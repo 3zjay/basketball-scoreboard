@@ -565,8 +565,8 @@ let gT=null, sT=null;
 
 function save(){
   try{ localStorage.setItem('bball_v3', JSON.stringify(S)); }catch(e){}
-  // Strip logos from server state - they're too large and cause POST to fail on mobile
-  const serverState = {...S, homeLogo: S.homeLogo ? '__has_logo__' : null, awayLogo: S.awayLogo ? '__has_logo__' : null};
+  // Send state WITHOUT logos (sent separately)
+  const serverState = {...S, homeLogo: null, awayLogo: null};
   fetch('/update', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -665,17 +665,34 @@ function updateColors(){
 }
 function updateBarColor(){ S.barColor=document.getElementById('barColorIn').value; save(); }
 
-// Logos
-function setLogo(team,input){
-  const f=input.files[0]; if(!f)return;
-  const r=new FileReader();
-  r.onload=e=>{ S[team+'Logo']=e.target.result; applyLogo(team,e.target.result); save(); };
+// Logos — resize to 200x200 before syncing to keep payload small
+function setLogo(team, input){
+  const f = input.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 200; canvas.height = 200;
+      canvas.getContext('2d').drawImage(img, 0, 0, 200, 200);
+      const resized = canvas.toDataURL('image/png');
+      S[team+'Logo'] = resized;
+      applyLogo(team, resized);
+      save();
+      fetch('/logo/' + team, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logo: resized })
+      }).catch(err => console.warn('Logo sync failed:', err));
+    };
+    img.src = e.target.result;
+  };
   r.readAsDataURL(f);
 }
-function applyLogo(team,src){
-  const img=`<img src="${src}" alt="logo">`;
-  const ct=document.getElementById(team+'LogoCtrl');
-  if(ct) ct.innerHTML=img;
+function applyLogo(team, src){
+  const img = `<img src="${src}" alt="logo">`;
+  const ct = document.getElementById(team+'LogoCtrl');
+  if(ct) ct.innerHTML = img;
 }
 
 // Clocks

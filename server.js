@@ -3,8 +3,9 @@ const fs   = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 3000;
-let state  = {};
-let clients = []; // SSE clients
+let state   = {};
+let logos   = { home: null, away: null }; // stored separately
+let clients = [];
 
 const ROUTES = {
   '/':        'basketball-scoreboard.html',
@@ -20,6 +21,10 @@ function pushToAll(data) {
   });
 }
 
+function fullState() {
+  return { ...state, homeLogo: logos.home, awayLogo: logos.away };
+}
+
 http.createServer((req, res) => {
 
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -27,42 +32,50 @@ http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-  // POST /update — control panel pushes new state, server pushes to all SSE clients instantly
+  const body = () => new Promise(resolve => {
+    let b = '';
+    req.on('data', d => b += d);
+    req.on('end', () => resolve(b));
+  });
+
+  // POST /update — game state (no logos)
   if (req.method === 'POST' && req.url === '/update') {
-    let body = '';
-    req.on('data', d => body += d);
-    req.on('end', () => {
-      try {
-        state = JSON.parse(body);
-        pushToAll(state); // instant push to all connected clients
-      } catch(e) {}
+    body().then(b => {
+      try { state = JSON.parse(b); } catch(e) {}
+      pushToAll(fullState());
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end('{"ok":true}');
     });
     return;
   }
 
-  // GET /events — SSE stream for overlay & display
+  // POST /logo/home or /logo/away — logos uploaded separately
+  if (req.method === 'POST' && (req.url === '/logo/home' || req.url === '/logo/away')) {
+    const side = req.url === '/logo/home' ? 'home' : 'away';
+    body().then(b => {
+      try { const d = JSON.parse(b); logos[side] = d.logo; } catch(e) {}
+      pushToAll(fullState());
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end('{"ok":true}');
+    });
+    return;
+  }
+
+  // GET /events — SSE stream
   if (req.url === '/events') {
     res.writeHead(200, {
       'Content-Type':  'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection':    'keep-alive',
     });
-    res.write('\n'); // open the connection
-
-    // Send current state immediately on connect
+    res.write('\n');
     if (Object.keys(state).length) {
-      res.write('data: ' + JSON.stringify(state) + '\n\n');
+      res.write('data: ' + JSON.stringify(fullState()) + '\n\n');
     }
-
-    // Keep-alive ping every 20s so Render doesn't close idle connections
     const ping = setInterval(() => {
       try { res.write(': ping\n\n'); } catch(e) { clearInterval(ping); }
     }, 20000);
-
     clients.push(res);
-
     req.on('close', () => {
       clearInterval(ping);
       clients = clients.filter(c => c !== res);
@@ -70,10 +83,10 @@ http.createServer((req, res) => {
     return;
   }
 
-  // GET /state — simple fallback poll (used on first load)
+  // GET /state — initial load fallback
   if (req.url === '/state') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(state));
+    res.end(JSON.stringify(fullState()));
     return;
   }
 
