@@ -217,11 +217,51 @@ function render(){
 
 function s(id,val){ const e=document.getElementById(id); if(e) e.textContent=val; }
 
-// SSE — server pushes instantly on every change, no polling delay
+// ── BUZZER ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+function getAudioCtx(){ if(!audioCtx) audioCtx = new AudioCtx(); if(audioCtx.state==='suspended') audioCtx.resume(); return audioCtx; }
+document.addEventListener('click',      ()=>getAudioCtx(), {passive:true});
+document.addEventListener('touchstart', ()=>getAudioCtx(), {passive:true});
+
+function playGameBuzzer(){
+  try {
+    const ctx=getAudioCtx(), dur=3.0;
+    [{type:'sawtooth',freq:116,g:0.5},{type:'sawtooth',freq:58,g:0.4},{type:'square',freq:232,g:0.15}].forEach(({type,freq,g})=>{
+      const osc=ctx.createOscillator(),gain=ctx.createGain(),dist=ctx.createWaveShaper();
+      const curve=new Float32Array(256); for(let i=0;i<256;i++){const x=(i*2/256)-1;curve[i]=Math.tanh(x*4);} dist.curve=curve;
+      osc.connect(dist);dist.connect(gain);gain.connect(ctx.destination);
+      osc.type=type; osc.frequency.setValueAtTime(freq,ctx.currentTime); osc.frequency.linearRampToValueAtTime(freq*0.94,ctx.currentTime+dur);
+      gain.gain.setValueAtTime(0,ctx.currentTime); gain.gain.linearRampToValueAtTime(g,ctx.currentTime+0.02);
+      gain.gain.setValueAtTime(g,ctx.currentTime+dur-0.3); gain.gain.linearRampToValueAtTime(0,ctx.currentTime+dur);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime+dur);
+    });
+  }catch(e){}
+}
+function playShotBuzzer(){
+  try {
+    const ctx=getAudioCtx(), dur=1.0;
+    [{type:'sawtooth',freq:116,g:0.45},{type:'sawtooth',freq:58,g:0.35}].forEach(({type,freq,g})=>{
+      const osc=ctx.createOscillator(),gain=ctx.createGain(),dist=ctx.createWaveShaper();
+      const curve=new Float32Array(256); for(let i=0;i<256;i++){const x=(i*2/256)-1;curve[i]=Math.tanh(x*4);} dist.curve=curve;
+      osc.connect(dist);dist.connect(gain);gain.connect(ctx.destination);
+      osc.type=type; osc.frequency.setValueAtTime(freq,ctx.currentTime); osc.frequency.linearRampToValueAtTime(freq*0.96,ctx.currentTime+dur);
+      gain.gain.setValueAtTime(0,ctx.currentTime); gain.gain.linearRampToValueAtTime(g,ctx.currentTime+0.02);
+      gain.gain.setValueAtTime(g,ctx.currentTime+dur-0.2); gain.gain.linearRampToValueAtTime(0,ctx.currentTime+dur);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime+dur);
+    });
+  }catch(e){}
+}
+
+// SSE — server pushes instantly on every change
 function connectSSE() {
   const es = new EventSource('/events');
   es.onmessage = (e) => {
-    try { S = {...DEF, ...JSON.parse(e.data)}; render(); } catch(err) {}
+    try {
+      const msg = JSON.parse(e.data);
+      if(msg.type === 'buzz'){ if(msg.kind==='game') playGameBuzzer(); else playShotBuzzer(); }
+      else if(msg.type === 'state'){ S={...DEF,...msg.data}; render(); }
+    } catch(err) {}
   };
   es.onerror = () => { es.close(); setTimeout(connectSSE, 2000); };
 }

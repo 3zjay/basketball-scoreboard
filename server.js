@@ -4,7 +4,7 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 let state   = {};
-let logos   = { home: null, away: null }; // stored separately
+let logos   = { home: null, away: null };
 let clients = [];
 
 const ROUTES = {
@@ -14,8 +14,8 @@ const ROUTES = {
   '/display': 'scoreboard-display.html',
 };
 
-function pushToAll(data) {
-  const msg = 'data: ' + JSON.stringify(data) + '\n\n';
+function pushToAll(payload) {
+  const msg = 'data: ' + JSON.stringify(payload) + '\n\n';
   clients = clients.filter(res => {
     try { res.write(msg); return true; } catch(e) { return false; }
   });
@@ -25,6 +25,14 @@ function fullState() {
   return { ...state, homeLogo: logos.home, awayLogo: logos.away };
 }
 
+function readBody(req) {
+  return new Promise(resolve => {
+    let b = '';
+    req.on('data', d => b += d);
+    req.on('end', () => resolve(b));
+  });
+}
+
 http.createServer((req, res) => {
 
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -32,29 +40,35 @@ http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-  const body = () => new Promise(resolve => {
-    let b = '';
-    req.on('data', d => b += d);
-    req.on('end', () => resolve(b));
-  });
-
-  // POST /update — game state (no logos)
+  // POST /update — game state
   if (req.method === 'POST' && req.url === '/update') {
-    body().then(b => {
+    readBody(req).then(b => {
       try { state = JSON.parse(b); } catch(e) {}
-      pushToAll(fullState());
+      pushToAll({ type: 'state', data: fullState() });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end('{"ok":true}');
     });
     return;
   }
 
-  // POST /logo/home or /logo/away — logos uploaded separately
+  // POST /buzz — broadcast buzzer sound to all clients
+  if (req.method === 'POST' && req.url === '/buzz') {
+    readBody(req).then(b => {
+      let kind = 'game';
+      try { kind = JSON.parse(b).kind || 'game'; } catch(e) {}
+      pushToAll({ type: 'buzz', kind });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end('{"ok":true}');
+    });
+    return;
+  }
+
+  // POST /logo/home or /logo/away
   if (req.method === 'POST' && (req.url === '/logo/home' || req.url === '/logo/away')) {
     const side = req.url === '/logo/home' ? 'home' : 'away';
-    body().then(b => {
+    readBody(req).then(b => {
       try { const d = JSON.parse(b); logos[side] = d.logo; } catch(e) {}
-      pushToAll(fullState());
+      pushToAll({ type: 'state', data: fullState() });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end('{"ok":true}');
     });
@@ -70,7 +84,7 @@ http.createServer((req, res) => {
     });
     res.write('\n');
     if (Object.keys(state).length) {
-      res.write('data: ' + JSON.stringify(fullState()) + '\n\n');
+      res.write('data: ' + JSON.stringify({ type: 'state', data: fullState() }) + '\n\n');
     }
     const ping = setInterval(() => {
       try { res.write(': ping\n\n'); } catch(e) { clearInterval(ping); }
@@ -83,7 +97,7 @@ http.createServer((req, res) => {
     return;
   }
 
-  // GET /state — initial load fallback
+  // GET /state — initial load
   if (req.url === '/state') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(fullState()));
