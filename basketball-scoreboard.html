@@ -708,36 +708,77 @@ let audioCtx = null;
 function getAudioCtx(){ if(!audioCtx) audioCtx = new AudioCtx(); return audioCtx; }
 
 function playGameBuzzer(){
-  // Long loud buzzer — end of period/game
+  // NBA-style long loud horn — ~3 seconds, layered oscillators for thickness
   try {
     const ctx = getAudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(220, ctx.currentTime);
-    osc.frequency.linearRampToValueAtTime(180, ctx.currentTime + 1.2);
-    gain.gain.setValueAtTime(0.8, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.4);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 1.4);
+    const duration = 3.0;
+
+    const layers = [
+      { type: 'sawtooth', freq: 116, gain: 0.5 },
+      { type: 'sawtooth', freq: 58,  gain: 0.4 },
+      { type: 'square',   freq: 232, gain: 0.15 },
+    ];
+
+    layers.forEach(({ type, freq, gain: gVal }) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const dist = ctx.createWaveShaper();
+
+      // Slight distortion for that buzzer harshness
+      const curve = new Float32Array(256);
+      for(let i=0;i<256;i++){ const x=(i*2/256)-1; curve[i]=Math.tanh(x*4); }
+      dist.curve = curve;
+
+      osc.connect(dist); dist.connect(gain); gain.connect(ctx.destination);
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+      // Slight pitch drop like a real horn
+      osc.frequency.linearRampToValueAtTime(freq * 0.94, ctx.currentTime + duration);
+
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(gVal, ctx.currentTime + 0.02); // fast attack
+      gain.gain.setValueAtTime(gVal, ctx.currentTime + duration - 0.3);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration); // fade out
+
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + duration);
+    });
   } catch(e){}
 }
 
 function playShotBuzzer(){
-  // Short sharp beep — shot clock violation
+  // Shot clock — shorter horn, same tone but 1 second
   try {
     const ctx = getAudioCtx();
-    [0, 0.18, 0.36].forEach(offset => {
-      const osc = ctx.createOscillator();
+    const duration = 1.0;
+
+    const layers = [
+      { type: 'sawtooth', freq: 116, gain: 0.45 },
+      { type: 'sawtooth', freq: 58,  gain: 0.35 },
+    ];
+
+    layers.forEach(({ type, freq, gain: gVal }) => {
+      const osc  = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(880, ctx.currentTime + offset);
-      gain.gain.setValueAtTime(0.5, ctx.currentTime + offset);
-      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + offset + 0.14);
-      osc.start(ctx.currentTime + offset);
-      osc.stop(ctx.currentTime + offset + 0.14);
+      const dist = ctx.createWaveShaper();
+
+      const curve = new Float32Array(256);
+      for(let i=0;i<256;i++){ const x=(i*2/256)-1; curve[i]=Math.tanh(x*4); }
+      dist.curve = curve;
+
+      osc.connect(dist); dist.connect(gain); gain.connect(ctx.destination);
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(freq * 0.96, ctx.currentTime + duration);
+
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(gVal, ctx.currentTime + 0.02);
+      gain.gain.setValueAtTime(gVal, ctx.currentTime + duration - 0.2);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + duration);
     });
   } catch(e){}
 }
