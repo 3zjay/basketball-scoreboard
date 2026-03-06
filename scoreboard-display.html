@@ -436,15 +436,19 @@ function flashScreen() {
   fl.classList.remove('flash-anim'); void fl.offsetWidth; fl.classList.add('flash-anim');
 }
 
-// Server poll — only source of truth
-function pollServer(){
-  fetch('/state')
-    .then(r=>r.json())
-    .then(data=>{ if(Object.keys(data).length){ S={...DEF,...data}; render(); } })
-    .catch(()=>{});
+// SSE — server pushes instantly on every change, no polling delay
+function connectSSE() {
+  const es = new EventSource('/events');
+  es.onmessage = (e) => {
+    try { S = {...DEF, ...JSON.parse(e.data)}; render(); } catch(err) {}
+  };
+  es.onerror = () => { es.close(); setTimeout(connectSSE, 2000); };
 }
-setInterval(pollServer, 100);
-pollServer();
+
+// Load initial state then connect SSE
+fetch('/state').then(r=>r.json()).then(data=>{
+  if(Object.keys(data).length){ S={...DEF,...data}; render(); }
+}).catch(()=>{}).finally(()=>{ connectSSE(); });
 </script>
 </body>
 </html>
