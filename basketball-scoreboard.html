@@ -705,7 +705,17 @@ function applyLogo(team, src){
 // ── BUZZER SOUNDS ──────────────────────────────────────────
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
-function getAudioCtx(){ if(!audioCtx) audioCtx = new AudioCtx(); return audioCtx; }
+
+function getAudioCtx(){
+  if(!audioCtx) audioCtx = new AudioCtx();
+  // Mobile Chrome suspends AudioContext — resume on every call
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+// Unlock AudioContext on first touch anywhere on the page (required for mobile)
+document.addEventListener('touchstart', () => { getAudioCtx(); }, { once: false, passive: true });
+document.addEventListener('click',      () => { getAudioCtx(); }, { once: false, passive: true });
 
 function playGameBuzzer(){
   // NBA-style long loud horn — ~3 seconds, layered oscillators for thickness
