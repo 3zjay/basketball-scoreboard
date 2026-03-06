@@ -1,0 +1,9 @@
+{
+  "name": "basketball-scoreboard",
+  "version": "1.0.0",
+  "description": "Live basketball scoreboard sync server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
