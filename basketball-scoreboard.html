@@ -565,11 +565,13 @@ let gT=null, sT=null;
 
 function save(){
   try{ localStorage.setItem('bball_v3', JSON.stringify(S)); }catch(e){}
+  // Strip logos from server state - they're too large and cause POST to fail on mobile
+  const serverState = {...S, homeLogo: S.homeLogo ? '__has_logo__' : null, awayLogo: S.awayLogo ? '__has_logo__' : null};
   fetch('/update', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(S)
-  }).catch(()=>{});
+    body: JSON.stringify(serverState)
+  }).catch((err)=>{ console.warn('Sync failed:', err); });
 }
 function load(){
   try{
@@ -734,8 +736,28 @@ function resetAll(){
   save(); renderAll();
 }
 
-load();
-renderAll();
+// Load from server first (so tablet gets live state, not stale localStorage)
+fetch('/state').then(r=>r.json()).then(data=>{
+  if(Object.keys(data).length){ S={...DEF,...data}; }
+  renderAll();
+}).catch(()=>{ renderAll(); });
+
+// SSE — keep control panel in sync if another device makes changes
+function connectSSE(){
+  const es = new EventSource('/events');
+  es.onmessage = (e) => {
+    try {
+      const d = JSON.parse(e.data);
+      // Only update if not actively editing a field
+      if(document.activeElement.tagName !== 'INPUT'){
+        S = {...DEF, ...d};
+        renderAll();
+      }
+    } catch(err){}
+  };
+  es.onerror = () => { es.close(); setTimeout(connectSSE, 3000); };
+}
+connectSSE();
 
 // Dark/Light mode toggle
 function toggleMode(){
