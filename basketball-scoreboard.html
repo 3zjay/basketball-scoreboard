@@ -590,17 +590,24 @@ function renderAll(){
   const qL = typeof S.quarter==='number' ? (PERIODS[S.quarter-1]||`Q${S.quarter}`) : S.quarter;
   document.querySelectorAll('.qbtn').forEach(b=>b.classList.toggle('active', b.textContent===qL));
 
-  t('rp1TIn', null); // inputs handled separately
   renderGameClock(); renderShotClock(); renderPossession();
 
-  // Inputs sync
-  const hA=document.getElementById('homeAbbrIn'); if(hA&&document.activeElement!==hA) hA.value=S.homeAbbr;
-  const aA=document.getElementById('awayAbbrIn'); if(aA&&document.activeElement!==aA) aA.value=S.awayAbbr;
-  const hR=document.getElementById('homeRecIn');  if(hR&&document.activeElement!==hR) hR.value=S.homeRecord;
-  const aR=document.getElementById('awayRecIn');  if(aR&&document.activeElement!==aR) aR.value=S.awayRecord;
+  // Sync all text inputs — skip only if that field is actively focused
+  const syncInp = (id, val) => {
+    const e = document.getElementById(id);
+    if(e && document.activeElement !== e) e.value = val || '';
+  };
+  syncInp('homeAbbrIn',  S.homeAbbr);
+  syncInp('awayAbbrIn',  S.awayAbbr);
+  syncInp('homeRecIn',   S.homeRecord);
+  syncInp('awayRecIn',   S.awayRecord);
+  syncInp('rp1TIn',      S.rp1Title);
+  syncInp('rp1VIn',      S.rp1Value);
+  syncInp('rp2TIn',      S.rp2Title);
+  syncInp('rp2VIn',      S.rp2Value);
 
-  if(S.homeLogo) applyLogo('home',S.homeLogo);
-  if(S.awayLogo) applyLogo('away',S.awayLogo);
+  if(S.homeLogo) applyLogo('home', S.homeLogo);
+  if(S.awayLogo) applyLogo('away', S.awayLogo);
 }
 
 function t(id,val){ if(val===null)return; const e=document.getElementById(id); if(e) e.textContent=val; }
@@ -695,14 +702,56 @@ function applyLogo(team, src){
   if(ct) ct.innerHTML = img;
 }
 
+// ── BUZZER SOUNDS ──────────────────────────────────────────
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+function getAudioCtx(){ if(!audioCtx) audioCtx = new AudioCtx(); return audioCtx; }
+
+function playGameBuzzer(){
+  // Long loud buzzer — end of period/game
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(180, ctx.currentTime + 1.2);
+    gain.gain.setValueAtTime(0.8, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.4);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 1.4);
+  } catch(e){}
+}
+
+function playShotBuzzer(){
+  // Short sharp beep — shot clock violation
+  try {
+    const ctx = getAudioCtx();
+    [0, 0.18, 0.36].forEach(offset => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(880, ctx.currentTime + offset);
+      gain.gain.setValueAtTime(0.5, ctx.currentTime + offset);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + offset + 0.14);
+      osc.start(ctx.currentTime + offset);
+      osc.stop(ctx.currentTime + offset + 0.14);
+    });
+  } catch(e){}
+}
+
 // Clocks
 function toggleGameClock(){
   if(S.gameRunning){ clearInterval(gT); S.gameRunning=false; }
   else{
     if(S.gameSeconds<=0)return;
     S.gameRunning=true;
-    gT=setInterval(()=>{ if(S.gameSeconds>0){S.gameSeconds--;save();renderGameClock();}
-      else{clearInterval(gT);S.gameRunning=false;renderGameClock();} },1000);
+    gT=setInterval(()=>{
+      if(S.gameSeconds>0){ S.gameSeconds--; save(); renderGameClock(); }
+      else{ clearInterval(gT); S.gameRunning=false; renderGameClock(); playGameBuzzer(); }
+    },1000);
   }
   renderGameClock();
 }
@@ -720,8 +769,10 @@ function toggleShotClock(){
   else{
     if(S.shotSeconds<=0)return;
     S.shotRunning=true;
-    sT=setInterval(()=>{ if(S.shotSeconds>0){S.shotSeconds--;save();renderShotClock();}
-      else{clearInterval(sT);S.shotRunning=false;renderShotClock();} },1000);
+    sT=setInterval(()=>{
+      if(S.shotSeconds>0){ S.shotSeconds--; save(); renderShotClock(); }
+      else{ clearInterval(sT); S.shotRunning=false; renderShotClock(); playShotBuzzer(); }
+    },1000);
   }
   renderShotClock();
 }
