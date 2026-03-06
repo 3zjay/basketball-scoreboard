@@ -104,9 +104,25 @@ body { background: transparent; font-family: 'Barlow Condensed', sans-serif; }
   100%{ transform:scale(1); color:#fff; }
 }
 .bump { animation:scoreBump 0.38s ease; }
+#soundUnlock {
+  position: fixed; inset: 0; z-index: 99999;
+  background: rgba(0,0,0,0.85);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+#soundUnlock button {
+  font-family: 'Barlow Condensed', sans-serif; font-size: 18px;
+  font-weight: 800; letter-spacing: 3px; text-transform: uppercase;
+  background: #c8102e; color: #fff; border: none;
+  padding: 14px 36px; border-radius: 10px; cursor: pointer;
+}
 </style>
 </head>
 <body>
+
+<div id="soundUnlock" onclick="unlockAudio()">
+  <button>▶ ACTIVATE SOUND</button>
+</div>
 
 <div id="overlay">
   <div class="bar" id="mainBar">
@@ -254,6 +270,14 @@ function playShotBuzzer(){
 }
 
 // SSE — server pushes instantly on every change
+function unlockAudio(){
+  const ctx = getAudioCtx();
+  const buf = ctx.createBuffer(1, 1, 22050);
+  const src = ctx.createBufferSource();
+  src.buffer = buf; src.connect(ctx.destination); src.start(0);
+  document.getElementById('soundUnlock').style.display = 'none';
+}
+
 function connectSSE() {
   const es = new EventSource('/events');
   es.onmessage = (e) => {

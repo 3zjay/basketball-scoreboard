@@ -262,9 +262,32 @@ html, body {
 }
 @keyframes flash { 0%{opacity:0} 15%{opacity:1} 100%{opacity:0} }
 .flash-anim { animation: flash 0.7s ease forwards; }
+
+#soundUnlock {
+  position: fixed; inset: 0; z-index: 99999;
+  background: rgba(0,0,0,0.88);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 20px;
+  cursor: pointer;
+}
+#soundUnlock h2 {
+  font-family: 'Teko', sans-serif; font-size: 5vh;
+  color: #fff; letter-spacing: 4px; text-transform: uppercase;
+}
+#soundUnlock button {
+  font-family: 'Teko', sans-serif; font-size: 3.5vh;
+  font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
+  background: #c8102e; color: #fff; border: none;
+  padding: 20px 52px; border-radius: 12px; cursor: pointer;
+}
 </style>
 </head>
 <body>
+
+<div id="soundUnlock" onclick="unlockAudio()">
+  <h2>🏀 Scoreboard Display</h2>
+  <button>TAP TO ACTIVATE SOUND</button>
+</div>
 
 <div class="score-flash" id="scoreFlash"></div>
 
@@ -473,7 +496,17 @@ function playShotBuzzer(){
 }
 
 // SSE — server pushes instantly on every change
-function connectSSE() {
+function unlockAudio(){
+  getAudioCtx();
+  // Play a silent buffer to fully unlock audio on mobile/display
+  const ctx = getAudioCtx();
+  const buf = ctx.createBuffer(1, 1, 22050);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.connect(ctx.destination);
+  src.start(0);
+  document.getElementById('soundUnlock').style.display = 'none';
+}
   const es = new EventSource('/events');
   es.onmessage = (e) => {
     try {
