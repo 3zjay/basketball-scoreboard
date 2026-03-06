@@ -217,7 +217,7 @@ function render(){
 
 function s(id,val){ const e=document.getElementById(id); if(e) e.textContent=val; }
 
-// Poll server for state every 100ms — works in OBS Browser Source
+// Server poll — only source of truth
 function pollServer(){
   fetch('/state')
     .then(r=>r.json())
@@ -225,12 +225,7 @@ function pollServer(){
     .catch(()=>{});
 }
 setInterval(pollServer, 100);
-
-// localStorage fallback (same browser tabs)
-setInterval(()=>{ load(); render(); }, 500);
-window.addEventListener('storage', (e)=>{ if(e.key==='bball_v3'){ load(); render(); } });
-
-load(); render();
+pollServer();
 </script>
 </body>
 </html>
