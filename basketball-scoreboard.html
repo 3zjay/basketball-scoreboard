@@ -114,6 +114,7 @@ body {
 .team-top {
   display: flex; align-items: center; gap: 14px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 .logo-btn {
@@ -392,7 +393,58 @@ body.light .reset-btn:hover { background:#fee2e2; }
 }
 .footer span { color:var(--accent);font-weight:700; }
 
-input[type="file"] { display:none; }
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  body { padding: 12px 10px 40px; }
+
+  .page-header {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .page-title { font-size: 22px; }
+  .mode-toggle { font-size: 11px; padding: 5px 10px; }
+
+  .main { grid-template-columns: 1fr; gap: 12px; }
+
+  .clocks-grid { grid-template-columns: 1fr; gap: 14px; }
+  .settings-grid { grid-template-columns: 1fr; gap: 12px; }
+
+  .score-big { font-size: 44px; }
+  .score-btns { grid-template-columns: repeat(4,1fr); gap: 5px; }
+  .btn { font-size: 14px; padding: 12px 4px; }
+
+  .clock-display { font-size: 36px; }
+  .shot-display  { font-size: 44px; }
+
+  .poss-row { gap: 6px; }
+  .poss-btn { padding: 12px 6px; }
+  .poss-btn-label { font-size: 15px; }
+
+  .footer { display: none; }
+}
+
+@media (max-width: 480px) {
+  body { padding: 8px 8px 32px; }
+
+  .page-header { padding: 10px 12px; }
+  .page-title { font-size: 18px; }
+
+  .card-body { padding: 14px 12px; }
+
+  .score-big { font-size: 38px; }
+  .btn { font-size: 13px; padding: 11px 2px; }
+
+  .tinput { width: 48px; font-size: 20px; }
+
+  .qtr-btns { gap: 4px; }
+  .qbtn { padding: 6px 10px; font-size: 12px; }
+
+  .poss-none-btn { padding: 12px 10px; font-size: 12px; }
+
+  .inp { font-size: 14px; padding: 8px 10px; }
+}
+
 </style>
 </head>
 <body>
