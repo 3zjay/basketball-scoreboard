@@ -466,6 +466,15 @@ function getAudioCtx(){ if(!audioCtx) audioCtx = new AudioCtx(); if(audioCtx.sta
 document.addEventListener('click',      ()=>getAudioCtx(), {passive:true});
 document.addEventListener('touchstart', ()=>getAudioCtx(), {passive:true});
 
+function unlockAudio(){
+  // Unlock Web Audio AND pre-load the MP3 on user gesture
+  getAudioCtx();
+  const audio = new Audio('/buzzer.mp3');
+  audio.volume = 0;
+  audio.play().then(()=>{ audio.pause(); audio.currentTime=0; }).catch(()=>{});
+  document.getElementById('soundUnlock').style.display = 'none';
+}
+
 function playGameBuzzer(){
   const audio = new Audio('/buzzer.mp3');
   audio.volume = 1.0;
