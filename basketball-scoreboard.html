@@ -353,6 +353,7 @@ input[type="file"] { display:none; }
 <div class="page-header">
   <div class="page-title">🏀 <span>Scoreboard</span> Control</div>
   <div style="display:flex;align-items:center;gap:12px;">
+    <button class="mode-toggle" id="fsToggle" onclick="toggleFullscreen()">⛶ Fullscreen</button>
     <button class="mode-toggle" id="modeToggle" onclick="toggleMode()">☀️ Light Mode</button>
     <div class="live-badge">
       <div class="live-dot"></div>
@@ -875,6 +876,21 @@ function connectSSE(){
   es.onerror = () => { es.close(); setTimeout(connectSSE, 3000); };
 }
 connectSSE();
+
+// Fullscreen
+function toggleFullscreen(){
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(()=>{});
+    document.getElementById('fsToggle').textContent = '✕ Exit Fullscreen';
+  } else {
+    document.exitFullscreen();
+    document.getElementById('fsToggle').textContent = '⛶ Fullscreen';
+  }
+}
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('fsToggle');
+  if(btn) btn.textContent = document.fullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+});
 
 // Dark/Light mode toggle
 function toggleMode(){
