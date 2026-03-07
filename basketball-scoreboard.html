@@ -475,7 +475,7 @@ body.light .reset-btn:hover { background:#fee2e2; }
         <div class="logo-btn" onclick="document.getElementById('homeFile').click()">
           <div id="homeLogoCtrl"><div class="lbtext">Upload<br>Logo</div></div>
         </div>
-        <input type="file" id="homeFile" accept="image/*" onchange="setLogo('home',this)">
+        <input type="file" id="homeFile" accept="image/*" onchange="setLogo('home',this)" style="display:none;position:absolute;width:0;height:0;opacity:0;">
         <div class="field-group">
           <div class="field-label">Team Name</div>
           <input class="inp" id="homeAbbrIn" value="HOME" placeholder="Team Name" oninput="updateTeam('home')" maxlength="20" style="text-transform:uppercase;">
@@ -509,7 +509,7 @@ body.light .reset-btn:hover { background:#fee2e2; }
         <div class="logo-btn" onclick="document.getElementById('awayFile').click()">
           <div id="awayLogoCtrl"><div class="lbtext">Upload<br>Logo</div></div>
         </div>
-        <input type="file" id="awayFile" accept="image/*" onchange="setLogo('away',this)">
+        <input type="file" id="awayFile" accept="image/*" onchange="setLogo('away',this)" style="display:none;position:absolute;width:0;height:0;opacity:0;">
         <div class="field-group">
           <div class="field-label">Team Name</div>
           <input class="inp" id="awayAbbrIn" value="AWAY" placeholder="Team Name" oninput="updateTeam('away')" maxlength="20" style="text-transform:uppercase;">
