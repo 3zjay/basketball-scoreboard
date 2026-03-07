@@ -507,6 +507,8 @@ function unlockAudio(){
   src.start(0);
   document.getElementById('soundUnlock').style.display = 'none';
 }
+
+function connectSSE() {
   const es = new EventSource('/events');
   es.onmessage = (e) => {
     try {
