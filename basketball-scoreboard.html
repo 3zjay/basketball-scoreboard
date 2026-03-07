@@ -1070,7 +1070,7 @@ document.addEventListener('keydown', (e) => {
     // Buzzer
     case 'b': refBuzzer(); break;
   }
-}); — show if on iOS Safari and not already installed
+}); // show if on iOS Safari and not already installed
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isInStandaloneMode = window.navigator.standalone === true;
 const iosDismissed = localStorage.getItem('iosBannerDismissed');

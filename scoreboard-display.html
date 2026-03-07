@@ -143,11 +143,11 @@ html, body {
 .poss-indicator.on { opacity: 1; }
 
 .poss-logo {
-  width: 4.5vh;
-  height: 4.5vh;
+  width: 9vh;
+  height: 9vh;
   border-radius: 50%;
   background: #111;
-  border: 2px solid #222;
+  border: 3px solid #222;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -158,7 +158,7 @@ html, body {
 .poss-logo img { width: 88%; height: 88%; object-fit: contain; }
 .poss-logo-ph {
   font-family: 'Teko', sans-serif;
-  font-size: 1.2vh;
+  font-size: 2vh;
   font-weight: 700;
   color: #555;
   text-align: center;
@@ -186,6 +186,29 @@ html, body {
 @keyframes arrowPulseRight { from{transform:translateX(0)} to{transform:translateX(5px)} }
 @keyframes arrowPulseLeft  { from{transform:translateX(0)} to{transform:translateX(-5px)} }
 
+/* Center possession indicator */
+.center-poss {
+  display: flex;
+  align-items: center;
+  gap: 1vw;
+  margin-bottom: 0.8vh;
+}
+.center-poss-side {
+  display: flex;
+  align-items: center;
+  gap: 0.4vw;
+  opacity: 0.2;
+  transition: opacity 0.3s, filter 0.3s;
+}
+.center-poss-side.on {
+  opacity: 1;
+  filter: drop-shadow(0 0 6px rgba(255,136,0,0.7));
+}
+.center-poss-side .poss-arrow { display: flex; align-items: center; }
+.center-poss-side.on .poss-logo {
+  box-shadow: 0 0 10px rgba(255,136,0,0.8), 0 0 22px rgba(255,100,0,0.35);
+}
+
 /* ═══ CENTER PANEL ═══ */
 .center-col {
   display: flex;
@@ -207,6 +230,7 @@ html, body {
   height: 100%;
   gap: 0;
   padding: 0 1.5vw;
+  overflow: visible;
 }
 
 .shot-lbl {
@@ -324,19 +348,18 @@ html, body {
 <!-- ROW 2: SCORES + POSSESSION -->
 <div class="row-scores">
 
-  <!-- HOME -->
+  <!-- HOME: name on left, possession (arrow → logo) on right -->
   <div class="team-block home">
     <div class="team-header">
-      <!-- Possession: logo + arrow → sitting left of team name -->
+      <div class="team-name" id="homeNameEl">HOME</div>
       <div class="poss-indicator" id="possHome">
         <div class="poss-logo" id="possLogoHome"><div class="poss-logo-ph">HOME</div></div>
-        <div class="poss-arrow">
-          <svg viewBox="0 0 60 42" style="width:3.2vw;height:2.1vw;">
-            <polygon points="56,21 4,3 4,39" fill="#ff8800"/>
+        <div class="poss-arrow" id="possArrowHome">
+          <svg viewBox="0 0 60 42" style="width:5vw;height:3.5vw;">
+            <polygon points="4,21 56,3 56,39" fill="#ff8800"/>
           </svg>
         </div>
       </div>
-      <div class="team-name" id="homeNameEl">HOME</div>
     </div>
     <div class="score-val" id="homeScoreEl">0</div>
   </div>
@@ -353,19 +376,18 @@ html, body {
     <div class="divider-line"></div>
   </div>
 
-  <!-- AWAY -->
+  <!-- AWAY: possession (logo → arrow) on left, name on right -->
   <div class="team-block away">
     <div class="team-header">
-      <div class="team-name" id="guestNameEl">AWAY</div>
-      <!-- Possession: arrow ← + logo sitting right of team name -->
       <div class="poss-indicator" id="possAway">
-        <div class="poss-arrow">
-          <svg viewBox="0 0 60 42" style="width:3.2vw;height:2.1vw;">
-            <polygon points="4,21 56,3 56,39" fill="#ff8800"/>
+        <div class="poss-arrow" id="possArrowAway">
+          <svg viewBox="0 0 60 42" style="width:5vw;height:3.5vw;">
+            <polygon points="56,21 4,3 4,39" fill="#ff8800"/>
           </svg>
         </div>
         <div class="poss-logo" id="possLogoAway"><div class="poss-logo-ph">AWAY</div></div>
       </div>
+      <div class="team-name" id="guestNameEl">AWAY</div>
     </div>
     <div class="score-val" id="awayScoreEl">0</div>
   </div>
@@ -451,6 +473,12 @@ function render() {
   document.getElementById('possHome')?.classList.toggle('on', homeOn);
   document.getElementById('possAway')?.classList.toggle('on', awayOn);
 
+  // Color possession arrows to match team color
+  const homeArrow = document.getElementById('possArrowHome');
+  const awayArrow = document.getElementById('possArrowAway');
+  if (homeArrow) homeArrow.querySelector('polygon').setAttribute('fill', S.homeColor || '#f5c842');
+  if (awayArrow) awayArrow.querySelector('polygon').setAttribute('fill', S.awayColor || '#c8102e');
+
   // Logos in possession
   const hlEl = document.getElementById('possLogoHome');
   const alEl = document.getElementById('possLogoAway');
@@ -459,14 +487,14 @@ function render() {
       ? `<img src="${S.homeLogo}" alt="">`
       : `<div class="poss-logo-ph">${(S.homeAbbr||'HOME').substring(0,3).toUpperCase()}</div>`;
     hlEl.style.border = `2px solid ${S.homeColor || '#f5c842'}`;
-    hlEl.style.boxShadow = S.possession === 'home' ? `0 0 10px ${S.homeColor || '#f5c842'}` : '';
+    hlEl.style.boxShadow = homeOn ? `0 0 10px ${S.homeColor || '#f5c842'}` : '';
   }
   if (alEl) {
     alEl.innerHTML = S.awayLogo
       ? `<img src="${S.awayLogo}" alt="">`
       : `<div class="poss-logo-ph">${(S.awayAbbr||'AWAY').substring(0,3).toUpperCase()}</div>`;
     alEl.style.border = `2px solid ${S.awayColor || '#c8102e'}`;
-    alEl.style.boxShadow = S.possession === 'away' ? `0 0 10px ${S.awayColor || '#c8102e'}` : '';
+    alEl.style.boxShadow = awayOn ? `0 0 10px ${S.awayColor || '#c8102e'}` : '';
   }
 }
 
