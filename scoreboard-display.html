@@ -280,6 +280,22 @@ html, body {
   background: #c8102e; color: #fff; border: none;
   padding: 20px 52px; border-radius: 12px; cursor: pointer;
 }
+
+/* Fullscreen button */
+#fsBtn {
+  position: fixed;
+  bottom: 20px; right: 20px;
+  z-index: 9998;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(13,17,23,0.85);
+  border: 2px solid rgba(255,255,255,0.2);
+  color: #fff; font-size: 22px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+  opacity: 0.5;
+}
+#fsBtn:hover { opacity: 1; border-color: rgba(255,255,255,0.5); }
 </style>
 </head>
 <body>
@@ -288,6 +304,9 @@ html, body {
   <h2>🏀 Scoreboard Display</h2>
   <button>TAP TO ACTIVATE SOUND</button>
 </div>
+
+<!-- Fullscreen button — bottom right corner -->
+<button id="fsBtn" onclick="toggleFullscreen()" title="Fullscreen">⛶</button>
 
 <div class="score-flash" id="scoreFlash"></div>
 
@@ -474,6 +493,21 @@ function unlockAudio(){
   audio.play().then(()=>{ audio.pause(); audio.currentTime=0; }).catch(()=>{});
   document.getElementById('soundUnlock').style.display = 'none';
 }
+
+function toggleFullscreen(){
+  const btn = document.getElementById('fsBtn');
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(()=>{});
+    if(btn) btn.textContent = '✕';
+  } else {
+    document.exitFullscreen();
+    if(btn) btn.textContent = '⛶';
+  }
+}
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('fsBtn');
+  if(btn) btn.textContent = document.fullscreenElement ? '✕' : '⛶';
+});
 
 function playGameBuzzer(){
   const audio = new Audio('/buzzer.mp3');
