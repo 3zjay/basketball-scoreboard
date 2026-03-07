@@ -80,7 +80,7 @@ html, body {
   align-items: center;
   justify-content: flex-start;
   padding: 1.5vh 2vw 1vh;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Name + possession on one row */
@@ -95,24 +95,24 @@ html, body {
 
 .team-name {
   font-family: 'Teko', sans-serif;
-  font-size: 5.5vw;
+  font-size: 7vw;
   font-weight: 700;
   color: #fff;
   letter-spacing: 0.4vw;
   text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  text-align: center;
+  width: 100%;
   text-shadow: 0 2px 16px rgba(255,255,255,0.1);
   line-height: 1;
 }
 
 .score-val {
   font-family: 'Teko', sans-serif;
-  font-size: 62vh;
+  font-size: clamp(8rem, 50vh, 55vw);
   font-weight: 700;
   color: #ff2200;
-  line-height: 0.82;
+  line-height: 0.9;
   letter-spacing: -0.2vw;
   text-align: center;
   text-shadow: 0 0 30px rgba(255,34,0,0.4);
@@ -120,7 +120,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
 }
 
 @keyframes scoreBump {
@@ -348,10 +348,9 @@ html, body {
 <!-- ROW 2: SCORES + POSSESSION -->
 <div class="row-scores">
 
-  <!-- HOME: name on left, possession (arrow → logo) on right -->
+  <!-- HOME: possession indicator top, score, name at bottom -->
   <div class="team-block home">
     <div class="team-header">
-      <div class="team-name" id="homeNameEl">HOME</div>
       <div class="poss-indicator" id="possHome">
         <div class="poss-logo" id="possLogoHome"><div class="poss-logo-ph">HOME</div></div>
         <div class="poss-arrow" id="possArrowHome">
@@ -362,6 +361,7 @@ html, body {
       </div>
     </div>
     <div class="score-val" id="homeScoreEl">0</div>
+    <div class="team-name" id="homeNameEl">HOME</div>
   </div>
 
   <!-- CENTER: shot clock + period -->
@@ -376,7 +376,7 @@ html, body {
     <div class="divider-line"></div>
   </div>
 
-  <!-- AWAY: possession (logo → arrow) on left, name on right -->
+  <!-- AWAY: possession indicator top, score, name at bottom -->
   <div class="team-block away">
     <div class="team-header">
       <div class="poss-indicator" id="possAway">
@@ -387,9 +387,9 @@ html, body {
         </div>
         <div class="poss-logo" id="possLogoAway"><div class="poss-logo-ph">AWAY</div></div>
       </div>
-      <div class="team-name" id="guestNameEl">AWAY</div>
     </div>
     <div class="score-val" id="awayScoreEl">0</div>
+    <div class="team-name" id="guestNameEl">AWAY</div>
   </div>
 
 </div>
