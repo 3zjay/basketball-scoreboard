@@ -178,7 +178,7 @@ html, body {
 }
 
 .poss-indicator.on .poss-arrow {
-  filter: drop-shadow(0 0 8px #ff8800) drop-shadow(0 0 16px #ff6600);
+  filter: drop-shadow(0 0 6px #ff8800) drop-shadow(0 0 14px #ff6600) drop-shadow(0 0 28px #ff4400);
 }
 
 .team-block.home .poss-indicator.on .poss-arrow { animation: arrowPulseRight 0.9s ease-in-out infinite alternate; }
@@ -355,7 +355,14 @@ html, body {
         <div class="poss-logo" id="possLogoHome"><div class="poss-logo-ph">HOME</div></div>
         <div class="poss-arrow" id="possArrowHome">
           <svg viewBox="0 0 60 42" style="width:5vw;height:3.5vw;">
-            <polygon points="4,21 56,3 56,39" fill="#ff8800"/>
+            <defs>
+              <radialGradient id="arrowGlowHome" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="40%" stop-color="#ffcc00"/>
+                <stop offset="100%" stop-color="#ff6600"/>
+              </radialGradient>
+            </defs>
+            <polygon points="4,21 56,3 56,39" fill="url(#arrowGlowHome)"/>
           </svg>
         </div>
       </div>
@@ -382,7 +389,14 @@ html, body {
       <div class="poss-indicator" id="possAway">
         <div class="poss-arrow" id="possArrowAway">
           <svg viewBox="0 0 60 42" style="width:5vw;height:3.5vw;">
-            <polygon points="56,21 4,3 4,39" fill="#ff8800"/>
+            <defs>
+              <radialGradient id="arrowGlowAway" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="40%" stop-color="#ffcc00"/>
+                <stop offset="100%" stop-color="#ff6600"/>
+              </radialGradient>
+            </defs>
+            <polygon points="56,21 4,3 4,39" fill="url(#arrowGlowAway)"/>
           </svg>
         </div>
         <div class="poss-logo" id="possLogoAway"><div class="poss-logo-ph">AWAY</div></div>
@@ -473,11 +487,7 @@ function render() {
   document.getElementById('possHome')?.classList.toggle('on', homeOn);
   document.getElementById('possAway')?.classList.toggle('on', awayOn);
 
-  // Color possession arrows to match team color
-  const homeArrow = document.getElementById('possArrowHome');
-  const awayArrow = document.getElementById('possArrowAway');
-  if (homeArrow) homeArrow.querySelector('polygon').setAttribute('fill', S.homeColor || '#f5c842');
-  if (awayArrow) awayArrow.querySelector('polygon').setAttribute('fill', S.awayColor || '#c8102e');
+  // Arrow colors handled by SVG gradient — no JS override needed
 
   // Logos in possession
   const hlEl = document.getElementById('possLogoHome');
