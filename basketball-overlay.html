@@ -9,18 +9,13 @@
 
 body { background: transparent; font-family: 'Barlow Condensed', sans-serif; }
 
-#overlay {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  align-items: flex-end;
-}
+#overlay { width:1920px; height:160px; display:flex; align-items:center; }
 
 .bar {
-  width: 100%; height: 6.25vw;
+  width: 100%; height: 120px;
   background: #0d1117;
-  border-top: 0.21vw solid #c8102e;
-  border-bottom: 0.21vw solid #c8102e;
+  border-top: 4px solid #c8102e;
+  border-bottom: 4px solid #c8102e;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -31,77 +26,70 @@ body { background: transparent; font-family: 'Barlow Condensed', sans-serif; }
 .bar-inner {
   display: flex;
   align-items: center;
-  width: 100%; height: 5.83vw;
+  width: 100%; height: 112px;
   overflow: visible;
   position: relative;
 }
 
-.team-seg { display:flex; align-items:center; padding:0 0.42vw; flex-shrink:0; }
-.team-seg.home { flex-direction:row; padding-left:0.73vw; }
-.team-seg.away { flex-direction:row-reverse; padding-right:0.73vw; }
+.team-seg { display:flex; align-items:center; padding:0 8px; flex-shrink:0; }
+.team-seg.home { flex-direction:row; padding-left:14px; }
+.team-seg.away { flex-direction:row-reverse; padding-right:14px; }
 
-.record { font-size:0.68vw; font-weight:700; color:#8a95a8; letter-spacing:0.5px; padding:0 0.52vw; white-space:nowrap; width:3.13vw; text-align:center; flex-shrink:0; }
+.record { font-size:13px; font-weight:700; color:#8a95a8; letter-spacing:0.5px; padding:0 10px; white-space:nowrap; width:60px; text-align:center; flex-shrink:0; }
 
-.logo-wrap {
-  width: 7.81vw; height: 7.81vw;
-  flex-shrink: 0; margin: 0 0.31vw;
-  position: relative; z-index: 9999;
-}
+.logo-wrap { width:150px; height:150px; flex-shrink:0; margin:0 6px; position:relative; z-index:9999; }
 
 .logo-circle {
-  width: 7.81vw; height: 7.81vw;
-  border-radius: 50%;
-  background: #1a2035;
-  border: 0.16vw solid rgba(255,255,255,0.15);
-  display: flex; align-items: center; justify-content: center;
-  overflow: hidden;
-  box-shadow: 0 0.21vw 1.25vw rgba(0,0,0,0.8);
-  position: relative; z-index: 9999;
+  width:150px; height:150px; border-radius:50%;
+  background:#1a2035; border:3px solid rgba(255,255,255,0.15);
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.8);
+  position:relative; z-index:9999;
 }
-.logo-circle img { width:6.98vw; height:6.98vw; object-fit:contain; }
-.logo-ph { font-size:0.47vw; font-weight:700; color:rgba(255,255,255,0.25); text-transform:uppercase; text-align:center; line-height:1.3; }
+.logo-circle img { width:134px; height:134px; object-fit:contain; }
+.logo-ph { font-size:9px; font-weight:700; color:rgba(255,255,255,0.25); text-transform:uppercase; text-align:center; line-height:1.3; }
 
-.team-text { display:flex; flex-direction:column; justify-content:center; padding:0 0.21vw; flex-shrink:0; }
+.team-text { display:flex; flex-direction:column; justify-content:center; padding:0 4px; flex-shrink:0; }
 .team-seg.away .team-text { align-items:flex-end; }
-.team-abbrev { font-family:'Teko',sans-serif; font-size:1.67vw; font-weight:700; color:#fff; letter-spacing:0.05vw; line-height:1; text-transform:uppercase; white-space:nowrap; }
+.team-abbrev { font-family:'Teko',sans-serif; font-size:32px; font-weight:700; color:#fff; letter-spacing:1px; line-height:1; text-transform:uppercase; white-space:nowrap; }
 
 .score-block {
   display:flex; align-items:center; justify-content:center;
-  background:#161b26; height:5.83vw; width:5.73vw; flex-shrink:0;
+  background:#161b26; height:112px; width:110px; flex-shrink:0;
   border-left:1px solid rgba(255,255,255,0.07);
   border-right:1px solid rgba(255,255,255,0.07);
 }
-.score-num { font-family:'Teko',sans-serif; font-size:4.17vw; font-weight:700; color:#fff; letter-spacing:0.05vw; line-height:1; width:100%; text-align:center; font-variant-numeric:tabular-nums; }
+.score-num { font-family:'Teko',sans-serif; font-size:80px; font-weight:700; color:#fff; letter-spacing:1px; line-height:1; width:100%; text-align:center; font-variant-numeric:tabular-nums; }
 
 .center-block {
   display:flex; flex-direction:column; align-items:center; justify-content:center;
-  padding:0 1.15vw; gap:0.1vw;
+  padding:0 22px; gap:2px;
   border-left:1px solid rgba(255,255,255,0.07);
   border-right:1px solid rgba(255,255,255,0.07);
-  background:#161b26; width:10.42vw; flex-shrink:0; height:5.83vw;
+  background:#161b26; width:200px; flex-shrink:0; height:112px;
 }
-.period-badge { font-size:0.68vw; font-weight:800; letter-spacing:0.16vw; color:rgba(255,255,255,0.45); text-transform:uppercase; white-space:nowrap; }
+.period-badge { font-size:13px; font-weight:800; letter-spacing:3px; color:rgba(255,255,255,0.45); text-transform:uppercase; white-space:nowrap; }
 .game-clock {
-  font-family:'Teko',sans-serif; font-size:2.92vw; font-weight:700; color:#fff;
-  letter-spacing:0.16vw; line-height:1; transition:color 0.3s;
-  font-variant-numeric:tabular-nums; white-space:nowrap; width:8.33vw; text-align:center;
+  font-family:'Teko',sans-serif; font-size:56px; font-weight:700; color:#fff;
+  letter-spacing:3px; line-height:1; transition:color 0.3s;
+  font-variant-numeric:tabular-nums; white-space:nowrap; width:160px; text-align:center;
 }
 .game-clock.warn { color:#ff5f5f; }
-.shot-row { display:flex; align-items:center; gap:0.26vw; }
-.shot-label { font-size:0.57vw; font-weight:800; color:#8a95a8; letter-spacing:0.1vw; text-transform:uppercase; }
-.shot-num { font-family:'Teko',sans-serif; font-size:1.35vw; font-weight:700; color:#f5c842; letter-spacing:0.05vw; width:1.88vw; text-align:center; line-height:1; font-variant-numeric:tabular-nums; }
+.shot-row { display:flex; align-items:center; gap:5px; }
+.shot-label { font-size:11px; font-weight:800; color:#8a95a8; letter-spacing:2px; text-transform:uppercase; }
+.shot-num { font-family:'Teko',sans-serif; font-size:26px; font-weight:700; color:#f5c842; letter-spacing:1px; width:36px; text-align:center; line-height:1; font-variant-numeric:tabular-nums; }
 .shot-num.urgent { color:#e84040; animation:scPulse 0.45s ease infinite alternate; }
 @keyframes scPulse { to { opacity:0.4; } }
 
-.right-panel { flex:1; display:flex; align-items:stretch; border-left:1px solid rgba(255,255,255,0.07); height:5.83vw; }
-.live-seg { display:flex; align-items:center; gap:0.42vw; padding:0 0.94vw; border-right:1px solid rgba(255,255,255,0.07); }
-.live-dot { width:0.36vw; height:0.36vw; border-radius:50%; background:#e84040; box-shadow:0 0 0.42vw #e84040; animation:livePulse 1.2s ease infinite; }
+.right-panel { flex:1; display:flex; align-items:stretch; border-left:1px solid rgba(255,255,255,0.07); height:112px; }
+.live-seg { display:flex; align-items:center; gap:8px; padding:0 18px; border-right:1px solid rgba(255,255,255,0.07); }
+.live-dot { width:7px; height:7px; border-radius:50%; background:#e84040; box-shadow:0 0 8px #e84040; animation:livePulse 1.2s ease infinite; }
 @keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.6)} }
-.live-text { font-size:0.52vw; font-weight:800; letter-spacing:0.16vw; color:rgba(255,255,255,0.5); text-transform:uppercase; }
+.live-text { font-size:10px; font-weight:800; letter-spacing:3px; color:rgba(255,255,255,0.5); text-transform:uppercase; }
 
-.rp-seg { display:flex; flex-direction:column; justify-content:center; padding:0 0.94vw; border-right:1px solid rgba(255,255,255,0.07); flex:1; }
-.rp-title { font-size:0.52vw; font-weight:800; letter-spacing:0.13vw; color:rgba(255,255,255,0.3); text-transform:uppercase; margin-bottom:0.05vw; }
-.rp-val { font-family:'Teko',sans-serif; font-size:1.46vw; font-weight:700; color:#fff; letter-spacing:0.05vw; line-height:1; }
+.rp-seg { display:flex; flex-direction:column; justify-content:center; padding:0 18px; border-right:1px solid rgba(255,255,255,0.07); flex:1; }
+.rp-title { font-size:10px; font-weight:800; letter-spacing:2.5px; color:rgba(255,255,255,0.3); text-transform:uppercase; margin-bottom:1px; }
+.rp-val { font-family:'Teko',sans-serif; font-size:28px; font-weight:700; color:#fff; letter-spacing:1px; line-height:1; }
 
 @keyframes scoreBump {
   0%  { transform:scale(1); color:#fff; }
@@ -191,10 +179,6 @@ const DEF = {
 const PERIODS = ['1ST','2ND','3RD','4TH','OT','2OT'];
 let S = {...DEF};
 
-function load(){
-  try{ const r=localStorage.getItem('bball_v3'); if(r) S={...DEF,...JSON.parse(r)}; }catch(e){}
-}
-
 function render(){
   s('homeAbbrOv',  S.homeAbbr.toUpperCase());
   s('homeRecordOv',S.homeRecord);
@@ -222,58 +206,27 @@ function render(){
 
 function s(id,val){ const e=document.getElementById(id); if(e) e.textContent=val; }
 
-// ── BUZZER ──
-const AudioCtx = window.AudioContext || window.webkitAudioContext;
-let audioCtx = null;
-function getAudioCtx(){ if(!audioCtx) audioCtx = new AudioCtx(); if(audioCtx.state==='suspended') audioCtx.resume(); return audioCtx; }
-document.addEventListener('click',      ()=>getAudioCtx(), {passive:true});
-document.addEventListener('touchstart', ()=>getAudioCtx(), {passive:true});
-
+// ── BUZZER — real MP3 ──
 function playGameBuzzer(){
   const audio = new Audio('/buzzer.mp3');
   audio.volume = 1.0;
   audio.play().catch(()=>{});
 }
 
-
-
-
 function playShotBuzzer(){
-  try {
-    const ctx = getAudioCtx();
-    const dur = 1.5;
-    const layers = [
-      { type: 'square',   freq: 440,  gain: 0.5  },
-      { type: 'square',   freq: 220,  gain: 0.45 },
-      { type: 'sawtooth', freq: 880,  gain: 0.2  },
-      { type: 'sawtooth', freq: 110,  gain: 0.3  },
-    ];
-    layers.forEach(({ type, freq, gain: gVal }) => {
-      const osc=ctx.createOscillator(),gain=ctx.createGain(),dist=ctx.createWaveShaper();
-      const curve=new Float32Array(256); for(let i=0;i<256;i++){const x=(i*2/256)-1;curve[i]=Math.tanh(x*8);} dist.curve=curve;
-      osc.connect(dist);dist.connect(gain);gain.connect(ctx.destination);
-      osc.type=type; osc.frequency.setValueAtTime(freq,ctx.currentTime); osc.frequency.linearRampToValueAtTime(freq*0.90,ctx.currentTime+dur);
-      gain.gain.setValueAtTime(0,ctx.currentTime); gain.gain.linearRampToValueAtTime(gVal,ctx.currentTime+0.01);
-      gain.gain.setValueAtTime(gVal,ctx.currentTime+dur-0.08); gain.gain.linearRampToValueAtTime(0,ctx.currentTime+dur);
-      osc.start(ctx.currentTime); osc.stop(ctx.currentTime+dur);
-    });
-  }catch(e){}
-},{type:'sawtooth',freq:58,g:0.35}].forEach(({type,freq,g})=>{
-      const osc=ctx.createOscillator(),gain=ctx.createGain(),dist=ctx.createWaveShaper();
-      const curve=new Float32Array(256); for(let i=0;i<256;i++){const x=(i*2/256)-1;curve[i]=Math.tanh(x*4);} dist.curve=curve;
-      osc.connect(dist);dist.connect(gain);gain.connect(ctx.destination);
-      osc.type=type; osc.frequency.setValueAtTime(freq,ctx.currentTime); osc.frequency.linearRampToValueAtTime(freq*0.96,ctx.currentTime+dur);
-      gain.gain.setValueAtTime(0,ctx.currentTime); gain.gain.linearRampToValueAtTime(g,ctx.currentTime+0.02);
-      gain.gain.setValueAtTime(g,ctx.currentTime+dur-0.2); gain.gain.linearRampToValueAtTime(0,ctx.currentTime+dur);
-      osc.start(ctx.currentTime); osc.stop(ctx.currentTime+dur);
-    });
-  }catch(e){}
+  const audio = new Audio('/buzzer.mp3');
+  audio.volume = 1.0;
+  audio.play().catch(()=>{});
 }
 
-// SSE — server pushes instantly on every change
-// Auto-init audio immediately — OBS grants audio without user gesture
-window.addEventListener('load', () => { getAudioCtx(); });
+// Auto-init for OBS — pre-load MP3 silently on page load
+window.addEventListener('load', () => {
+  const audio = new Audio('/buzzer.mp3');
+  audio.volume = 0;
+  audio.play().then(()=>{ audio.pause(); audio.currentTime=0; }).catch(()=>{});
+});
 
+// SSE
 function connectSSE() {
   const es = new EventSource('/events');
   es.onmessage = (e) => {
@@ -286,7 +239,6 @@ function connectSSE() {
   es.onerror = () => { es.close(); setTimeout(connectSSE, 2000); };
 }
 
-// Load initial state then connect SSE
 fetch('/state').then(r=>r.json()).then(data=>{
   if(Object.keys(data).length){ S={...DEF,...data}; render(); }
 }).catch(()=>{}).finally(()=>{ connectSSE(); });
