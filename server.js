@@ -11,6 +11,7 @@ const ROUTES = {
   '/':              'basketball-scoreboard.html',
   '/control':       'basketball-scoreboard.html',
   '/overlay':       'basketball-overlay.html',
+  '/nbaoverlay':    'basketball-nbaoverlay.html',
   '/mobile-overlay':'mobile-overlay.html',
   '/display':       'scoreboard-display.html',
   '/manifest.json': 'manifest.json',
