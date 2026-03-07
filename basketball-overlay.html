@@ -41,12 +41,12 @@ body { background: transparent; font-family: 'Barlow Condensed', sans-serif; }
 
 .logo-circle {
   width:150px; height:150px; border-radius:50%;
-  background:#000; border:3px solid rgba(255,255,255,0.15);
+  background:#111; border:4px solid rgba(255,255,255,0.15);
   display:flex; align-items:center; justify-content:center;
   overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.8);
   position:relative; z-index:9999;
 }
-.logo-circle img { width:150px; height:150px; object-fit:cover; }
+.logo-circle img { width:134px; height:134px; object-fit:contain; }
 .logo-ph { font-size:9px; font-weight:700; color:rgba(255,255,255,0.25); text-transform:uppercase; text-align:center; line-height:1.3; }
 
 .team-text { display:flex; flex-direction:column; justify-content:center; padding:0 4px; flex-shrink:0; }
@@ -253,8 +253,8 @@ function render(){
   // Apply team colors to logo borders
   const hCircle = document.getElementById('homeLogoOv');
   const aCircle = document.getElementById('awayLogoOv');
-  if(hCircle) hCircle.style.border = `3px solid ${S.homeColor || '#f5c842'}`;
-  if(aCircle) aCircle.style.border = `3px solid ${S.awayColor || '#c8102e'}`;
+  if(hCircle){ hCircle.style.border = `5px solid ${S.homeColor || '#f5c842'}`; hCircle.style.boxShadow = `0 0 12px ${S.homeColor || '#f5c842'}, 0 4px 24px rgba(0,0,0,0.8)`; }
+  if(aCircle){ aCircle.style.border = `5px solid ${S.awayColor || '#c8102e'}`; aCircle.style.boxShadow = `0 0 12px ${S.awayColor || '#c8102e'}, 0 4px 24px rgba(0,0,0,0.8)`; }
 
   // Possession arrows
   const homeArrow = document.getElementById('possArrowHome');
