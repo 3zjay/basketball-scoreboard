@@ -12,6 +12,8 @@ const ROUTES = {
   '/control': 'basketball-scoreboard.html',
   '/overlay': 'basketball-overlay.html',
   '/display': 'scoreboard-display.html',
+  '/manifest.json': 'manifest.json',
+  '/sw.js':         'sw.js',
 };
 
 function pushToAll(payload) {
@@ -104,12 +106,14 @@ http.createServer((req, res) => {
     return;
   }
 
-  // Serve HTML files
+  // Serve static files
   const fileName = ROUTES[req.url];
   if (fileName) {
     const filePath = path.join(__dirname, fileName);
     if (fs.existsSync(filePath)) {
-      res.writeHead(200, { 'Content-Type': 'text/html' });
+      const ext = path.extname(fileName);
+      const types = { '.html':'text/html', '.json':'application/json', '.js':'application/javascript' };
+      res.writeHead(200, { 'Content-Type': types[ext] || 'text/plain' });
       res.end(fs.readFileSync(filePath));
       return;
     }
