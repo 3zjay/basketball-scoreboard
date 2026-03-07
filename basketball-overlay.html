@@ -202,6 +202,12 @@ function render(){
 
   if(S.homeLogo){ const e=document.getElementById('homeLogoOv'); if(e) e.innerHTML=`<img src="${S.homeLogo}" alt="">`; }
   if(S.awayLogo){ const e=document.getElementById('awayLogoOv'); if(e) e.innerHTML=`<img src="${S.awayLogo}" alt="">`; }
+
+  // Apply team colors to logo borders
+  const hCircle = document.getElementById('homeLogoOv');
+  const aCircle = document.getElementById('awayLogoOv');
+  if(hCircle) hCircle.style.border = `3px solid ${S.homeColor || '#f5c842'}`;
+  if(aCircle) aCircle.style.border = `3px solid ${S.awayColor || '#c8102e'}`;
 }
 
 function s(id,val){ const e=document.getElementById(id); if(e) e.textContent=val; }

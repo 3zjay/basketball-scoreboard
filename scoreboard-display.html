@@ -458,11 +458,15 @@ function render() {
     hlEl.innerHTML = S.homeLogo
       ? `<img src="${S.homeLogo}" alt="">`
       : `<div class="poss-logo-ph">${(S.homeAbbr||'HOME').substring(0,3).toUpperCase()}</div>`;
+    hlEl.style.border = `2px solid ${S.homeColor || '#f5c842'}`;
+    hlEl.style.boxShadow = S.possession === 'home' ? `0 0 10px ${S.homeColor || '#f5c842'}` : '';
   }
   if (alEl) {
     alEl.innerHTML = S.awayLogo
       ? `<img src="${S.awayLogo}" alt="">`
       : `<div class="poss-logo-ph">${(S.awayAbbr||'AWAY').substring(0,3).toUpperCase()}</div>`;
+    alEl.style.border = `2px solid ${S.awayColor || '#c8102e'}`;
+    alEl.style.boxShadow = S.possession === 'away' ? `0 0 10px ${S.awayColor || '#c8102e'}` : '';
   }
 }
 

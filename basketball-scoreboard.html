@@ -152,7 +152,10 @@ body {
 .inp-row { display:flex;gap:8px;margin-top:6px; }
 .inp.rec { width:90px;flex-shrink:0; }
 .inp.col { width:44px;height:38px;padding:2px;cursor:pointer;border-radius:7px;flex-shrink:0; }
-input[type="color"] { -webkit-appearance:none; }
+/* Hide number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+input[type="number"] { -moz-appearance: textfield; }
 
 /* Score display */
 .score-display {
@@ -175,7 +178,7 @@ input[type="color"] { -webkit-appearance:none; }
 }
 .score-label { font-size:10px;font-weight:800;letter-spacing:2px;color:var(--text3);text-transform:uppercase; }
 
-.score-btns { display:grid;grid-template-columns:repeat(4,1fr);gap:6px; }
+.score-btns { display:grid;grid-template-columns:repeat(6,1fr);gap:6px; }
 
 .btn {
   border-radius: 8px;
@@ -411,7 +414,7 @@ body.light .reset-btn:hover { background:#fee2e2; }
   .settings-grid { grid-template-columns: 1fr; gap: 12px; }
 
   .score-big { font-size: 44px; }
-  .score-btns { grid-template-columns: repeat(4,1fr); gap: 5px; }
+  .score-btns { grid-template-columns: repeat(6,1fr); gap: 5px; }
   .btn { font-size: 14px; padding: 12px 4px; }
 
   .clock-display { font-size: 36px; }
@@ -487,7 +490,9 @@ body.light .reset-btn:hover { background:#fee2e2; }
         </div>
       </div>
       <div class="score-display">
-        <div class="score-big" id="homeScoreCtrl">0</div>
+        <input type="number" class="score-big" id="homeScoreCtrl" value="0" min="0" max="999"
+          oninput="setScoreDirect('home',this.value)"
+          style="background:none;border:none;outline:none;width:100%;color:var(--text);font-family:'Teko',sans-serif;font-size:56px;font-weight:700;letter-spacing:1px;line-height:1;-moz-appearance:textfield;">
         <div class="score-label">Score</div>
       </div>
       <div class="score-btns">
@@ -495,6 +500,8 @@ body.light .reset-btn:hover { background:#fee2e2; }
         <button class="btn b" onclick="addScore('home',2)">+2</button>
         <button class="btn y" onclick="addScore('home',3)">+3</button>
         <button class="btn r" onclick="addScore('home',-1)">−1</button>
+        <button class="btn r" onclick="addScore('home',-2)">−2</button>
+        <button class="btn r" onclick="addScore('home',-3)">−3</button>
       </div>
     </div>
   </div>
@@ -521,7 +528,9 @@ body.light .reset-btn:hover { background:#fee2e2; }
         </div>
       </div>
       <div class="score-display">
-        <div class="score-big" id="awayScoreCtrl">0</div>
+        <input type="number" class="score-big" id="awayScoreCtrl" value="0" min="0" max="999"
+          oninput="setScoreDirect('away',this.value)"
+          style="background:none;border:none;outline:none;width:100%;color:var(--text);font-family:'Teko',sans-serif;font-size:56px;font-weight:700;letter-spacing:1px;line-height:1;-moz-appearance:textfield;">
         <div class="score-label">Score</div>
       </div>
       <div class="score-btns">
@@ -529,6 +538,8 @@ body.light .reset-btn:hover { background:#fee2e2; }
         <button class="btn b" onclick="addScore('away',2)">+2</button>
         <button class="btn y" onclick="addScore('away',3)">+3</button>
         <button class="btn r" onclick="addScore('away',-1)">−1</button>
+        <button class="btn r" onclick="addScore('away',-2)">−2</button>
+        <button class="btn r" onclick="addScore('away',-3)">−3</button>
       </div>
     </div>
   </div>
@@ -652,6 +663,16 @@ body.light .reset-btn:hover { background:#fee2e2; }
   OBS Browser Source → <a href="https://basketball-scoreboard-o0c7.onrender.com/overlay" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/overlay</a> → 1920 × 160
   &nbsp;·&nbsp;
   Big Screen → <a href="https://basketball-scoreboard-o0c7.onrender.com/display" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/display</a>
+  <br style="margin-top:8px;">
+  <span style="color:var(--text2);font-size:10px;letter-spacing:1px;">
+    ⌨️ &nbsp;HOME: <span style="color:var(--accent)">Q</span>+1 &nbsp;<span style="color:var(--accent)">W</span>+2 &nbsp;<span style="color:var(--accent)">E</span>+3 &nbsp;<span style="color:var(--accent)">A</span>−1 &nbsp;<span style="color:var(--accent)">S</span>−2 &nbsp;&nbsp;
+    AWAY: <span style="color:var(--accent)">U</span>+1 &nbsp;<span style="color:var(--accent)">I</span>+2 &nbsp;<span style="color:var(--accent)">O</span>+3 &nbsp;<span style="color:var(--accent)">J</span>−1 &nbsp;<span style="color:var(--accent)">K</span>−2 &nbsp;&nbsp;
+    GAME CLOCK: <span style="color:var(--accent)">SPACE</span> &nbsp;&nbsp;
+    SHOT CLOCK: <span style="color:var(--accent)">ENTER</span> &nbsp;
+    RESET 24: <span style="color:var(--accent)">R</span> &nbsp;
+    RESET 14: <span style="color:var(--accent)">T</span> &nbsp;
+    BUZZER: <span style="color:var(--accent)">B</span>
+  </span>
 </div>
 
 <!-- iOS Install Banner -->
@@ -704,8 +725,11 @@ const PERIODS=['1ST','2ND','3RD','4TH','OT','2OT'];
 const QTRS=[1,2,3,4,'OT','2OT'];
 
 function renderAll(){
-  t('homeScoreCtrl', S.homeScore);
-  t('awayScoreCtrl', S.awayScore);
+  // Score inputs — use .value not .textContent
+  const hScoreEl = document.getElementById('homeScoreCtrl');
+  const aScoreEl = document.getElementById('awayScoreCtrl');
+  if(hScoreEl && document.activeElement !== hScoreEl) hScoreEl.value = S.homeScore;
+  if(aScoreEl && document.activeElement !== aScoreEl) aScoreEl.value = S.awayScore;
 
   const qL = typeof S.quarter==='number' ? (PERIODS[S.quarter-1]||`Q${S.quarter}`) : S.quarter;
   document.querySelectorAll('.qbtn').forEach(b=>b.classList.toggle('active', b.textContent===qL));
@@ -768,9 +792,18 @@ function renderPossession(){
   if(al) al.textContent=(S.awayAbbr||'AWAY').toUpperCase();
 }
 
+function setScoreDirect(team, val){
+  const n = parseInt(val);
+  if(isNaN(n) || n < 0) return;
+  S[team+'Score'] = n;
+  save();
+}
+
 // Scores
 function addScore(team,pts){
   S[team+'Score']=Math.max(0,S[team+'Score']+pts);
+  const el = document.getElementById(team+'ScoreCtrl');
+  if(el) el.value = S[team+'Score'];
   bump(team+'ScoreCtrl');
   save(); renderAll();
 }
@@ -792,7 +825,33 @@ function updateColors(){
 }
 function updateBarColor(){ S.barColor=document.getElementById('barColorIn').value; save(); }
 
-// Logos — resize to 200x200 before syncing to keep payload small
+// Dominant color extraction from logo
+function getDominantColor(canvas){
+  const ctx = canvas.getContext('2d');
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const colorMap = {};
+  for(let i = 0; i < data.length; i += 4){
+    const a = data[i+3];
+    if(a < 128) continue; // skip transparent pixels
+    const r = Math.round(data[i]   / 32) * 32;
+    const g = Math.round(data[i+1] / 32) * 32;
+    const b = Math.round(data[i+2] / 32) * 32;
+    // Skip near-white and near-black
+    if(r > 220 && g > 220 && b > 220) continue;
+    if(r < 30  && g < 30  && b < 30)  continue;
+    const key = `${r},${g},${b}`;
+    colorMap[key] = (colorMap[key] || 0) + 1;
+  }
+  let maxCount = 0, dominant = null;
+  for(const [key, count] of Object.entries(colorMap)){
+    if(count > maxCount){ maxCount = count; dominant = key; }
+  }
+  if(!dominant) return null;
+  const [r,g,b] = dominant.split(',').map(Number);
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+
+// Logos — resize to 200x200, auto-detect dominant color
 function setLogo(team, input){
   const f = input.files[0]; if(!f) return;
   const r = new FileReader();
@@ -805,6 +864,15 @@ function setLogo(team, input){
       const resized = canvas.toDataURL('image/png');
       S[team+'Logo'] = resized;
       applyLogo(team, resized);
+
+      // Auto-detect and apply dominant color
+      const dominant = getDominantColor(canvas);
+      if(dominant){
+        S[team+'Color'] = dominant;
+        const colorInput = document.getElementById(team+'ColorIn');
+        if(colorInput) colorInput.value = dominant;
+      }
+
       save();
       fetch('/logo/' + team, {
         method: 'POST',
@@ -970,7 +1038,39 @@ function connectSSE(){
 }
 connectSSE();
 
-// iOS Install Banner — show if on iOS Safari and not already installed
+// ── KEYBOARD SHORTCUTS ──────────────────────────────────────
+// Home score:  Q=+1  W=+2  E=+3  A=−1  S=−2
+// Away score:  U=+1  I=+2  O=+3  J=−1  K=−2
+// Game clock:  Space = start/pause
+// Shot clock:  Enter = start/pause   R=reset 24   T=reset 14
+document.addEventListener('keydown', (e) => {
+  if(document.activeElement.tagName === 'INPUT') return; // don't fire while typing
+  switch(e.key.toLowerCase()){
+    // Home
+    case 'q': addScore('home', 1);  break;
+    case 'w': addScore('home', 2);  break;
+    case 'e': addScore('home', 3);  break;
+    case 'a': addScore('home', -1); break;
+    case 's': addScore('home', -2); break;
+    // Away
+    case 'u': addScore('away', 1);  break;
+    case 'i': addScore('away', 2);  break;
+    case 'o': addScore('away', 3);  break;
+    case 'j': addScore('away', -1); break;
+    case 'k': addScore('away', -2); break;
+    // Clocks
+    case ' ':
+      e.preventDefault();
+      toggleGameClock(); break;
+    case 'enter':
+      e.preventDefault();
+      toggleShotClock(); break;
+    case 'r': resetShot(24); break;
+    case 't': resetShot(14); break;
+    // Buzzer
+    case 'b': refBuzzer(); break;
+  }
+}); — show if on iOS Safari and not already installed
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isInStandaloneMode = window.navigator.standalone === true;
 const iosDismissed = localStorage.getItem('iosBannerDismissed');
