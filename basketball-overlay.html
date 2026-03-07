@@ -91,6 +91,25 @@ body { background: transparent; font-family: 'Barlow Condensed', sans-serif; }
 .rp-title { font-size:10px; font-weight:800; letter-spacing:2.5px; color:rgba(255,255,255,0.3); text-transform:uppercase; margin-bottom:1px; }
 .rp-val { font-family:'Teko',sans-serif; font-size:28px; font-weight:700; color:#fff; letter-spacing:1px; line-height:1; }
 
+/* Possession arrows on overlay */
+.poss-arrow-ov {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.3s, filter 0.3s;
+}
+.poss-arrow-ov.on {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px #ff8800) drop-shadow(0 0 12px #ff6600) drop-shadow(0 0 22px #ff4400);
+  animation: arrowBounce 0.8s ease-in-out infinite alternate;
+}
+@keyframes arrowBounce {
+  from { transform: translateX(0); }
+  to   { transform: translateX(4px); }
+}
 @keyframes scoreBump {
   0%  { transform:scale(1); color:#fff; }
   40% { transform:scale(1.2); color:#f5c842; }
@@ -116,6 +135,20 @@ body { background: transparent; font-family: 'Barlow Condensed', sans-serif; }
         </div>
       </div>
 
+      <!-- HOME POSSESSION ARROW -->
+      <div class="poss-arrow-ov home" id="possArrowHome">
+        <svg viewBox="0 0 60 42" width="28" height="20">
+          <defs>
+            <radialGradient id="arrowGlowOvHome" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="40%" stop-color="#ffcc00"/>
+              <stop offset="100%" stop-color="#ff6600"/>
+            </radialGradient>
+          </defs>
+          <polygon points="56,21 4,3 4,39" fill="url(#arrowGlowOvHome)"/>
+        </svg>
+      </div>
+
       <div class="score-block">
         <div class="score-num" id="homeScoreOv">0</div>
       </div>
@@ -132,6 +165,20 @@ body { background: transparent; font-family: 'Barlow Condensed', sans-serif; }
 
       <div class="score-block">
         <div class="score-num" id="awayScoreOv">0</div>
+      </div>
+
+      <!-- AWAY POSSESSION ARROW -->
+      <div class="poss-arrow-ov away" id="possArrowAway">
+        <svg viewBox="0 0 60 42" width="28" height="20">
+          <defs>
+            <radialGradient id="arrowGlowOvAway" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="40%" stop-color="#ffcc00"/>
+              <stop offset="100%" stop-color="#ff6600"/>
+            </radialGradient>
+          </defs>
+          <polygon points="4,21 56,3 56,39" fill="url(#arrowGlowOvAway)"/>
+        </svg>
       </div>
 
       <!-- AWAY -->
@@ -171,6 +218,7 @@ const DEF = {
   homeAbbr:'HOME', homeRecord:'0-0', homeColor:'#f5c842', homeLogo:null,
   awayAbbr:'AWAY', awayRecord:'0-0', awayColor:'#c8102e', awayLogo:null,
   quarter:1, gameSeconds:600, shotSeconds:24,
+  possession: null,
   rp1Title:'BROADCAST', rp1Value:'—',
   rp2Title:'VENUE',     rp2Value:'—',
   barColor:'#0d1117',
@@ -208,6 +256,12 @@ function render(){
   const aCircle = document.getElementById('awayLogoOv');
   if(hCircle) hCircle.style.border = `3px solid ${S.homeColor || '#f5c842'}`;
   if(aCircle) aCircle.style.border = `3px solid ${S.awayColor || '#c8102e'}`;
+
+  // Possession arrows
+  const homeArrow = document.getElementById('possArrowHome');
+  const awayArrow = document.getElementById('possArrowAway');
+  if(homeArrow) homeArrow.classList.toggle('on', S.possession === 'home');
+  if(awayArrow) awayArrow.classList.toggle('on', S.possession === 'away');
 }
 
 function s(id,val){ const e=document.getElementById(id); if(e) e.textContent=val; }
