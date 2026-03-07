@@ -104,12 +104,11 @@ body { background: transparent; font-family: 'Barlow Condensed', sans-serif; }
 .poss-arrow-ov.on {
   opacity: 1;
   filter: drop-shadow(0 0 5px #ff8800) drop-shadow(0 0 12px #ff6600) drop-shadow(0 0 22px #ff4400);
-  animation: arrowBounce 0.8s ease-in-out infinite alternate;
 }
-@keyframes arrowBounce {
-  from { transform: translateX(0); }
-  to   { transform: translateX(4px); }
-}
+.poss-arrow-ov.home.on { animation: arrowBounceLeft  0.8s ease-in-out infinite alternate; }
+.poss-arrow-ov.away.on { animation: arrowBounceRight 0.8s ease-in-out infinite alternate; }
+@keyframes arrowBounceLeft  { from{transform:translateX(0)} to{transform:translateX(-4px)} }
+@keyframes arrowBounceRight { from{transform:translateX(0)} to{transform:translateX( 4px)} }
 @keyframes scoreBump {
   0%  { transform:scale(1); color:#fff; }
   40% { transform:scale(1.2); color:#f5c842; }
@@ -145,7 +144,7 @@ body { background: transparent; font-family: 'Barlow Condensed', sans-serif; }
               <stop offset="100%" stop-color="#ff6600"/>
             </radialGradient>
           </defs>
-          <polygon points="56,21 4,3 4,39" fill="url(#arrowGlowOvHome)"/>
+          <polygon points="4,21 56,3 56,39" fill="url(#arrowGlowOvHome)"/>
         </svg>
       </div>
 
@@ -177,7 +176,7 @@ body { background: transparent; font-family: 'Barlow Condensed', sans-serif; }
               <stop offset="100%" stop-color="#ff6600"/>
             </radialGradient>
           </defs>
-          <polygon points="4,21 56,3 56,39" fill="url(#arrowGlowOvAway)"/>
+          <polygon points="56,21 4,3 4,39" fill="url(#arrowGlowOvAway)"/>
         </svg>
       </div>
 
