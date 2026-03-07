@@ -11,11 +11,13 @@ const ROUTES = {
   '/':              'basketball-scoreboard.html',
   '/control':       'basketball-scoreboard.html',
   '/overlay':       'basketball-overlay.html',
+  '/mobile-overlay':'mobile-overlay.html',
   '/display':       'scoreboard-display.html',
   '/manifest.json': 'manifest.json',
   '/sw.js':         'sw.js',
   '/icon-192.png':  'icon-192.png',
   '/icon-512.png':  'icon-512.png',
+  '/buzzer.mp3':    'buzzer.mp3',
 };
 
 function pushToAll(payload) {
@@ -114,7 +116,7 @@ http.createServer((req, res) => {
     const filePath = path.join(__dirname, fileName);
     if (fs.existsSync(filePath)) {
       const ext = path.extname(fileName);
-      const types = { '.html':'text/html', '.json':'application/json', '.js':'application/javascript', '.png':'image/png' };
+      const types = { '.html':'text/html', '.json':'application/json', '.js':'application/javascript', '.png':'image/png', '.mp3':'audio/mpeg' };
       res.writeHead(200, { 'Content-Type': types[ext] || 'text/plain' });
       res.end(fs.readFileSync(filePath));
       return;
