@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Live Scoreboard Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: transparent;
+  font-family: 'Barlow Condensed', sans-serif;
+  overflow: hidden;
+}
+
+/* Full 1920x1080 canvas — bar sits at bottom */
+#overlay {
+  width: 1920px;
+  height: 1080px;
+  display: flex;
+  align-items: flex-end;
+  transform-origin: top left;
+  position: absolute;
+  top: 0; left: 0;
+}
+
+.bar {
+  width: 100%; height: 120px;
+  background: #0d1117;
+  border-top: 4px solid #c8102e;
+  border-bottom: 4px solid #c8102e;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  overflow: visible;
+  position: relative;
+}
+
+.bar-inner {
+  display: flex;
+  align-items: center;
+  width: 100%; height: 112px;
+  overflow: visible;
+  position: relative;
+}
+
+.team-seg { display:flex; align-items:center; padding:0 8px; flex-shrink:0; }
+.team-seg.home { flex-direction:row; padding-left:14px; }
+.team-seg.away { flex-direction:row-reverse; padding-right:14px; }
+
+.record { font-size:13px; font-weight:700; color:#8a95a8; letter-spacing:0.5px; padding:0 10px; white-space:nowrap; width:60px; text-align:center; flex-shrink:0; }
+
+.logo-wrap { width:150px; height:150px; flex-shrink:0; margin:0 6px; position:relative; z-index:9999; }
+
+.logo-circle {
+  width:150px; height:150px; border-radius:50%;
+  background:#111; border:4px solid rgba(255,255,255,0.15);
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.8);
+  position:relative; z-index:9999;
+}
+.logo-circle img { width:134px; height:134px; object-fit:contain; }
+.logo-ph { font-size:9px; font-weight:700; color:rgba(255,255,255,0.25); text-transform:uppercase; text-align:center; line-height:1.3; }
+
+.team-text { display:flex; flex-direction:column; justify-content:center; padding:0 4px; flex-shrink:0; }
+.team-seg.away .team-text { align-items:flex-end; }
+.team-abbrev { font-family:'Teko',sans-serif; font-size:32px; font-weight:700; color:#fff; letter-spacing:1px; line-height:1; text-transform:uppercase; white-space:nowrap; }
+
+.score-block {
+  display:flex; align-items:center; justify-content:center;
+  background:#161b26; height:112px; width:110px; flex-shrink:0;
+  border-left:1px solid rgba(255,255,255,0.07);
+  border-right:1px solid rgba(255,255,255,0.07);
+}
+.score-num { font-family:'Teko',sans-serif; font-size:80px; font-weight:700; color:#fff; letter-spacing:1px; line-height:1; width:100%; text-align:center; font-variant-numeric:tabular-nums; }
+
+.center-block {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:0 22px; gap:2px;
+  border-left:1px solid rgba(255,255,255,0.07);
+  border-right:1px solid rgba(255,255,255,0.07);
+  background:#161b26; width:200px; flex-shrink:0; height:112px;
+}
+.period-badge { font-size:13px; font-weight:800; letter-spacing:3px; color:rgba(255,255,255,0.45); text-transform:uppercase; white-space:nowrap; }
+.game-clock {
+  font-family:'Teko',sans-serif; font-size:56px; font-weight:700; color:#fff;
+  letter-spacing:3px; line-height:1; transition:color 0.3s;
+  font-variant-numeric:tabular-nums; white-space:nowrap; width:160px; text-align:center;
+}
+.game-clock.warn { color:#ff5f5f; }
+.shot-row { display:flex; align-items:center; gap:5px; }
+.shot-label { font-size:11px; font-weight:800; color:#8a95a8; letter-spacing:2px; text-transform:uppercase; }
+.shot-num { font-family:'Teko',sans-serif; font-size:26px; font-weight:700; color:#f5c842; letter-spacing:1px; width:36px; text-align:center; line-height:1; font-variant-numeric:tabular-nums; }
+.shot-num.urgent { color:#e84040; animation:scPulse 0.45s ease infinite alternate; }
+@keyframes scPulse { to { opacity:0.4; } }
+
+.right-panel { flex:1; display:flex; align-items:stretch; border-left:1px solid rgba(255,255,255,0.07); height:112px; }
+.live-seg { display:flex; align-items:center; gap:8px; padding:0 18px; border-right:1px solid rgba(255,255,255,0.07); }
+.live-dot { width:7px; height:7px; border-radius:50%; background:#e84040; box-shadow:0 0 8px #e84040; animation:livePulse 1.2s ease infinite; }
+@keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.6)} }
+.live-text { font-size:10px; font-weight:800; letter-spacing:3px; color:rgba(255,255,255,0.5); text-transform:uppercase; }
+
+.rp-seg { display:flex; flex-direction:column; justify-content:center; padding:0 18px; border-right:1px solid rgba(255,255,255,0.07); flex:1; }
+.rp-title { font-size:10px; font-weight:800; letter-spacing:2.5px; color:rgba(255,255,255,0.3); text-transform:uppercase; margin-bottom:1px; }
+.rp-val { font-family:'Teko',sans-serif; font-size:28px; font-weight:700; color:#fff; letter-spacing:1px; line-height:1; }
+
+/* Possession arrows on overlay */
+.poss-arrow-ov {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.3s, filter 0.3s;
+}
+.poss-arrow-ov.on {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px #ff8800) drop-shadow(0 0 12px #ff6600) drop-shadow(0 0 22px #ff4400);
+}
+.poss-arrow-ov.home.on { animation: arrowBounceLeft  0.8s ease-in-out infinite alternate; }
+.poss-arrow-ov.away.on { animation: arrowBounceRight 0.8s ease-in-out infinite alternate; }
+@keyframes arrowBounceLeft  { from{transform:translateX(0)} to{transform:translateX(-4px)} }
+@keyframes arrowBounceRight { from{transform:translateX(0)} to{transform:translateX( 4px)} }
+@keyframes scoreBump {
+  0%  { transform:scale(1); color:#fff; }
+  40% { transform:scale(1.2); color:#f5c842; }
+  100%{ transform:scale(1); color:#fff; }
+}
+.bump { animation:scoreBump 0.38s ease; }
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div class="bar" id="mainBar">
+    <div class="bar-inner">
+
+      <!-- HOME -->
+      <div class="team-seg home">
+        <div class="record" id="homeRecordOv">0-0</div>
+        <div class="logo-wrap">
+          <div class="logo-circle" id="homeLogoOv"><div class="logo-ph">LOGO</div></div>
+        </div>
+        <div class="team-text">
+          <div class="team-abbrev" id="homeAbbrOv">HOME</div>
+        </div>
+      </div>
+
+      <!-- HOME POSSESSION ARROW -->
+      <div class="poss-arrow-ov home" id="possArrowHome">
+        <svg viewBox="0 0 60 42" width="28" height="20">
+          <defs>
+            <radialGradient id="arrowGlowOvHome" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="40%" stop-color="#ffcc00"/>
+              <stop offset="100%" stop-color="#ff6600"/>
+            </radialGradient>
+          </defs>
+          <polygon points="4,21 56,3 56,39" fill="url(#arrowGlowOvHome)"/>
+        </svg>
+      </div>
+
+      <div class="score-block">
+        <div class="score-num" id="homeScoreOv">0</div>
+      </div>
+
+      <!-- CENTER -->
+      <div class="center-block">
+        <div class="period-badge" id="periodOv">1ST</div>
+        <div class="game-clock" id="gameClkOv">10:00</div>
+        <div class="shot-row">
+          <div class="shot-label">SHOT</div>
+          <div class="shot-num" id="shotClkOv">24</div>
+        </div>
+      </div>
+
+      <div class="score-block">
+        <div class="score-num" id="awayScoreOv">0</div>
+      </div>
+
+      <!-- AWAY POSSESSION ARROW -->
+      <div class="poss-arrow-ov away" id="possArrowAway">
+        <svg viewBox="0 0 60 42" width="28" height="20">
+          <defs>
+            <radialGradient id="arrowGlowOvAway" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="40%" stop-color="#ffcc00"/>
+              <stop offset="100%" stop-color="#ff6600"/>
+            </radialGradient>
+          </defs>
+          <polygon points="56,21 4,3 4,39" fill="url(#arrowGlowOvAway)"/>
+        </svg>
+      </div>
+
+      <!-- AWAY -->
+      <div class="team-seg away">
+        <div class="team-text" style="align-items:flex-end;">
+          <div class="team-abbrev" id="awayAbbrOv">AWAY</div>
+        </div>
+        <div class="logo-wrap">
+          <div class="logo-circle" id="awayLogoOv"><div class="logo-ph">LOGO</div></div>
+        </div>
+        <div class="record" id="awayRecordOv">0-0</div>
+      </div>
+
+      <!-- RIGHT PANEL -->
+      <div class="right-panel">
+        <div class="live-seg">
+          <div class="live-dot"></div>
+          <div class="live-text">LIVE</div>
+        </div>
+        <div class="rp-seg">
+          <div class="rp-title" id="rp1TOv">BROADCAST</div>
+          <div class="rp-val" id="rp1VOv">—</div>
+        </div>
+        <div class="rp-seg">
+          <div class="rp-title" id="rp2TOv">VENUE</div>
+          <div class="rp-val" id="rp2VOv">—</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const DEF = {
+  homeScore:0, awayScore:0,
+  homeAbbr:'HOME', homeRecord:'0-0', homeColor:'#f5c842', homeLogo:null,
+  awayAbbr:'AWAY', awayRecord:'0-0', awayColor:'#c8102e', awayLogo:null,
+  quarter:1, gameSeconds:600, shotSeconds:24,
+  possession: null,
+  rp1Title:'BROADCAST', rp1Value:'—',
+  rp2Title:'VENUE',     rp2Value:'—',
+  barColor:'#0d1117',
+};
+
+const PERIODS = ['1ST','2ND','3RD','4TH','OT','2OT'];
+let S = {...DEF};
+
+function render(){
+  s('homeAbbrOv',  S.homeAbbr.toUpperCase());
+  s('homeRecordOv',S.homeRecord);
+  s('homeScoreOv', S.homeScore);
+  s('awayAbbrOv',  S.awayAbbr.toUpperCase());
+  s('awayRecordOv',S.awayRecord);
+  s('awayScoreOv', S.awayScore);
+
+  const qL = typeof S.quarter==='number' ? (PERIODS[S.quarter-1]||`Q${S.quarter}`) : S.quarter;
+  s('periodOv', qL);
+
+  const m=Math.floor(S.gameSeconds/60), sec=S.gameSeconds%60;
+  const clkEl=document.getElementById('gameClkOv');
+  if(clkEl){ clkEl.textContent=`${m}:${sec.toString().padStart(2,'0')}`; clkEl.className='game-clock'+(S.gameSeconds<=30?' warn':''); }
+
+  const shotEl=document.getElementById('shotClkOv');
+  if(shotEl){ shotEl.textContent=S.shotSeconds; shotEl.className='shot-num'+(S.shotSeconds<=5?' urgent':''); }
+
+  s('rp1TOv',S.rp1Title); s('rp1VOv',S.rp1Value);
+  s('rp2TOv',S.rp2Title); s('rp2VOv',S.rp2Value);
+
+  if(S.homeLogo){ const e=document.getElementById('homeLogoOv'); if(e) e.innerHTML=`<img src="${S.homeLogo}" alt="">`; }
+  if(S.awayLogo){ const e=document.getElementById('awayLogoOv'); if(e) e.innerHTML=`<img src="${S.awayLogo}" alt="">`; }
+
+  // Apply team colors to logo borders
+  const hCircle = document.getElementById('homeLogoOv');
+  const aCircle = document.getElementById('awayLogoOv');
+  if(hCircle){ hCircle.style.border = `5px solid ${S.homeColor || '#f5c842'}`; hCircle.style.boxShadow = `0 0 12px ${S.homeColor || '#f5c842'}, 0 4px 24px rgba(0,0,0,0.8)`; }
+  if(aCircle){ aCircle.style.border = `5px solid ${S.awayColor || '#c8102e'}`; aCircle.style.boxShadow = `0 0 12px ${S.awayColor || '#c8102e'}, 0 4px 24px rgba(0,0,0,0.8)`; }
+
+  // Possession arrows
+  const homeArrow = document.getElementById('possArrowHome');
+  const awayArrow = document.getElementById('possArrowAway');
+  if(homeArrow) homeArrow.classList.toggle('on', S.possession === 'home');
+  if(awayArrow) awayArrow.classList.toggle('on', S.possession === 'away');
+}
+
+function s(id,val){ const e=document.getElementById(id); if(e) e.textContent=val; }
+
+// ── BUZZER — real MP3 ──
+function playGameBuzzer(){
+  const audio = new Audio('/buzzer.mp3');
+  audio.volume = 1.0;
+  audio.play().catch(()=>{});
+}
+
+function playShotBuzzer(){
+  const audio = new Audio('/buzzer.mp3');
+  audio.volume = 1.0;
+  audio.play().catch(()=>{});
+}
+
+// Auto-init for OBS — pre-load MP3 silently on page load
+window.addEventListener('load', () => {
+  const audio = new Audio('/buzzer.mp3');
+  audio.volume = 0;
+  audio.play().then(()=>{ audio.pause(); audio.currentTime=0; }).catch(()=>{});
+});
+
+// SSE
+function connectSSE() {
+  const es = new EventSource('/events');
+  es.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if(msg.type === 'buzz'){ if(msg.kind==='game') playGameBuzzer(); else playShotBuzzer(); }
+      else if(msg.type === 'state'){ S={...DEF,...msg.data}; render(); }
+    } catch(err) {}
+  };
+  es.onerror = () => { es.close(); setTimeout(connectSSE, 2000); };
+}
+
+fetch('/state').then(r=>r.json()).then(data=>{
+  if(Object.keys(data).length){ S={...DEF,...data}; render(); }
+}).catch(()=>{}).finally(()=>{ connectSSE(); });
+
+// Scale overlay to fit viewport while keeping proportions
+function scaleOverlay(){
+  const el = document.getElementById('overlay');
+  const scaleX = window.innerWidth  / 1920;
+  const scaleY = window.innerHeight / 1080;
+  const scale  = Math.min(scaleX, scaleY);
+  el.style.transform = `scale(${scale})`;
+}
+window.addEventListener('resize', scaleOverlay);
+scaleOverlay();
+</script>
+</body>
+</html>
