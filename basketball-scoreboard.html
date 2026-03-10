@@ -665,7 +665,7 @@ body.light .reset-btn:hover { background:#fee2e2; }
             <select class="inp" id="rp1VIn" onchange="updateRP()" style="flex:1;">
               <option value="—">— None —</option>
               <option value="YouTube">YouTube</option>
-              <option value="Facebook">Facebook</option>
+              <option value="Facebook" selected>Facebook</option>
             </select>
             <button class="btn r" style="padding:0 10px;font-size:13px;" onclick="deleteCustomOption('rp1VIn','custom_rp1VIn')" title="Delete selected">🗑</button>
           </div>
@@ -679,8 +679,8 @@ body.light .reset-btn:hover { background:#fee2e2; }
           <div style="display:flex;gap:6px;margin-top:4px;">
             <select class="inp" id="rp2VIn" onchange="updateRP()" style="flex:1;">
               <option value="—">— None —</option>
-              <option value="DMC">DMC</option>
-              <option value="WillowWood School">WillowWood School</option>
+              <option value="DMC - 2467 Eglinton Ave E, Scarborough, ON M1K 2R1" selected>DMC</option>
+              <option value="WillowWood School - 55 Scarsdale Rd, North York, ON M3B 2R3">WillowWood School</option>
             </select>
             <button class="btn r" style="padding:0 10px;font-size:13px;" onclick="deleteCustomOption('rp2VIn','custom_rp2VIn')" title="Delete selected">🗑</button>
           </div>
@@ -739,8 +739,8 @@ const DEF = {
   quarter:1,
   gameSeconds:600, shotSeconds:24,
   gameRunning:false, shotRunning:false,
-  rp1Title:'BROADCAST', rp1Value:'—',
-  rp2Title:'VENUE', rp2Value:'—',
+  rp1Title:'BROADCAST', rp1Value:'Facebook',
+  rp2Title:'VENUE', rp2Value:'DMC - 2467 Eglinton Ave E, Scarborough, ON M1K 2R1',
   barColor:'#0d1117',
   possession:null
 };
@@ -1034,7 +1034,7 @@ function deleteCustomOption(selectId, storageKey){
     'homeAbbrIn': ['HARINA','KUY\'S RYAN','FREEDOM','BARBERCUTZ'],
     'awayAbbrIn': ['HARINA','KUY\'S RYAN','FREEDOM','BARBERCUTZ'],
     'rp1VIn': ['—','YouTube','Facebook'],
-    'rp2VIn': ['—','DMC','WillowWood School'],
+    'rp2VIn': ['—','DMC - 2467 Eglinton Ave E, Scarborough, ON M1K 2R1','WillowWood School - 55 Scarsdale Rd, North York, ON M3B 2R3'],
   };
   if((builtIn[selectId]||[]).includes(val)){
     alert('Built-in options cannot be deleted.');
