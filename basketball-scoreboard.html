@@ -481,8 +481,20 @@ body.light .reset-btn:hover { background:#fee2e2; }
         <input type="file" id="homeFile" accept="image/*" onchange="setLogo('home',this)" style="display:none;position:absolute;width:0;height:0;opacity:0;">
         <div class="field-group">
           <div class="field-label">Team Name</div>
-          <input class="inp" id="homeAbbrIn" value="HOME" placeholder="Team Name" oninput="updateTeam('home')" maxlength="20" style="text-transform:uppercase;">
-          <div class="inp-row">
+          <div style="display:flex;gap:6px;">
+            <select class="inp" id="homeAbbrIn" onchange="updateTeam('home')" style="text-transform:uppercase;flex:1;">
+              <option value="HARINA">HARINA</option>
+              <option value="KUY'S RYAN">KUY'S RYAN</option>
+              <option value="FREEDOM">FREEDOM</option>
+              <option value="BARBERCUTZ">BARBERCUTZ</option>
+            </select>
+            <button class="btn r" style="padding:0 10px;font-size:13px;" onclick="deleteCustomOption('homeAbbrIn','custom_teams')" title="Delete selected custom team">🗑</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <input class="inp" id="homeTeamCustom" placeholder="Custom team name..." style="flex:1;text-transform:uppercase;">
+            <button class="btn" style="padding:0 10px;font-size:12px;" onclick="saveCustomTeam('home')">Save</button>
+          </div>
+          <div class="inp-row" style="margin-top:6px;">
             <input class="inp rec" id="homeRecIn" value="0-0" placeholder="W-L" oninput="updateTeam('home')" maxlength="10">
             <input type="color" class="inp col" id="homeColorIn" value="#f5c842" onchange="updateColors()">
             <span style="font-size:11px;color:var(--text3);align-self:center;">Color</span>
@@ -519,8 +531,20 @@ body.light .reset-btn:hover { background:#fee2e2; }
         <input type="file" id="awayFile" accept="image/*" onchange="setLogo('away',this)" style="display:none;position:absolute;width:0;height:0;opacity:0;">
         <div class="field-group">
           <div class="field-label">Team Name</div>
-          <input class="inp" id="awayAbbrIn" value="AWAY" placeholder="Team Name" oninput="updateTeam('away')" maxlength="20" style="text-transform:uppercase;">
-          <div class="inp-row">
+          <div style="display:flex;gap:6px;">
+            <select class="inp" id="awayAbbrIn" onchange="updateTeam('away')" style="text-transform:uppercase;flex:1;">
+              <option value="HARINA">HARINA</option>
+              <option value="KUY'S RYAN">KUY'S RYAN</option>
+              <option value="FREEDOM">FREEDOM</option>
+              <option value="BARBERCUTZ">BARBERCUTZ</option>
+            </select>
+            <button class="btn r" style="padding:0 10px;font-size:13px;" onclick="deleteCustomOption('awayAbbrIn','custom_teams')" title="Delete selected custom team">🗑</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <input class="inp" id="awayTeamCustom" placeholder="Custom team name..." style="flex:1;text-transform:uppercase;">
+            <button class="btn" style="padding:0 10px;font-size:12px;" onclick="saveCustomTeam('away')">Save</button>
+          </div>
+          <div class="inp-row" style="margin-top:6px;">
             <input class="inp rec" id="awayRecIn" value="0-0" placeholder="W-L" oninput="updateTeam('away')" maxlength="10">
             <input type="color" class="inp col" id="awayColorIn" value="#c8102e" onchange="updateColors()">
             <span style="font-size:11px;color:var(--text3);align-self:center;">Color</span>
@@ -636,14 +660,34 @@ body.light .reset-btn:hover { background:#fee2e2; }
     <div class="card-body">
       <div class="settings-grid">
         <div>
-          <div class="sec-label">Info Label 1</div>
-          <input class="inp" style="margin-bottom:6px;" id="rp1TIn" value="BROADCAST" placeholder="Title" oninput="updateRP()">
-          <input class="inp" id="rp1VIn" value="—" placeholder="Value" oninput="updateRP()">
+          <div class="sec-label">Broadcast</div>
+          <div style="display:flex;gap:6px;margin-top:4px;">
+            <select class="inp" id="rp1VIn" onchange="updateRP()" style="flex:1;">
+              <option value="—">— None —</option>
+              <option value="YouTube">YouTube</option>
+              <option value="Facebook">Facebook</option>
+            </select>
+            <button class="btn r" style="padding:0 10px;font-size:13px;" onclick="deleteCustomOption('rp1VIn','custom_rp1VIn')" title="Delete selected">🗑</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <input class="inp" id="rp1Custom" placeholder="Custom broadcast..." style="flex:1;">
+            <button class="btn" style="padding:0 10px;font-size:12px;" onclick="saveCustomOption('rp1VIn','rp1Custom')">Save</button>
+          </div>
         </div>
         <div>
-          <div class="sec-label">Info Label 2</div>
-          <input class="inp" style="margin-bottom:6px;" id="rp2TIn" value="VENUE" placeholder="Title" oninput="updateRP()">
-          <input class="inp" id="rp2VIn" value="—" placeholder="Value" oninput="updateRP()">
+          <div class="sec-label">Venue</div>
+          <div style="display:flex;gap:6px;margin-top:4px;">
+            <select class="inp" id="rp2VIn" onchange="updateRP()" style="flex:1;">
+              <option value="—">— None —</option>
+              <option value="DMC">DMC</option>
+              <option value="WillowWood School">WillowWood School</option>
+            </select>
+            <button class="btn r" style="padding:0 10px;font-size:13px;" onclick="deleteCustomOption('rp2VIn','custom_rp2VIn')" title="Delete selected">🗑</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <input class="inp" id="rp2Custom" placeholder="Custom venue..." style="flex:1;">
+            <button class="btn" style="padding:0 10px;font-size:12px;" onclick="saveCustomOption('rp2VIn','rp2Custom')">Save</button>
+          </div>
         </div>
         <div>
           <div class="sec-label">Bar Background</div>
@@ -745,10 +789,8 @@ function renderAll(){
   syncInp('awayAbbrIn',  S.awayAbbr);
   syncInp('homeRecIn',   S.homeRecord);
   syncInp('awayRecIn',   S.awayRecord);
-  syncInp('rp1TIn',      S.rp1Title);
-  syncInp('rp1VIn',      S.rp1Value);
-  syncInp('rp2TIn',      S.rp2Title);
-  syncInp('rp2VIn',      S.rp2Value);
+  syncInp('rp1VIn', S.rp1Value);
+  syncInp('rp2VIn', S.rp2Value);
 
   if(S.homeLogo) applyLogo('home', S.homeLogo);
   if(S.awayLogo) applyLogo('away', S.awayLogo);
@@ -976,11 +1018,120 @@ function nextQtr(){ const i=QTRS.indexOf(S.quarter); if(i<QTRS.length-1)S.quarte
 
 // Right panel
 function updateRP(){
-  S.rp1Title=document.getElementById('rp1TIn').value;
+  S.rp1Title='BROADCAST';
   S.rp1Value=document.getElementById('rp1VIn').value;
-  S.rp2Title=document.getElementById('rp2TIn').value;
+  S.rp2Title='VENUE';
   S.rp2Value=document.getElementById('rp2VIn').value;
   save();
+}
+
+function deleteCustomOption(selectId, storageKey){
+  const select = document.getElementById(selectId);
+  const val = select.value;
+
+  // Built-in values that cannot be deleted
+  const builtIn = {
+    'homeAbbrIn': ['HARINA','KUY\'S RYAN','FREEDOM','BARBERCUTZ'],
+    'awayAbbrIn': ['HARINA','KUY\'S RYAN','FREEDOM','BARBERCUTZ'],
+    'rp1VIn': ['—','YouTube','Facebook'],
+    'rp2VIn': ['—','DMC','WillowWood School'],
+  };
+  if((builtIn[selectId]||[]).includes(val)){
+    alert('Built-in options cannot be deleted.');
+    return;
+  }
+
+  // Remove from localStorage
+  const saved = JSON.parse(localStorage.getItem(storageKey)||'[]');
+  const updated = saved.filter(v => v !== val);
+  localStorage.setItem(storageKey, JSON.stringify(updated));
+
+  // Remove from all matching dropdowns
+  const targets = selectId.includes('Abbr') ? ['homeAbbrIn','awayAbbrIn'] : [selectId];
+  targets.forEach(sid => {
+    const sel = document.getElementById(sid);
+    const opt = [...sel.options].find(o => o.value === val);
+    if(opt) sel.removeChild(opt);
+  });
+}
+
+function saveCustomTeam(team){
+  const inputId = team+'TeamCustom';
+  const selectId = team+'AbbrIn';
+  const input = document.getElementById(inputId);
+  const select = document.getElementById(selectId);
+  const val = input.value.trim().toUpperCase();
+  if(!val) return;
+
+  const key = 'custom_teams';
+  const saved = JSON.parse(localStorage.getItem(key)||'[]');
+  if(!saved.includes(val)){ saved.push(val); localStorage.setItem(key, JSON.stringify(saved)); }
+
+  // Add to both home and away dropdowns
+  ['homeAbbrIn','awayAbbrIn'].forEach(sid => {
+    const sel = document.getElementById(sid);
+    if(![...sel.options].some(o=>o.value===val)){
+      const opt = document.createElement('option');
+      opt.value = opt.textContent = val;
+      sel.appendChild(opt);
+    }
+  });
+
+  select.value = val;
+  input.value = '';
+  updateTeam(team);
+}
+
+function saveCustomOption(selectId, inputId){
+  const input = document.getElementById(inputId);
+  const select = document.getElementById(selectId);
+  const val = input.value.trim();
+  if(!val) return;
+
+  // Save to localStorage
+  const key = 'custom_'+selectId;
+  const saved = JSON.parse(localStorage.getItem(key)||'[]');
+  if(!saved.includes(val)){ saved.push(val); localStorage.setItem(key, JSON.stringify(saved)); }
+
+  // Add to dropdown if not already there
+  if(![...select.options].some(o=>o.value===val)){
+    const opt = document.createElement('option');
+    opt.value = opt.textContent = val;
+    select.appendChild(opt);
+  }
+
+  // Select it and update
+  select.value = val;
+  input.value = '';
+  updateRP();
+}
+
+function loadCustomOptions(){
+  // Load custom broadcast/venue
+  ['rp1VIn','rp2VIn'].forEach(selectId => {
+    const key = 'custom_'+selectId;
+    const saved = JSON.parse(localStorage.getItem(key)||'[]');
+    const select = document.getElementById(selectId);
+    saved.forEach(val => {
+      if(![...select.options].some(o=>o.value===val)){
+        const opt = document.createElement('option');
+        opt.value = opt.textContent = val;
+        select.appendChild(opt);
+      }
+    });
+  });
+  // Load custom teams into both dropdowns
+  const savedTeams = JSON.parse(localStorage.getItem('custom_teams')||'[]');
+  savedTeams.forEach(val => {
+    ['homeAbbrIn','awayAbbrIn'].forEach(sid => {
+      const sel = document.getElementById(sid);
+      if(sel && ![...sel.options].some(o=>o.value===val)){
+        const opt = document.createElement('option');
+        opt.value = opt.textContent = val;
+        sel.appendChild(opt);
+      }
+    });
+  });
 }
 
 // Referee manual buzzer
@@ -1013,6 +1164,7 @@ function resetAll(){
 }
 
 // Load from server first (so tablet gets live state, not stale localStorage)
+loadCustomOptions();
 fetch('/state').then(r=>r.json()).then(data=>{
   if(Object.keys(data).length){ S={...DEF,...data}; }
   renderAll();
