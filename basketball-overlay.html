@@ -7,9 +7,23 @@
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
-body { background: transparent; font-family: 'Barlow Condensed', sans-serif; }
+html, body {
+  width: 100%; height: 100%;
+  background: transparent;
+  font-family: 'Barlow Condensed', sans-serif;
+  overflow: hidden;
+}
 
-#overlay { width:1920px; height:160px; display:flex; align-items:center; }
+/* Fixed design size — scales to fit any viewport */
+#overlay {
+  width: 1920px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  transform-origin: top left;
+  position: absolute;
+  top: 0; left: 0;
+}
 
 .bar {
   width: 100%; height: 120px;
@@ -301,6 +315,17 @@ function connectSSE() {
 fetch('/state').then(r=>r.json()).then(data=>{
   if(Object.keys(data).length){ S={...DEF,...data}; render(); }
 }).catch(()=>{}).finally(()=>{ connectSSE(); });
+
+// Scale overlay to fit viewport while keeping proportions
+function scaleOverlay(){
+  const el = document.getElementById('overlay');
+  const scaleX = window.innerWidth  / 1920;
+  const scaleY = window.innerHeight / 160;
+  const scale  = Math.min(scaleX, scaleY);
+  el.style.transform = `scale(${scale})`;
+}
+window.addEventListener('resize', scaleOverlay);
+scaleOverlay();
 </script>
 </body>
 </html>
