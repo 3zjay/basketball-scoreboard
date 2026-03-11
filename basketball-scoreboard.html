@@ -1011,14 +1011,25 @@ function triggerBuzz(kind) {
 
 // Clocks
 function toggleGameClock(){
-  if(S.gameRunning){ clearInterval(gT); S.gameRunning=false; }
-  else{
-    if(S.gameSeconds<=0)return;
+  if(S.gameRunning){
+    clearInterval(gT); S.gameRunning=false;
+    clearInterval(sT); S.shotRunning=false;
+    renderShotClock();
+  } else {
+    if(S.gameSeconds<=0) return;
     S.gameRunning=true;
     gT=setInterval(()=>{
       if(S.gameSeconds>0){ S.gameSeconds--; save(); renderGameClock(); }
       else{ clearInterval(gT); S.gameRunning=false; renderGameClock(); triggerBuzz('game'); }
     },1000);
+    if(!S.shotRunning && S.shotSeconds>0){
+      S.shotRunning=true;
+      sT=setInterval(()=>{
+        if(S.shotSeconds>0){ S.shotSeconds--; save(); renderShotClock(); }
+        else{ clearInterval(sT); S.shotRunning=false; renderShotClock(); triggerBuzz('shot'); }
+      },1000);
+      renderShotClock();
+    }
   }
   renderGameClock();
 }
@@ -1049,14 +1060,25 @@ function setClockManual(){
   save(); renderGameClock();
 }
 function toggleShotClock(){
-  if(S.shotRunning){ clearInterval(sT); S.shotRunning=false; }
-  else{
-    if(S.shotSeconds<=0)return;
+  if(S.shotRunning){
+    clearInterval(sT); S.shotRunning=false;
+    clearInterval(gT); S.gameRunning=false;
+    renderGameClock();
+  } else {
+    if(S.shotSeconds<=0) return;
     S.shotRunning=true;
     sT=setInterval(()=>{
       if(S.shotSeconds>0){ S.shotSeconds--; save(); renderShotClock(); }
       else{ clearInterval(sT); S.shotRunning=false; renderShotClock(); triggerBuzz('shot'); }
     },1000);
+    if(!S.gameRunning && S.gameSeconds>0){
+      S.gameRunning=true;
+      gT=setInterval(()=>{
+        if(S.gameSeconds>0){ S.gameSeconds--; save(); renderGameClock(); }
+        else{ clearInterval(gT); S.gameRunning=false; renderGameClock(); triggerBuzz('game'); }
+      },1000);
+      renderGameClock();
+    }
   }
   renderShotClock();
 }
