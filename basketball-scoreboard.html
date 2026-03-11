@@ -1083,17 +1083,18 @@ function toggleShotClock(){
   renderShotClock();
 }
 function resetShot(n){
-  const wasRunning = S.shotRunning;
   clearInterval(sT);
   S.shotRunning = false;
   S.shotSeconds = n;
   save(); renderShotClock();
-  if(wasRunning){
+  // Restart if shot clock was running OR game clock is still running
+  if(S.gameRunning){
     S.shotRunning = true;
     sT = setInterval(()=>{
       if(S.shotSeconds > 0){ S.shotSeconds--; save(); renderShotClock(); }
       else{ clearInterval(sT); S.shotRunning=false; renderShotClock(); triggerBuzz('shot'); }
     }, 1000);
+    renderShotClock();
   }
 }
 
