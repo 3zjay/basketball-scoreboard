@@ -1060,7 +1060,20 @@ function toggleShotClock(){
   }
   renderShotClock();
 }
-function resetShot(n){ clearInterval(sT); S.shotRunning=false; S.shotSeconds=n; save(); renderShotClock(); }
+function resetShot(n){
+  const wasRunning = S.shotRunning;
+  clearInterval(sT);
+  S.shotRunning = false;
+  S.shotSeconds = n;
+  save(); renderShotClock();
+  if(wasRunning){
+    S.shotRunning = true;
+    sT = setInterval(()=>{
+      if(S.shotSeconds > 0){ S.shotSeconds--; save(); renderShotClock(); }
+      else{ clearInterval(sT); S.shotRunning=false; renderShotClock(); triggerBuzz('shot'); }
+    }, 1000);
+  }
+}
 
 // Quarter
 function setQtr(q){ S.quarter=q; save(); renderAll(); }
