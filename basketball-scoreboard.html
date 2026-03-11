@@ -515,10 +515,16 @@ body.light .reset-btn:hover { background:#fee2e2; }
         <button class="btn r" onclick="addScore('home',-2)">−2</button>
         <button class="btn r" onclick="addScore('home',-3)">−3</button>
       </div>
+      <!-- FOULS -->
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+        <span style="font-family:'Teko',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--text3);text-transform:uppercase;flex-shrink:0;">FOULS</span>
+        <button class="btn r" style="padding:0 12px;font-size:16px;" onclick="addFouls('home',-1)">−</button>
+        <span id="homeFoulsCtrl" style="font-family:'Teko',sans-serif;font-size:28px;font-weight:700;color:#ff9900;min-width:32px;text-align:center;line-height:1;">0</span>
+        <button class="btn g" style="padding:0 12px;font-size:16px;" onclick="addFouls('home',1)">+</button>
+        <button class="btn" style="padding:0 10px;font-size:11px;margin-left:4px;" onclick="resetFouls('home')">Reset</button>
+      </div>
     </div>
   </div>
-
-  <!-- AWAY TEAM -->
   <div class="card">
     <div class="card-header">
       <div class="card-title">Away Team</div>
@@ -565,6 +571,14 @@ body.light .reset-btn:hover { background:#fee2e2; }
         <button class="btn r" onclick="addScore('away',-2)">−2</button>
         <button class="btn r" onclick="addScore('away',-3)">−3</button>
       </div>
+      <!-- FOULS -->
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+        <span style="font-family:'Teko',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--text3);text-transform:uppercase;flex-shrink:0;">FOULS</span>
+        <button class="btn r" style="padding:0 12px;font-size:16px;" onclick="addFouls('away',-1)">−</button>
+        <span id="awayFoulsCtrl" style="font-family:'Teko',sans-serif;font-size:28px;font-weight:700;color:#ff9900;min-width:32px;text-align:center;line-height:1;">0</span>
+        <button class="btn g" style="padding:0 12px;font-size:16px;" onclick="addFouls('away',1)">+</button>
+        <button class="btn" style="padding:0 10px;font-size:11px;margin-left:4px;" onclick="resetFouls('away')">Reset</button>
+      </div>
     </div>
   </div>
 
@@ -589,6 +603,7 @@ body.light .reset-btn:hover { background:#fee2e2; }
             <button class="btn primary" id="gClkBtn" onclick="toggleGameClock()">▶ Start</button>
             <button class="btn danger"  onclick="resetGameClock()">↺ Reset</button>
           </div>
+          <button class="btn" style="width:100%;margin-top:6px;background:var(--surface2);border-color:#f5c842;color:#f5c842;" onclick="setTimerPreset()">⏱ Set as Period Timer</button>
         </div>
 
         <!-- Shot Clock -->
@@ -707,6 +722,8 @@ body.light .reset-btn:hover { background:#fee2e2; }
   OBS Browser Source → <a href="https://basketball-scoreboard-o0c7.onrender.com/overlay" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/overlay</a> → 1920 × 160
   &nbsp;·&nbsp;
   Big Screen → <a href="https://basketball-scoreboard-o0c7.onrender.com/display" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/display</a>
+  &nbsp;·&nbsp;
+  Big Screen v2 → <a href="https://basketball-scoreboard-o0c7.onrender.com/display2" target="_blank" style="color:#00ee44;font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/display2</a>
   <br style="margin-top:8px;">
   <span style="color:var(--text2);font-size:10px;letter-spacing:1px;">
     ⌨️ &nbsp;HOME: <span style="color:var(--accent)">Q</span>+1 &nbsp;<span style="color:var(--accent)">W</span>+2 &nbsp;<span style="color:var(--accent)">E</span>+3 &nbsp;<span style="color:var(--accent)">A</span>−1 &nbsp;<span style="color:var(--accent)">S</span>−2 &nbsp;&nbsp;
@@ -734,11 +751,13 @@ body.light .reset-btn:hover { background:#fee2e2; }
 <script>
 const DEF = {
   homeScore:0, awayScore:0,
+  homeFouls:0, awayFouls:0,
   homeAbbr:'HOME', homeRecord:'0-0', homeColor:'#f5c842', homeLogo:null,
   awayAbbr:'AWAY', awayRecord:'0-0', awayColor:'#c8102e', awayLogo:null,
   quarter:1,
   gameSeconds:600, shotSeconds:24,
   gameRunning:false, shotRunning:false,
+  timerPresetSeconds: 600,
   rp1Title:'BROADCAST', rp1Value:'Facebook',
   rp2Title:'VENUE', rp2Value:'DMC - 2467 Eglinton Ave E, Scarborough, ON M1K 2R1',
   barColor:'#0d1117',
@@ -774,6 +793,12 @@ function renderAll(){
   const aScoreEl = document.getElementById('awayScoreCtrl');
   if(hScoreEl && document.activeElement !== hScoreEl) hScoreEl.value = S.homeScore;
   if(aScoreEl && document.activeElement !== aScoreEl) aScoreEl.value = S.awayScore;
+
+  // Fouls display
+  const hfEl = document.getElementById('homeFoulsCtrl');
+  const afEl = document.getElementById('awayFoulsCtrl');
+  if(hfEl) hfEl.textContent = S.homeFouls || 0;
+  if(afEl) afEl.textContent = S.awayFouls || 0;
 
   const qL = typeof S.quarter==='number' ? (PERIODS[S.quarter-1]||`Q${S.quarter}`) : S.quarter;
   document.querySelectorAll('.qbtn').forEach(b=>b.classList.toggle('active', b.textContent===qL));
@@ -847,6 +872,14 @@ function addScore(team,pts){
   const el = document.getElementById(team+'ScoreCtrl');
   if(el) el.value = S[team+'Score'];
   bump(team+'ScoreCtrl');
+  save(); renderAll();
+}
+function addFouls(team, n){
+  S[team+'Fouls'] = Math.max(0, (S[team+'Fouls']||0) + n);
+  save(); renderAll();
+}
+function resetFouls(team){
+  S[team+'Fouls'] = 0;
   save(); renderAll();
 }
 function bump(id){
@@ -989,9 +1022,26 @@ function toggleGameClock(){
   }
   renderGameClock();
 }
+function setTimerPreset(){
+  const mins = parseInt(document.getElementById('clkMin').value)||0;
+  const secs = Math.min(59, parseInt(document.getElementById('clkSec').value)||0);
+  S.timerPresetSeconds = mins*60 + secs;
+  save();
+  // Visual feedback
+  const btn = document.querySelector('[onclick="setTimerPreset()"]');
+  if(btn){ const orig=btn.textContent; btn.textContent='✓ Saved!'; btn.style.borderColor='#00ee44'; btn.style.color='#00ee44'; setTimeout(()=>{ btn.textContent=orig; btn.style.borderColor='#f5c842'; btn.style.color='#f5c842'; },1200); }
+}
 function resetGameClock(){
   clearInterval(gT); S.gameRunning=false;
-  S.gameSeconds=(parseInt(document.getElementById('clkMin').value)||10)*60+(parseInt(document.getElementById('clkSec').value)||0);
+  const preset = S.timerPresetSeconds;
+  if(preset != null && preset > 0){
+    S.gameSeconds = preset;
+    // Sync inputs to preset
+    document.getElementById('clkMin').value = Math.floor(preset/60);
+    document.getElementById('clkSec').value = preset%60;
+  } else {
+    S.gameSeconds=(parseInt(document.getElementById('clkMin').value)||10)*60+(parseInt(document.getElementById('clkSec').value)||0);
+  }
   save(); renderGameClock();
 }
 function setClockManual(){
