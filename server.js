@@ -3,56 +3,60 @@ const fs   = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 3000;
-let state   = {};
-let logos   = { home: null, away: null };
+let state  = {};
+let logos  = { home: null, away: null };
 let clients = [];
 
-let scCmdClients = []; // listeners for shot clock commands (main scorekeeper browser)
-
-// ── SHOT CLOCK (independent system) ──────────────────────────
-let scState    = { seconds: 24, running: false };
-let scClients  = [];
+// ── SERVER-OWNED SHOT CLOCK ───────────────────────────────────
+// Server is the single source of truth for shot clock.
+// No browser timer touches shotSeconds/shotRunning.
 let scInterval = null;
 
-function scPush(payload) {
-  const msg = 'data: ' + JSON.stringify(payload) + '\n\n';
-  scClients = scClients.filter(res => {
-    try { res.write(msg); return true; } catch(e) { return false; }
-  });
+function scPush() {
+  pushToAll({ type: 'state', data: fullState() });
 }
 
 function scTick() {
-  if (!scState.running) return;
-  if (scState.seconds > 0) {
-    scState.seconds--;
-    scPush({ type: 'sc', data: scState });
-  }
-  if (scState.seconds === 0) {
-    scState.running = false;
-    clearInterval(scInterval);
-    scInterval = null;
-    scPush({ type: 'sc_buzz', data: scState });
+  if (!state.shotRunning) { scStop(); return; }
+  if (state.shotSeconds > 1) {
+    state.shotSeconds--;
+    scPush();
+  } else {
+    state.shotSeconds = 0;
+    state.shotRunning = false;
+    scStop();
+    scPush();
+    pushToAll({ type: 'buzz', kind: 'shot' });
+    // Auto-reset to 24, restart if game still running
+    setTimeout(() => {
+      state.shotSeconds = 24;
+      state.shotRunning = !!state.gameRunning;
+      scPush();
+      if (state.shotRunning) scStart();
+    }, 400);
   }
 }
 
 function scStart() {
-  if (scState.running || scState.seconds === 0) return;
-  scState.running = true;
+  if (state.shotRunning) return;
+  if (!state.shotSeconds || state.shotSeconds <= 0) return;
+  state.shotRunning = true;
   if (scInterval) clearInterval(scInterval);
   scInterval = setInterval(scTick, 1000);
-  scPush({ type: 'sc', data: scState });
+  scPush();
 }
 
 function scStop() {
-  scState.running = false;
+  state.shotRunning = false;
   if (scInterval) { clearInterval(scInterval); scInterval = null; }
-  scPush({ type: 'sc', data: scState });
 }
 
 function scReset(n) {
   scStop();
-  scState.seconds = n;
-  scPush({ type: 'sc', data: scState });
+  state.shotSeconds = n || 24;
+  state.shotRunning = !!state.gameRunning;
+  if (state.shotRunning) scStart();
+  scPush();
 }
 // ─────────────────────────────────────────────────────────────
 
@@ -100,10 +104,25 @@ http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-  // POST /update — game state
+  // POST /update — game state from control board (scores, game clock, etc.)
+  // Server ignores incoming shotSeconds/shotRunning — it owns those.
   if (req.method === 'POST' && req.url === '/update') {
     readBody(req).then(b => {
-      try { state = JSON.parse(b); } catch(e) {}
+      try {
+        const incoming = JSON.parse(b);
+        const prevGameRunning = state.gameRunning;
+        const shotSeconds = state.shotSeconds;
+        const shotRunning = state.shotRunning;
+        state = incoming;
+        // Restore server-owned shot clock values
+        state.shotSeconds = shotSeconds != null ? shotSeconds : 24;
+        state.shotRunning = shotRunning || false;
+        // If game clock just stopped, stop shot clock too
+        if (prevGameRunning && !state.gameRunning) {
+          scStop();
+          state.shotRunning = false;
+        }
+      } catch(e) {}
       pushToAll({ type: 'state', data: fullState() });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end('{"ok":true}');
@@ -111,7 +130,7 @@ http.createServer((req, res) => {
     return;
   }
 
-  // POST /buzz — broadcast buzzer sound to all clients
+  // POST /buzz
   if (req.method === 'POST' && req.url === '/buzz') {
     readBody(req).then(b => {
       let kind = 'game';
@@ -135,7 +154,7 @@ http.createServer((req, res) => {
     return;
   }
 
-  // GET /events — SSE stream
+  // GET /events — main SSE stream for all displays
   if (req.url === '/events') {
     res.writeHead(200, {
       'Content-Type':  'text/event-stream',
@@ -143,9 +162,7 @@ http.createServer((req, res) => {
       'Connection':    'keep-alive',
     });
     res.write('\n');
-    if (Object.keys(state).length) {
-      res.write('data: ' + JSON.stringify({ type: 'state', data: fullState() }) + '\n\n');
-    }
+    res.write('data: ' + JSON.stringify({ type: 'state', data: fullState() }) + '\n\n');
     const ping = setInterval(() => {
       try { res.write(': ping\n\n'); } catch(e) { clearInterval(ping); }
     }, 20000);
@@ -157,125 +174,40 @@ http.createServer((req, res) => {
     return;
   }
 
-  // GET /state — initial load
+  // GET /state — initial snapshot
   if (req.url === '/state') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(fullState()));
     return;
   }
 
-  // ── SHOT CLOCK COMMAND CHANNEL ──────────────────────────────
-  // Dedicated shot clock controller sends commands here.
-  // Main scorekeeper's browser receives them via SSE and executes.
-
-  // POST /sc-cmd  body: { cmd: 'start'|'stop'|'reset', seconds?: 24|14 }
+  // POST /sc-cmd — shot clock commands from operator phone OR control board
+  // body: { cmd: 'start'|'stop'|'reset'|'game-start'|'game-stop', seconds?: 24|14 }
   if (req.method === 'POST' && req.url === '/sc-cmd') {
     readBody(req).then(b => {
       let cmd = {};
       try { cmd = JSON.parse(b); } catch(e) {}
 
-      // Apply to server state immediately so displays update in 1 hop
       if (cmd.cmd === 'start') {
-        state.shotRunning = true;
+        scStart();
       } else if (cmd.cmd === 'stop') {
-        state.shotRunning = false;
+        scStop();
         state.gameRunning = false;
+        scPush();
+      } else if (cmd.cmd === 'game-start') {
+        if (!state.shotRunning && state.shotSeconds > 0) scStart();
+      } else if (cmd.cmd === 'game-stop') {
+        scStop();
+        scPush();
       } else if (cmd.cmd === 'reset') {
-        state.shotSeconds = cmd.seconds || 24;
-        state.shotRunning = false;
+        scReset(cmd.seconds || 24);
       }
-
-      // Push to all displays right now — no waiting for control board round trip
-      pushToAll({ type: 'state', data: fullState() });
-
-      // Also relay command to control board so its timer interval stays in sync
-      const relay = 'data: ' + JSON.stringify({ type: 'sc_cmd', cmd }) + '\n\n';
-      scCmdClients = scCmdClients.filter(r => {
-        try { r.write(relay); return true; } catch(e) { return false; }
-      });
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end('{"ok":true}');
     });
     return;
   }
-
-  // GET /sc-cmd-events — SSE for the main scorekeeper to receive commands
-  if (req.url === '/sc-cmd-events') {
-    res.writeHead(200, {
-      'Content-Type':  'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection':    'keep-alive',
-    });
-    res.write('\n');
-    const ping = setInterval(() => {
-      try { res.write(': ping\n\n'); } catch(e) { clearInterval(ping); }
-    }, 20000);
-    scCmdClients.push(res);
-    req.on('close', () => {
-      clearInterval(ping);
-      scCmdClients = scCmdClients.filter(c => c !== res);
-    });
-    return;
-  }
-  // ─────────────────────────────────────────────────────────────
-
-  // ── SHOT CLOCK API ──────────────────────────────────────────
-  // GET /sc/state
-  if (req.url === '/sc/state') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(scState));
-    return;
-  }
-
-  // GET /sc/events — SSE for shot clock clients
-  if (req.url === '/sc/events') {
-    res.writeHead(200, {
-      'Content-Type':  'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection':    'keep-alive',
-    });
-    res.write('\n');
-    res.write('data: ' + JSON.stringify({ type: 'sc', data: scState }) + '\n\n');
-    const ping = setInterval(() => {
-      try { res.write(': ping\n\n'); } catch(e) { clearInterval(ping); }
-    }, 20000);
-    scClients.push(res);
-    req.on('close', () => {
-      clearInterval(ping);
-      scClients = scClients.filter(c => c !== res);
-    });
-    return;
-  }
-
-  // POST /sc/start
-  if (req.method === 'POST' && req.url === '/sc/start') {
-    scStart();
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(scState));
-    return;
-  }
-
-  // POST /sc/stop
-  if (req.method === 'POST' && req.url === '/sc/stop') {
-    scStop();
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(scState));
-    return;
-  }
-
-  // POST /sc/reset  body: { seconds: 24 | 14 }
-  if (req.method === 'POST' && req.url === '/sc/reset') {
-    readBody(req).then(b => {
-      let n = 24;
-      try { n = JSON.parse(b).seconds || 24; } catch(e) {}
-      scReset(n);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(scState));
-    });
-    return;
-  }
-  // ────────────────────────────────────────────────────────────
 
   // Serve static files
   const fileName = ROUTES[req.url];

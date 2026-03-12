@@ -796,7 +796,7 @@ const DEF = {
 };
 
 let S = {...DEF};
-let gT=null, sT=null;
+let gT = null;
 let _saveTimer=null, _savePending=false;
 
 // Throttled save — used by per-tick timer callbacks (prevents fetch flood)
@@ -1057,12 +1057,22 @@ function triggerBuzz(kind) {
   }).catch(()=>{});
 }
 
+// Send a shot clock command to the server (server owns the shot clock timer)
+function sendSCCmd(cmd, seconds) {
+  const body = seconds !== undefined ? { cmd, seconds } : { cmd };
+  fetch('/sc-cmd', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).catch(() => {});
+}
+
 // Clocks
 function toggleGameClock(){
   if(S.gameRunning){
     clearInterval(gT); S.gameRunning=false;
-    clearInterval(sT); S.shotRunning=false;
-    renderGameClock(); renderShotClock();
+    renderGameClock();
+    sendSCCmd('game-stop');
     saveNow();
   } else {
     if(S.gameSeconds<=0) return;
@@ -1070,19 +1080,38 @@ function toggleGameClock(){
     clearInterval(gT);
     gT=setInterval(()=>{
       if(S.gameSeconds>0){ S.gameSeconds--; save(); renderGameClock(); }
-      else{ clearInterval(gT); S.gameRunning=false; renderGameClock(); triggerBuzz('game'); }
+      else{ clearInterval(gT); S.gameRunning=false; renderGameClock(); triggerBuzz('game'); saveNow(); }
     },1000);
-    if(!S.shotRunning && S.shotSeconds>0){
-      S.shotRunning=true;
-      clearInterval(sT);
-      sT=setInterval(()=>{
-        if(S.shotSeconds>0){ S.shotSeconds--; save(); renderShotClock(); }
-        else{ clearInterval(sT); S.shotRunning=false; triggerBuzz('shot'); autoResetShot(); }
-      },1000);
-      renderShotClock();
-    }
+    sendSCCmd('game-start');
+    saveNow();
+    renderGameClock();
   }
-  renderGameClock();
+}
+function toggleShotClock(){
+  if(S.shotRunning){
+    clearInterval(gT); S.gameRunning=false;
+    renderGameClock();
+    sendSCCmd('stop');
+    saveNow();
+  } else {
+    if(!S.gameRunning && S.gameSeconds>0){
+      S.gameRunning=true;
+      clearInterval(gT);
+      gT=setInterval(()=>{
+        if(S.gameSeconds>0){ S.gameSeconds--; save(); renderGameClock(); }
+        else{ clearInterval(gT); S.gameRunning=false; renderGameClock(); triggerBuzz('game'); saveNow(); }
+      },1000);
+      renderGameClock();
+    }
+    sendSCCmd('start');
+    saveNow();
+  }
+}
+function resetShot(n){
+  sendSCCmd('reset', n);
+}
+function autoResetShot(){
+  // Server handles auto-reset — nothing needed here
 }
 function setTimerPreset(){
   const mins = parseInt(document.getElementById('clkMin').value)||0;
@@ -1110,55 +1139,7 @@ function setClockManual(){
   S.gameSeconds=(parseInt(document.getElementById('clkMin').value)||0)*60+Math.min(59,parseInt(document.getElementById('clkSec').value)||0);
   save(); renderGameClock();
 }
-function toggleShotClock(){
-  if(S.shotRunning){
-    clearInterval(sT); S.shotRunning=false;
-    clearInterval(gT); S.gameRunning=false;
-    renderGameClock(); renderShotClock();
-    saveNow();
-  } else {
-    if(S.shotSeconds<=0) return;
-    S.shotRunning=true;
-    clearInterval(sT);
-    sT=setInterval(()=>{
-      if(S.shotSeconds>0){ S.shotSeconds--; save(); renderShotClock(); }
-      else{ clearInterval(sT); S.shotRunning=false; triggerBuzz('shot'); autoResetShot(); }
-    },1000);
-    if(!S.gameRunning && S.gameSeconds>0){
-      S.gameRunning=true;
-      clearInterval(gT);
-      gT=setInterval(()=>{
-        if(S.gameSeconds>0){ S.gameSeconds--; save(); renderGameClock(); }
-        else{ clearInterval(gT); S.gameRunning=false; renderGameClock(); triggerBuzz('game'); }
-      },1000);
-      renderGameClock();
-    }
-    saveNow();
-  }
-  renderShotClock();
-}
-function resetShot(n){
-  clearInterval(sT);
-  S.shotRunning = false;
-  S.shotSeconds = n;
-  renderShotClock();
-  if(S.gameRunning){
-    S.shotRunning = true;
-    clearInterval(sT);
-    sT = setInterval(()=>{
-      if(S.shotSeconds > 0){ S.shotSeconds--; save(); renderShotClock(); }
-      else{ clearInterval(sT); S.shotRunning=false; triggerBuzz('shot'); autoResetShot(); }
-    }, 1000);
-    renderShotClock();
-  }
-  saveNow();
-}
-// Auto-reset to 24 after expiry — restarts if game clock still running
-function autoResetShot(){
-  setTimeout(()=>{
-    resetShot(24);
-  }, 300);
-}
+
 
 // Quarter
 function setQtr(q){ S.quarter=q; save(); renderAll(); }
@@ -1304,11 +1285,12 @@ function setPoss(side){ S.possession=side; save(); renderAll(); }
 // Reset
 function resetAll(){
   if(!confirm('Reset full game? Scores & clocks will clear.'))return;
-  clearInterval(gT); clearInterval(sT);
+  clearInterval(gT);
   S={...DEF};
   document.getElementById('clkMin').value=10;
   document.getElementById('clkSec').value=0;
-  save(); renderAll();
+  sendSCCmd('reset', 24);
+  saveNow(); renderAll();
 }
 
 // Load from server first (so tablet gets live state, not stale localStorage)
@@ -1327,7 +1309,11 @@ function connectSSE(){
       if(msg.type === 'state') {
         const d = msg.data;
         if(document.activeElement.tagName !== 'INPUT'){
-          S = {...DEF, ...d};
+          // Merge server state but preserve our own game clock — server owns shot clock only
+          S = {...DEF, ...d,
+            gameSeconds: S.gameSeconds,
+            gameRunning: S.gameRunning,
+          };
           renderAll();
         }
       }
@@ -1337,27 +1323,6 @@ function connectSSE(){
   es.onerror = () => { es.close(); setTimeout(connectSSE, 3000); };
 }
 connectSSE();
-
-// ── DEDICATED SHOT CLOCK CONTROLLER — command channel ────────
-// A separate phone operator sends commands here via /sc-cmd.
-// We receive them and execute as if the scorekeeper tapped the button.
-function connectShotClockCmds(){
-  const es = new EventSource('/sc-cmd-events');
-  es.onmessage = (e) => {
-    try {
-      const msg = JSON.parse(e.data);
-      if(msg.type === 'sc_cmd'){
-        const { cmd, seconds } = msg.cmd;
-        if(cmd === 'start')  { if(!S.shotRunning) toggleShotClock(); }
-        if(cmd === 'stop')   { if(S.shotRunning)  toggleShotClock(); }
-        if(cmd === 'reset')  { resetShot(seconds || 24); }
-      }
-    } catch(err){}
-  };
-  es.onerror = () => { es.close(); setTimeout(connectShotClockCmds, 3000); };
-}
-connectShotClockCmds();
-// ─────────────────────────────────────────────────────────────
 
 // ── KEYBOARD SHORTCUTS ──────────────────────────────────────
 // Home score:  Q=+1  W=+2  E=+3  A=−1  S=−2
