@@ -122,6 +122,10 @@ http.createServer((req, res) => {
           scStop();
           state.shotRunning = false;
         }
+        // If game clock just started (resumed), restart shot clock if it has time
+        if (!prevGameRunning && state.gameRunning && !state.shotRunning && state.shotSeconds > 0) {
+          scStart();
+        }
       } catch(e) {}
       pushToAll({ type: 'state', data: fullState() });
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -189,14 +193,17 @@ http.createServer((req, res) => {
       try { cmd = JSON.parse(b); } catch(e) {}
 
       if (cmd.cmd === 'start') {
+        state.gameRunning = true;
         scStart();
       } else if (cmd.cmd === 'stop') {
         scStop();
         state.gameRunning = false;
         scPush();
       } else if (cmd.cmd === 'game-start') {
+        state.gameRunning = true;
         if (!state.shotRunning && state.shotSeconds > 0) scStart();
       } else if (cmd.cmd === 'game-stop') {
+        state.gameRunning = false;
         scStop();
         scPush();
       } else if (cmd.cmd === 'reset') {
