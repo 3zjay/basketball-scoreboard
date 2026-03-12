@@ -173,11 +173,26 @@ http.createServer((req, res) => {
     readBody(req).then(b => {
       let cmd = {};
       try { cmd = JSON.parse(b); } catch(e) {}
-      // Push command to all scorekeeper listeners
-      const msg = 'data: ' + JSON.stringify({ type: 'sc_cmd', cmd }) + '\n\n';
+
+      // Apply to server state immediately so displays update in 1 hop
+      if (cmd.cmd === 'start') {
+        state.shotRunning = true;
+      } else if (cmd.cmd === 'stop') {
+        state.shotRunning = false;
+      } else if (cmd.cmd === 'reset') {
+        state.shotSeconds = cmd.seconds || 24;
+        state.shotRunning = false;
+      }
+
+      // Push to all displays right now — no waiting for control board round trip
+      pushToAll({ type: 'state', data: fullState() });
+
+      // Also relay command to control board so its timer interval stays in sync
+      const relay = 'data: ' + JSON.stringify({ type: 'sc_cmd', cmd }) + '\n\n';
       scCmdClients = scCmdClients.filter(r => {
-        try { r.write(msg); return true; } catch(e) { return false; }
+        try { r.write(relay); return true; } catch(e) { return false; }
       });
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end('{"ok":true}');
     });

@@ -799,21 +799,31 @@ let S = {...DEF};
 let gT=null, sT=null;
 let _saveTimer=null, _savePending=false;
 
+// Throttled save — used by per-tick timer callbacks (prevents fetch flood)
 function save(){
   try{ localStorage.setItem('bball_v3', JSON.stringify(S)); }catch(e){}
-  // Throttle server push — max one fetch per 900ms to prevent stacking
   if(_savePending) return;
   _savePending = true;
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(()=>{
     _savePending = false;
-    const serverState = {...S, homeLogo: null, awayLogo: null};
-    fetch('/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(serverState)
-    }).catch((err)=>{ console.warn('Sync failed:', err); });
+    pushState();
   }, 900);
+}
+// Immediate save — used for manual actions (stop, reset, score change, etc.)
+function saveNow(){
+  try{ localStorage.setItem('bball_v3', JSON.stringify(S)); }catch(e){}
+  _savePending = false;
+  clearTimeout(_saveTimer);
+  pushState();
+}
+function pushState(){
+  const serverState = {...S, homeLogo: null, awayLogo: null};
+  fetch('/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(serverState)
+  }).catch((err)=>{ console.warn('Sync failed:', err); });
 }
 function load(){
   try{
@@ -1052,7 +1062,8 @@ function toggleGameClock(){
   if(S.gameRunning){
     clearInterval(gT); S.gameRunning=false;
     clearInterval(sT); S.shotRunning=false;
-    renderShotClock();
+    renderGameClock(); renderShotClock();
+    saveNow();
   } else {
     if(S.gameSeconds<=0) return;
     S.gameRunning=true;
@@ -1102,8 +1113,8 @@ function setClockManual(){
 function toggleShotClock(){
   if(S.shotRunning){
     clearInterval(sT); S.shotRunning=false;
-    clearInterval(gT); S.gameRunning=false;
-    renderGameClock();
+    renderShotClock();
+    saveNow();
   } else {
     if(S.shotSeconds<=0) return;
     S.shotRunning=true;
@@ -1121,6 +1132,7 @@ function toggleShotClock(){
       },1000);
       renderGameClock();
     }
+    saveNow();
   }
   renderShotClock();
 }
@@ -1128,8 +1140,7 @@ function resetShot(n){
   clearInterval(sT);
   S.shotRunning = false;
   S.shotSeconds = n;
-  save(); renderShotClock();
-  // Restart if game clock is still running
+  renderShotClock();
   if(S.gameRunning){
     S.shotRunning = true;
     clearInterval(sT);
@@ -1139,6 +1150,7 @@ function resetShot(n){
     }, 1000);
     renderShotClock();
   }
+  saveNow();
 }
 // Auto-reset to 24 after expiry — restarts if game clock still running
 function autoResetShot(){
