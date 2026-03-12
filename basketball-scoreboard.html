@@ -1113,7 +1113,8 @@ function setClockManual(){
 function toggleShotClock(){
   if(S.shotRunning){
     clearInterval(sT); S.shotRunning=false;
-    renderShotClock();
+    clearInterval(gT); S.gameRunning=false;
+    renderGameClock(); renderShotClock();
     saveNow();
   } else {
     if(S.shotSeconds<=0) return;

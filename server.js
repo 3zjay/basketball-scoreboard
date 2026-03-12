@@ -179,6 +179,7 @@ http.createServer((req, res) => {
         state.shotRunning = true;
       } else if (cmd.cmd === 'stop') {
         state.shotRunning = false;
+        state.gameRunning = false;
       } else if (cmd.cmd === 'reset') {
         state.shotSeconds = cmd.seconds || 24;
         state.shotRunning = false;
