@@ -716,45 +716,14 @@ body.light .reset-btn:hover { background:#fee2e2; }
     </div>
   </div>
 
-  <!-- ── QUICK LAUNCH ── -->
-  <div class="card" style="margin-top:0;">
-    <div class="card-header">
-      <div class="card-title">🚀 Quick Launch</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:4px;">
-      <button class="btn primary" onclick="window.open('/shotclock-display','_blank')" style="padding:14px 10px;font-size:13px;letter-spacing:1px;background:rgba(255,34,0,0.15);border-color:rgba(255,34,0,0.4);color:#ff4422;">
-        📺 Shot Clock Display
-      </button>
-      <button class="btn primary" onclick="window.open('/shotclock','_blank')" style="padding:14px 10px;font-size:13px;letter-spacing:1px;background:rgba(255,140,0,0.1);border-color:rgba(255,140,0,0.35);color:#ff9900;">
-        ⏱ Shot Clock Operator
-      </button>
-      <button class="btn primary" onclick="window.open('/display','_blank')" style="padding:14px 10px;font-size:13px;letter-spacing:1px;">
-        🖥️ Venue Display
-      </button>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px;">
-      <button class="btn" onclick="window.open('/overlay','_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
-        📡 OBS Bar Overlay
-      </button>
-      <button class="btn" onclick="window.open('/fullscreen','_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
-        📡 OBS Fullscreen
-      </button>
-      <button class="btn" onclick="window.open('/nbaoverlay','_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
-        📡 NBA Scorebug
-      </button>
-    </div>
-  </div>
-
 </div>
 
 <div class="footer">
-  OBS Bar → <a href="https://basketball-scoreboard-o0c7.onrender.com/overlay" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/overlay</a> → 1920 × 160
+  OBS Browser Source → <a href="https://basketball-scoreboard-o0c7.onrender.com/overlay" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/overlay</a> → 1920 × 160
   &nbsp;·&nbsp;
-  Venue Display → <a href="https://basketball-scoreboard-o0c7.onrender.com/display" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/display</a>
+  Big Screen → <a href="https://basketball-scoreboard-o0c7.onrender.com/display" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/display</a>
   &nbsp;·&nbsp;
-  Shot Clock Display → <a href="https://basketball-scoreboard-o0c7.onrender.com/shotclock-display" target="_blank" style="color:#ff4422;font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/shotclock-display</a>
-  &nbsp;·&nbsp;
-  Shot Clock Operator → <a href="https://basketball-scoreboard-o0c7.onrender.com/shotclock" target="_blank" style="color:#ff9900;font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/shotclock</a>
+  Big Screen v2 → <a href="https://basketball-scoreboard-o0c7.onrender.com/display2" target="_blank" style="color:#00ee44;font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/display2</a>
   <br style="margin-top:8px;">
   <span style="color:var(--text2);font-size:10px;letter-spacing:1px;">
     ⌨️ &nbsp;HOME: <span style="color:var(--accent)">Q</span>+1 &nbsp;<span style="color:var(--accent)">W</span>+2 &nbsp;<span style="color:var(--accent)">E</span>+3 &nbsp;<span style="color:var(--accent)">A</span>−1 &nbsp;<span style="color:var(--accent)">S</span>−2 &nbsp;&nbsp;
@@ -796,28 +765,11 @@ const DEF = {
 };
 
 let S = {...DEF};
-let gT = null;
-let _saveTimer=null, _savePending=false;
+let gT=null, sT=null;
 
-// Throttled save — used by per-tick timer callbacks (prevents fetch flood)
 function save(){
   try{ localStorage.setItem('bball_v3', JSON.stringify(S)); }catch(e){}
-  if(_savePending) return;
-  _savePending = true;
-  clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(()=>{
-    _savePending = false;
-    pushState();
-  }, 900);
-}
-// Immediate save — used for manual actions (stop, reset, score change, etc.)
-function saveNow(){
-  try{ localStorage.setItem('bball_v3', JSON.stringify(S)); }catch(e){}
-  _savePending = false;
-  clearTimeout(_saveTimer);
-  pushState();
-}
-function pushState(){
+  // Send state WITHOUT logos (sent separately)
   const serverState = {...S, homeLogo: null, awayLogo: null};
   fetch('/update', {
     method: 'POST',
@@ -1057,61 +1009,18 @@ function triggerBuzz(kind) {
   }).catch(()=>{});
 }
 
-// Send a shot clock command to the server (server owns the shot clock timer)
-function sendSCCmd(cmd, seconds) {
-  const body = seconds !== undefined ? { cmd, seconds } : { cmd };
-  fetch('/sc-cmd', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  }).catch(() => {});
-}
-
 // Clocks
 function toggleGameClock(){
-  if(S.gameRunning){
-    clearInterval(gT); S.gameRunning=false;
-    renderGameClock();
-    sendSCCmd('game-stop');
-    saveNow();
-  } else {
-    if(S.gameSeconds<=0) return;
+  if(S.gameRunning){ clearInterval(gT); S.gameRunning=false; }
+  else{
+    if(S.gameSeconds<=0)return;
     S.gameRunning=true;
-    clearInterval(gT);
     gT=setInterval(()=>{
       if(S.gameSeconds>0){ S.gameSeconds--; save(); renderGameClock(); }
-      else{ clearInterval(gT); S.gameRunning=false; renderGameClock(); triggerBuzz('game'); saveNow(); }
+      else{ clearInterval(gT); S.gameRunning=false; renderGameClock(); triggerBuzz('game'); }
     },1000);
-    sendSCCmd('game-start');
-    saveNow();
-    renderGameClock();
   }
-}
-function toggleShotClock(){
-  if(S.shotRunning){
-    clearInterval(gT); S.gameRunning=false;
-    renderGameClock();
-    sendSCCmd('stop');
-    saveNow();
-  } else {
-    if(!S.gameRunning && S.gameSeconds>0){
-      S.gameRunning=true;
-      clearInterval(gT);
-      gT=setInterval(()=>{
-        if(S.gameSeconds>0){ S.gameSeconds--; save(); renderGameClock(); }
-        else{ clearInterval(gT); S.gameRunning=false; renderGameClock(); triggerBuzz('game'); saveNow(); }
-      },1000);
-      renderGameClock();
-    }
-    sendSCCmd('start');
-    saveNow();
-  }
-}
-function resetShot(n){
-  sendSCCmd('reset', n);
-}
-function autoResetShot(){
-  // Server handles auto-reset — nothing needed here
+  renderGameClock();
 }
 function setTimerPreset(){
   const mins = parseInt(document.getElementById('clkMin').value)||0;
@@ -1139,7 +1048,19 @@ function setClockManual(){
   S.gameSeconds=(parseInt(document.getElementById('clkMin').value)||0)*60+Math.min(59,parseInt(document.getElementById('clkSec').value)||0);
   save(); renderGameClock();
 }
-
+function toggleShotClock(){
+  if(S.shotRunning){ clearInterval(sT); S.shotRunning=false; }
+  else{
+    if(S.shotSeconds<=0)return;
+    S.shotRunning=true;
+    sT=setInterval(()=>{
+      if(S.shotSeconds>0){ S.shotSeconds--; save(); renderShotClock(); }
+      else{ clearInterval(sT); S.shotRunning=false; renderShotClock(); triggerBuzz('shot'); }
+    },1000);
+  }
+  renderShotClock();
+}
+function resetShot(n){ clearInterval(sT); S.shotRunning=false; S.shotSeconds=n; save(); renderShotClock(); }
 
 // Quarter
 function setQtr(q){ S.quarter=q; save(); renderAll(); }
@@ -1285,12 +1206,11 @@ function setPoss(side){ S.possession=side; save(); renderAll(); }
 // Reset
 function resetAll(){
   if(!confirm('Reset full game? Scores & clocks will clear.'))return;
-  clearInterval(gT);
+  clearInterval(gT); clearInterval(sT);
   S={...DEF};
   document.getElementById('clkMin').value=10;
   document.getElementById('clkSec').value=0;
-  sendSCCmd('reset', 24);
-  saveNow(); renderAll();
+  save(); renderAll();
 }
 
 // Load from server first (so tablet gets live state, not stale localStorage)
@@ -1309,11 +1229,7 @@ function connectSSE(){
       if(msg.type === 'state') {
         const d = msg.data;
         if(document.activeElement.tagName !== 'INPUT'){
-          // Merge server state but preserve our own game clock — server owns shot clock only
-          S = {...DEF, ...d,
-            gameSeconds: S.gameSeconds,
-            gameRunning: S.gameRunning,
-          };
+          S = {...DEF, ...d};
           renderAll();
         }
       }

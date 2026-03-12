@@ -3,79 +3,24 @@ const fs   = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 3000;
-let state  = {};
-let logos  = { home: null, away: null };
+let state   = {};
+let logos   = { home: null, away: null };
 let clients = [];
 
-// ── SERVER-OWNED SHOT CLOCK ───────────────────────────────────
-// Server is the single source of truth for shot clock.
-// No browser timer touches shotSeconds/shotRunning.
-let scInterval = null;
-
-function scPush() {
-  pushToAll({ type: 'state', data: fullState() });
-}
-
-function scTick() {
-  if (!state.shotRunning) { scStop(); return; }
-  if (state.shotSeconds > 1) {
-    state.shotSeconds--;
-    scPush();
-  } else {
-    state.shotSeconds = 0;
-    state.shotRunning = false;
-    scStop();
-    scPush();
-    pushToAll({ type: 'buzz', kind: 'shot' });
-    // Auto-reset to 24, restart if game still running
-    setTimeout(() => {
-      state.shotSeconds = 24;
-      state.shotRunning = !!state.gameRunning;
-      scPush();
-      if (state.shotRunning) scStart();
-    }, 400);
-  }
-}
-
-function scStart() {
-  if (state.shotRunning) return;
-  if (!state.shotSeconds || state.shotSeconds <= 0) return;
-  state.shotRunning = true;
-  if (scInterval) clearInterval(scInterval);
-  scInterval = setInterval(scTick, 1000);
-  scPush();
-}
-
-function scStop() {
-  state.shotRunning = false;
-  if (scInterval) { clearInterval(scInterval); scInterval = null; }
-}
-
-function scReset(n) {
-  scStop();
-  state.shotSeconds = n || 24;
-  state.shotRunning = !!state.gameRunning;
-  if (state.shotRunning) scStart();
-  scPush();
-}
-// ─────────────────────────────────────────────────────────────
-
 const ROUTES = {
-  '/':                   'basketball-scoreboard.html',
-  '/control':            'basketball-scoreboard.html',
-  '/overlay':            'basketball-overlay.html',
-  '/fullscreen':         'basketball-fullscreen.html',
-  '/nbaoverlay':         'basketball-nbaoverlay.html',
-  '/mobile-overlay':     'mobile-overlay.html',
-  '/display':            'scoreboard-display.html',
-  '/display2':           'scoreboard-display2.html',
-  '/shotclock':          'shotclock-control.html',
-  '/shotclock-display':  'shotclock-display.html',
-  '/manifest.json':      'manifest.json',
-  '/sw.js':              'sw.js',
-  '/icon-192.png':       'icon-192.png',
-  '/icon-512.png':       'icon-512.png',
-  '/buzzer.mp3':         'buzzer.mp3',
+  '/':              'basketball-scoreboard.html',
+  '/control':       'basketball-scoreboard.html',
+  '/overlay':       'basketball-overlay.html',
+  '/fullscreen':    'basketball-fullscreen.html',
+  '/nbaoverlay':    'basketball-nbaoverlay.html',
+  '/mobile-overlay':'mobile-overlay.html',
+  '/display':       'scoreboard-display.html',
+  '/display2':      'scoreboard-display2.html',
+  '/manifest.json': 'manifest.json',
+  '/sw.js':         'sw.js',
+  '/icon-192.png':  'icon-192.png',
+  '/icon-512.png':  'icon-512.png',
+  '/buzzer.mp3':    'buzzer.mp3',
 };
 
 function pushToAll(payload) {
@@ -104,29 +49,10 @@ http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-  // POST /update — game state from control board (scores, game clock, etc.)
-  // Server ignores incoming shotSeconds/shotRunning — it owns those.
+  // POST /update — game state
   if (req.method === 'POST' && req.url === '/update') {
     readBody(req).then(b => {
-      try {
-        const incoming = JSON.parse(b);
-        const prevGameRunning = state.gameRunning;
-        const shotSeconds = state.shotSeconds;
-        const shotRunning = state.shotRunning;
-        state = incoming;
-        // Restore server-owned shot clock values
-        state.shotSeconds = shotSeconds != null ? shotSeconds : 24;
-        state.shotRunning = shotRunning || false;
-        // If game clock just stopped, stop shot clock too
-        if (prevGameRunning && !state.gameRunning) {
-          scStop();
-          state.shotRunning = false;
-        }
-        // If game clock just started (resumed), restart shot clock if it has time
-        if (!prevGameRunning && state.gameRunning && !state.shotRunning && state.shotSeconds > 0) {
-          scStart();
-        }
-      } catch(e) {}
+      try { state = JSON.parse(b); } catch(e) {}
       pushToAll({ type: 'state', data: fullState() });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end('{"ok":true}');
@@ -134,7 +60,7 @@ http.createServer((req, res) => {
     return;
   }
 
-  // POST /buzz
+  // POST /buzz — broadcast buzzer sound to all clients
   if (req.method === 'POST' && req.url === '/buzz') {
     readBody(req).then(b => {
       let kind = 'game';
@@ -158,7 +84,7 @@ http.createServer((req, res) => {
     return;
   }
 
-  // GET /events — main SSE stream for all displays
+  // GET /events — SSE stream
   if (req.url === '/events') {
     res.writeHead(200, {
       'Content-Type':  'text/event-stream',
@@ -166,7 +92,9 @@ http.createServer((req, res) => {
       'Connection':    'keep-alive',
     });
     res.write('\n');
-    res.write('data: ' + JSON.stringify({ type: 'state', data: fullState() }) + '\n\n');
+    if (Object.keys(state).length) {
+      res.write('data: ' + JSON.stringify({ type: 'state', data: fullState() }) + '\n\n');
+    }
     const ping = setInterval(() => {
       try { res.write(': ping\n\n'); } catch(e) { clearInterval(ping); }
     }, 20000);
@@ -178,41 +106,10 @@ http.createServer((req, res) => {
     return;
   }
 
-  // GET /state — initial snapshot
+  // GET /state — initial load
   if (req.url === '/state') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(fullState()));
-    return;
-  }
-
-  // POST /sc-cmd — shot clock commands from operator phone OR control board
-  // body: { cmd: 'start'|'stop'|'reset'|'game-start'|'game-stop', seconds?: 24|14 }
-  if (req.method === 'POST' && req.url === '/sc-cmd') {
-    readBody(req).then(b => {
-      let cmd = {};
-      try { cmd = JSON.parse(b); } catch(e) {}
-
-      if (cmd.cmd === 'start') {
-        state.gameRunning = true;
-        scStart();
-      } else if (cmd.cmd === 'stop') {
-        scStop();
-        state.gameRunning = false;
-        scPush();
-      } else if (cmd.cmd === 'game-start') {
-        state.gameRunning = true;
-        if (!state.shotRunning && state.shotSeconds > 0) scStart();
-      } else if (cmd.cmd === 'game-stop') {
-        state.gameRunning = false;
-        scStop();
-        scPush();
-      } else if (cmd.cmd === 'reset') {
-        scReset(cmd.seconds || 24);
-      }
-
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end('{"ok":true}');
-    });
     return;
   }
 
