@@ -207,6 +207,16 @@ html, body {
   var sse = null, retryTimer = null;
   var audioCtx = null, lastBeepSec = -1;
 
+
+  var localTick = null;
+  function startLocalTick(){
+    if(localTick) return;
+    localTick = setInterval(function(){
+      if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; render(); }
+    }, 1000);
+  }
+  function stopLocalTick(){ clearInterval(localTick); localTick = null; }
+  function syncLocalTick(){ if(S.shotRunning){ startLocalTick(); } else { stopLocalTick(); } }
   var scNum        = document.getElementById('scNum');
   var scLabel      = document.getElementById('scLabel');
   var runDot       = document.getElementById('runDot');
@@ -295,6 +305,7 @@ html, body {
       S.shotSeconds = d.shotSeconds != null ? d.shotSeconds : 24;
       S.shotRunning = d.shotRunning || false;
       render();
+      syncLocalTick();
     }).catch(function() {}).finally(function() { connect(); });
   }
 

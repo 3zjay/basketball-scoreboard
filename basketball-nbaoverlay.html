@@ -112,6 +112,24 @@ body { background: transparent; font-family: 'Barlow Condensed', sans-serif; }
 const DEF = { homeScore:0, awayScore:0, homeAbbr:'HOME', homeColor:'#f5c842', homeLogo:null, awayAbbr:'AWAY', awayColor:'#c8102e', awayLogo:null, quarter:1, gameSeconds:600, shotSeconds:24, possession:null };
 const PERIODS = ['1ST','2ND','3RD','4TH','OT','2OT'];
 let S = {...DEF};
+let localTick = null;
+function startLocalTick(){
+  if(localTick) return;
+  localTick = setInterval(()=>{
+    if(S.gameRunning && S.gameSeconds > 0){ S.gameSeconds--; renderClocks(); }
+    if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; renderClocks(); }
+  }, 1000);
+}
+function stopLocalTick(){ clearInterval(localTick); localTick = null; }
+function syncLocalTick(){ if(S.gameRunning || S.shotRunning){ startLocalTick(); } else { stopLocalTick(); } }
+function renderClocks(){
+  const m=Math.floor(S.gameSeconds/60), sec=S.gameSeconds%60;
+  const clkEl=document.getElementById('gameClkOv2');
+  if(clkEl){ clkEl.textContent=`${m}:${sec.toString().padStart(2,'0')}`; clkEl.className='game-clock'+(S.gameSeconds<=30?' warn':''); }
+  const shotEl=document.getElementById('shotClkOv2');
+  if(shotEl){ shotEl.textContent=S.shotSeconds; shotEl.className='shot-num'+(S.shotSeconds<=5?' urgent':''); }
+}
+
 function s(id,val){ const e=document.getElementById(id); if(e) e.textContent=val; }
 function render(){
   s('homeScoreOv2', S.homeScore); s('awayScoreOv2', S.awayScore);
@@ -131,10 +149,10 @@ function render(){
 }
 function connectSSE(){
   const es=new EventSource('/events');
-  es.onmessage=e=>{ try{ const msg=JSON.parse(e.data); if(msg.type==='state'){ S={...DEF,...msg.data}; render(); } }catch(err){} };
+  es.onmessage=e=>{ try{ const msg=JSON.parse(e.data); if(msg.type==='state'){ stopLocalTick(); S={...DEF,...msg.data}; render(); syncLocalTick(); } }catch(err){} };
   es.onerror=()=>{ setTimeout(connectSSE,3000); es.close(); };
 }
-fetch('/state').then(r=>r.json()).then(d=>{ S={...DEF,...d}; render(); }).catch(()=>{}).finally(()=>connectSSE());
+fetch('/state').then(r=>r.json()).then(d=>{ S={...DEF,...d}; render(); syncLocalTick(); }).catch(()=>{}).finally(()=>connectSSE());
 </script>
 </body>
 </html>

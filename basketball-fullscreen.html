@@ -216,6 +216,24 @@ const DEF = {
 };
 const PERIODS = ['1ST','2ND','3RD','4TH','OT','2OT'];
 let S = {...DEF};
+let localTick = null;
+function startLocalTick(){
+  if(localTick) return;
+  localTick = setInterval(()=>{
+    if(S.gameRunning && S.gameSeconds > 0){ S.gameSeconds--; renderClocks(); }
+    if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; renderClocks(); }
+  }, 1000);
+}
+function stopLocalTick(){ clearInterval(localTick); localTick = null; }
+function syncLocalTick(){ if(S.gameRunning || S.shotRunning){ startLocalTick(); } else { stopLocalTick(); } }
+
+function renderClocks(){
+  const m=Math.floor(S.gameSeconds/60), sec=S.gameSeconds%60;
+  const clkEl=document.getElementById('gameClkOv');
+  if(clkEl){ clkEl.textContent=`${m}:${sec.toString().padStart(2,'0')}`; clkEl.className='game-clock'+(S.gameSeconds<=30?' warn':''); }
+  const shotEl=document.getElementById('shotClkOv');
+  if(shotEl){ shotEl.textContent=S.shotSeconds; shotEl.className='shot-num'+(S.shotSeconds<=5?' urgent':''); }
+}
 
 function s(id,val){ const e=document.getElementById(id); if(e) e.textContent=val; }
 
@@ -268,14 +286,14 @@ function connectSSE(){
     try {
       const msg=JSON.parse(e.data);
       if(msg.type==='buzz'){ if(msg.kind==='game') playGameBuzzer(); else playShotBuzzer(); }
-      else if(msg.type==='state'){ S={...DEF,...msg.data}; render(); }
+      else if(msg.type==='state'){ stopLocalTick(); S={...DEF,...msg.data}; render(); syncLocalTick(); }
     } catch(err){}
   };
   es.onerror=()=>{ es.close(); setTimeout(connectSSE,2000); };
 }
 
 fetch('/state').then(r=>r.json()).then(data=>{
-  if(Object.keys(data).length){ S={...DEF,...data}; render(); }
+  if(Object.keys(data).length){ S={...DEF,...data}; render(); syncLocalTick(); }
 }).catch(()=>{}).finally(()=>{ connectSSE(); });
 </script>
 </body>
