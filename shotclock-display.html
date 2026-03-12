@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shot Clock Display</title>
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width:100%; height:100%;
+  overflow:hidden;
+  background:#050505;
+  user-select:none;
+}
+
+/* ── STAGE ── */
+.stage {
+  width:100vw; height:100vh;
+  display:flex; align-items:center; justify-content:center;
+  background:#050505;
+  position:relative;
+  overflow:hidden;
+}
+
+/* ── LABEL — tiny, pinned top ── */
+.sc-label {
+  position:absolute;
+  top:2vh; left:0; right:0;
+  text-align:center;
+  font-family:'Teko',sans-serif;
+  font-size:clamp(14px, 2.2vmin, 26px);
+  font-weight:700;
+  letter-spacing:0.7vw;
+  text-transform:uppercase;
+  color:#222;
+  pointer-events:none;
+}
+
+/* ── THE NUMBER — fills the screen ── */
+.sc-number {
+  font-family:'Teko',sans-serif;
+  /* use the smaller of 96vw or 90vh so it always fits both axes */
+  font-size:min(96vw, 90vh);
+  font-weight:700;
+  line-height:0.82;
+  font-variant-numeric:tabular-nums;
+  text-align:center;
+  letter-spacing:-0.02em;
+  transition:color 0.25s, text-shadow 0.25s;
+  will-change:color;
+}
+
+.sc-number.normal {
+  color:#ff2200;
+  text-shadow:0 0 80px rgba(255,34,0,0.3), 0 0 200px rgba(255,20,0,0.1);
+}
+.sc-number.urgent {
+  color:#ff2200;
+  text-shadow:0 0 100px rgba(255,34,0,0.6), 0 0 280px rgba(255,20,0,0.2);
+  animation:urgentPulse 0.4s ease infinite alternate;
+}
+.sc-number.zero {
+  color:#ff2200;
+  text-shadow:0 0 140px rgba(255,34,0,0.85), 0 0 360px rgba(255,20,0,0.35);
+}
+@keyframes urgentPulse { to { opacity:0.32; } }
+
+/* ── STATUS ROW — tiny, pinned bottom ── */
+.status-row {
+  position:absolute;
+  bottom:2.5vh; left:0; right:0;
+  display:flex; align-items:center; justify-content:center; gap:9px;
+  pointer-events:none;
+}
+.run-dot {
+  width:clamp(7px,1.1vmin,13px); height:clamp(7px,1.1vmin,13px);
+  border-radius:50%; background:#1c1c1c;
+  transition:background .25s, box-shadow .25s;
+}
+.run-dot.on {
+  background:#00ee44;
+  box-shadow:0 0 10px rgba(0,238,68,0.8);
+  animation:dotPulse 1s ease-in-out infinite;
+}
+@keyframes dotPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.75)} }
+.run-lbl {
+  font-family:'Teko',sans-serif;
+  font-size:clamp(13px, 2vmin, 24px);
+  font-weight:700; letter-spacing:0.4vw; text-transform:uppercase;
+  color:#252525; transition:color .25s;
+}
+.run-lbl.on { color:#00ee44; text-shadow:0 0 10px rgba(0,238,68,0.35); }
+
+/* ── FLASH OVERLAY ── */
+.flash-overlay {
+  position:fixed; inset:0; background:#ff2200;
+  opacity:0; pointer-events:none; z-index:10;
+}
+@keyframes redFlash { 0%{opacity:0.6} 100%{opacity:0} }
+.flash-overlay.go { animation:redFlash 0.5s ease-out forwards; }
+
+/* ── NO SIGNAL ── */
+.no-sig {
+  position:fixed; bottom:14px; left:14px;
+  font-family:'Teko',sans-serif; font-size:15px;
+  font-weight:700; letter-spacing:2px; text-transform:uppercase;
+  color:#ff4455; background:rgba(255,34,68,0.08);
+  border:1px solid rgba(255,34,68,0.18);
+  padding:5px 11px; border-radius:4px; display:none;
+  z-index:50;
+}
+.no-sig.show { display:block; }
+
+/* ── CORNER CONTROLS (auto-hide) ── */
+.corner-btns {
+  position:fixed; bottom:16px; right:16px;
+  display:flex; flex-direction:column; align-items:flex-end; gap:8px;
+  z-index:50;
+  opacity:1; transition:opacity .5s;
+}
+.corner-btns.hidden { opacity:0; pointer-events:none; }
+
+.c-btn {
+  display:flex; align-items:center; gap:8px;
+  background:rgba(10,10,10,0.78);
+  border:1px solid rgba(255,255,255,0.09);
+  border-radius:8px; padding:7px 14px;
+  cursor:pointer; text-decoration:none; color:#777;
+  font-family:'Teko',sans-serif; font-size:15px;
+  font-weight:700; letter-spacing:2px; text-transform:uppercase;
+  transition:background .15s, color .15s, border-color .15s;
+  white-space:nowrap; -webkit-tap-highlight-color:transparent;
+}
+.c-btn:hover, .c-btn:active { background:rgba(28,28,28,0.92); color:#fff; border-color:rgba(255,255,255,0.2); }
+.c-btn.fs-btn:hover   { border-color:rgba(255,170,0,0.45); color:#ffaa00; }
+.c-btn.ctrl-btn:hover { border-color:rgba(77,159,255,0.45); color:#4d9fff; }
+.c-btn.sc-btn:hover   { border-color:rgba(255,50,0,0.45); color:#ff4422; }
+.c-btn-icon { font-size:15px; line-height:1; }
+
+/* ── UNLOCK ── */
+#soundUnlock {
+  position:fixed; inset:0; z-index:99999;
+  background:rgba(0,0,0,0.92);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:20px; cursor:pointer;
+}
+#soundUnlock h2 {
+  font-family:'Teko',sans-serif;
+  font-size:clamp(28px,5vh,56px);
+  color:#fff; letter-spacing:4px; text-transform:uppercase;
+}
+#soundUnlock button {
+  font-family:'Teko',sans-serif;
+  font-size:clamp(18px,3.5vh,36px);
+  font-weight:700; letter-spacing:3px; text-transform:uppercase;
+  background:#ff2200; color:#fff; border:none;
+  padding:12px 40px; border-radius:6px; cursor:pointer;
+}
+#soundUnlock p {
+  font-family:'Teko',sans-serif;
+  font-size:clamp(14px,2vh,22px);
+  color:#444; letter-spacing:2px; text-transform:uppercase;
+}
+</style>
+</head>
+<body>
+
+<div class="flash-overlay" id="flashOverlay"></div>
+
+<div class="stage">
+  <div class="sc-label" id="scLabel">SHOT CLOCK</div>
+  <div class="sc-number normal" id="scNum">24</div>
+  <div class="status-row">
+    <div class="run-dot" id="runDot"></div>
+    <div class="run-lbl" id="runLbl">READY</div>
+  </div>
+</div>
+
+<div class="no-sig" id="noSig">NO SIGNAL</div>
+
+<!-- Corner controls: fullscreen + quick links -->
+<div class="corner-btns" id="cornerBtns">
+  <button class="c-btn fs-btn" id="fsBtn" onclick="toggleFS()">
+    <span class="c-btn-icon" id="fsIcon">&#x26F6;</span>
+    <span id="fsLabel">FULL SCREEN</span>
+  </button>
+  <a class="c-btn ctrl-btn" href="/control" target="_blank">
+    <span class="c-btn-icon">&#x1F3AE;</span>
+    CONTROL BOARD
+  </a>
+  <a class="c-btn sc-btn" href="/shotclock" target="_blank">
+    <span class="c-btn-icon">&#x23F1;</span>
+    SHOT CLOCK OPERATOR
+  </a>
+</div>
+
+<div id="soundUnlock">
+  <h2>Shot Clock Display</h2>
+  <button onclick="activate()">TAP TO ACTIVATE</button>
+  <p>Tap once to enable sound</p>
+</div>
+
+<script>
+  var S = { shotSeconds: 24, shotRunning: false };
+  var sse = null, retryTimer = null;
+  var audioCtx = null, lastBeepSec = -1;
+
+  var scNum        = document.getElementById('scNum');
+  var scLabel      = document.getElementById('scLabel');
+  var runDot       = document.getElementById('runDot');
+  var runLbl       = document.getElementById('runLbl');
+  var flashOverlay = document.getElementById('flashOverlay');
+  var noSig        = document.getElementById('noSig');
+
+  function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  function playBuzz() {
+    if (!audioCtx) return;
+    [0, 0.22, 0.44].forEach(function(t) {
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(160, audioCtx.currentTime + t);
+      g.gain.setValueAtTime(0.5, audioCtx.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + t + 0.18);
+      o.start(audioCtx.currentTime + t);
+      o.stop(audioCtx.currentTime + t + 0.2);
+    });
+  }
+  function playBeep() {
+    if (!audioCtx) return;
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.frequency.setValueAtTime(900, audioCtx.currentTime);
+    g.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
+    o.start(); o.stop(audioCtx.currentTime + 0.09);
+  }
+  function doFlash() {
+    flashOverlay.classList.remove('go');
+    void flashOverlay.offsetWidth;
+    flashOverlay.classList.add('go');
+    flashOverlay.addEventListener('animationend', function() {
+      flashOverlay.classList.remove('go');
+    }, { once: true });
+  }
+
+  function render() {
+    var s = S.shotSeconds, r = S.shotRunning;
+    scNum.textContent = s < 10 ? '0' + s : '' + s;
+    scNum.className   = 'sc-number ' + (s === 0 ? 'zero' : s <= 5 ? 'urgent' : 'normal');
+    scLabel.style.color = s <= 5 ? '#3a1500' : '#222';
+    if (r) {
+      runDot.className = 'run-dot on';
+      runLbl.className = 'run-lbl on';
+      runLbl.textContent = 'RUNNING';
+    } else {
+      runDot.className = 'run-dot';
+      runLbl.className = 'run-lbl';
+      runLbl.textContent = s === 0 ? 'EXPIRED' : 'READY';
+    }
+  }
+
+  function connect() {
+    if (sse) sse.close();
+    sse = new EventSource('/events');
+    sse.onopen = function() { noSig.classList.remove('show'); clearTimeout(retryTimer); };
+    sse.onmessage = function(e) {
+      try {
+        var msg = JSON.parse(e.data);
+        if (msg.type === 'state') {
+          var wasRunning = S.shotRunning;
+          S.shotSeconds = msg.data.shotSeconds != null ? msg.data.shotSeconds : S.shotSeconds;
+          S.shotRunning = msg.data.shotRunning || false;
+          if (S.shotRunning && S.shotSeconds <= 5 && S.shotSeconds > 0 && S.shotSeconds !== lastBeepSec) {
+            playBeep(); lastBeepSec = S.shotSeconds;
+          }
+          if (wasRunning && !S.shotRunning && S.shotSeconds === 0) { playBuzz(); doFlash(); }
+          render();
+        }
+        if (msg.type === 'buzz' && msg.kind === 'shot') { playBuzz(); doFlash(); }
+      } catch(err) {}
+    };
+    sse.onerror = function() { noSig.classList.add('show'); sse.close(); retryTimer = setTimeout(connect, 2500); };
+  }
+
+  function activate() {
+    initAudio();
+    document.getElementById('soundUnlock').style.display = 'none';
+    fetch('/state').then(function(r) { return r.json(); }).then(function(d) {
+      S.shotSeconds = d.shotSeconds != null ? d.shotSeconds : 24;
+      S.shotRunning = d.shotRunning || false;
+      render();
+    }).catch(function() {}).finally(function() { connect(); });
+  }
+
+  /* ── FULLSCREEN ── */
+  var fsBtn   = document.getElementById('fsBtn');
+  var fsIcon  = document.getElementById('fsIcon');
+  var fsLabel = document.getElementById('fsLabel');
+
+  function toggleFS() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(function() {});
+    } else {
+      document.exitFullscreen().catch(function() {});
+    }
+  }
+  document.addEventListener('fullscreenchange', function() {
+    if (document.fullscreenElement) {
+      fsIcon.textContent  = '\u2715';
+      fsLabel.textContent = 'EXIT FULL SCREEN';
+    } else {
+      fsIcon.innerHTML  = '&#x26F6;';
+      fsLabel.textContent = 'FULL SCREEN';
+    }
+  });
+
+  /* ── AUTO-HIDE corner buttons ── */
+  var cornerBtns  = document.getElementById('cornerBtns');
+  var hideTimer   = null;
+  function showCorner() {
+    cornerBtns.classList.remove('hidden');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(function() { cornerBtns.classList.add('hidden'); }, 3500);
+  }
+  document.addEventListener('mousemove',  showCorner);
+  document.addEventListener('touchstart', showCorner);
+  // start hidden after 4s on load
+  hideTimer = setTimeout(function() { cornerBtns.classList.add('hidden'); }, 4000);
+
+  render();
+</script>
+</body>
+</html>
