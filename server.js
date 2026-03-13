@@ -8,19 +8,19 @@ let logos   = { home: null, away: null };
 let clients = [];
 
 const ROUTES = {
-  '/':              'basketball-scoreboard.html',
-  '/control':       'basketball-scoreboard.html',
-  '/overlay':       'basketball-overlay.html',
-  '/fullscreen':    'basketball-fullscreen.html',
-  '/nbaoverlay':    'basketball-nbaoverlay.html',
-  '/mobile-overlay':'mobile-overlay.html',
-  '/display':       'scoreboard-display.html',
-  '/display2':      'scoreboard-display2.html',
-  '/manifest.json': 'manifest.json',
-  '/sw.js':         'sw.js',
-  '/icon-192.png':  'icon-192.png',
-  '/icon-512.png':  'icon-512.png',
-  '/buzzer.mp3':    'buzzer.mp3',
+  '/':                   'basketball-scoreboard.html',
+  '/control':            'basketball-scoreboard.html',
+  '/overlay':            'basketball-overlay.html',
+  '/fullscreen':         'basketball-fullscreen.html',
+  '/nbaoverlay':         'basketball-nbaoverlay.html',
+  '/mobile-overlay':     'mobile-overlay.html',
+  '/display':            'scoreboard-display.html',
+  '/display2':           'scoreboard-display2.html',
+  '/manifest.json':      'manifest.json',
+  '/sw.js':              'sw.js',
+  '/icon-192.png':       'icon-192.png',
+  '/icon-512.png':       'icon-512.png',
+  '/buzzer.mp3':         'buzzer.mp3',
 };
 
 function pushToAll(payload) {
