@@ -3,8 +3,33 @@ const fs   = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 3000;
-let state   = {};
-let logos   = { home: null, away: null };
+let state = {
+  homeScore: 0, awayScore: 0,
+  homeFouls: 0, awayFouls: 0,
+  homeAbbr: 'HOME', awayAbbr: 'AWAY',
+  homeRecord: '0-0', awayRecord: '0-0',
+  homeColor: '#f5c842', awayColor: '#c8102e',
+  homeLogo: null, awayLogo: null,
+  quarter: 1,
+  gameSeconds: 600,
+  shotSeconds: 24,
+  gameRunning: false,
+  shotRunning: false,
+  timerPresetSeconds: 600,
+  rp1Title: 'BROADCAST', rp1Value: '',
+  rp2Title: 'VENUE',     rp2Value: '',
+  barColor: '#0d1117',
+  possession: null,
+};
+let logos = { home: null, away: null };
+
+function fullState() {
+  return {
+    ...state,
+    homeLogo: logos.home !== null ? logos.home : (state.homeLogo || null),
+    awayLogo: logos.away !== null ? logos.away : (state.awayLogo || null),
+  };
+}
 let clients = [];
 
 // ── SERVER-OWNED CLOCKS ────────────────────────────────────────────────────
@@ -82,10 +107,6 @@ function pushToAll(payload) {
   clients = clients.filter(res => {
     try { res.write(msg); return true; } catch(e) { return false; }
   });
-}
-
-function fullState() {
-  return { ...state, homeLogo: logos.home, awayLogo: logos.away };
 }
 
 function readBody(req) {
