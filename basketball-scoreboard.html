@@ -789,20 +789,17 @@ const DEF = {
 };
 
 let S = {...DEF};
-let _saveTimer=null, _savePending=false;
+let _saveTimer = null;
 
-// Throttled save — for rapid changes (score edits, etc.)
+// Debounced save — always resets timer so the latest value is always pushed
 function save(){
   try{ localStorage.setItem('bball_v3', JSON.stringify(S)); }catch(e){}
-  if(_savePending) return;
-  _savePending = true;
   clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(()=>{ _savePending = false; pushState(); }, 400);
+  _saveTimer = setTimeout(()=>{ pushState(); }, 300);
 }
 // Immediate save — for discrete actions (period change, team name, etc.)
 function saveNow(){
   try{ localStorage.setItem('bball_v3', JSON.stringify(S)); }catch(e){}
-  _savePending = false;
   clearTimeout(_saveTimer);
   pushState();
 }
@@ -912,7 +909,8 @@ function setScoreDirect(team, val){
   const n = parseInt(val);
   if(isNaN(n) || n < 0) return;
   S[team+'Score'] = n;
-  save();
+  _lastStateCmd = Date.now();
+  save(); renderAll();
 }
 
 // Scores
@@ -1096,8 +1094,7 @@ function setTimerPreset(){
   const mins = parseInt(document.getElementById('clkMin').value)||0;
   const secs = Math.min(59, parseInt(document.getElementById('clkSec').value)||0);
   S.timerPresetSeconds = mins*60 + secs;
-  save();
-  // Visual feedback
+  saveNow(); // immediate — user might press Reset right after
   const btn = document.querySelector('[onclick="setTimerPreset()"]');
   if(btn){ const orig=btn.textContent; btn.textContent='✓ Saved!'; btn.style.borderColor='#00ee44'; btn.style.color='#00ee44'; setTimeout(()=>{ btn.textContent=orig; btn.style.borderColor='#f5c842'; btn.style.color='#f5c842'; },1200); }
 }
@@ -1120,8 +1117,8 @@ function setClockManual(){
 
 
 // Quarter
-function setQtr(q){ S.quarter=q; save(); renderAll(); }
-function nextQtr(){ const i=QTRS.indexOf(S.quarter); if(i<QTRS.length-1)S.quarter=QTRS[i+1]; save(); renderAll(); }
+function setQtr(q){ S.quarter=q; _lastStateCmd=Date.now(); save(); renderAll(); }
+function nextQtr(){ const i=QTRS.indexOf(S.quarter); if(i<QTRS.length-1)S.quarter=QTRS[i+1]; _lastStateCmd=Date.now(); save(); renderAll(); }
 
 // Right panel
 function updateRP(){
@@ -1265,7 +1262,7 @@ function refBuzzer(){
 }
 
 // Possession
-function setPoss(side){ S.possession=side; save(); renderAll(); }
+function setPoss(side){ S.possession=side; _lastStateCmd=Date.now(); save(); renderAll(); }
 
 // Reset
 function resetAll(){
