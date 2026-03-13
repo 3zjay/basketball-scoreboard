@@ -124,9 +124,10 @@ http.createServer((req, res) => {
           pushToAll({ type: 'state', data: fullState() });
 
         } else if (cmd === 'game_set') {
-          stopGameClock();
-          state.gameSeconds = seconds != null ? seconds : (state.gameSeconds || 600);
-          pushToAll({ type: 'state', data: fullState() });
+          if (!state.gameRunning) {
+            state.gameSeconds = seconds != null ? seconds : (state.gameSeconds || 600);
+            pushToAll({ type: 'state', data: fullState() });
+          }
 
         } else if (cmd === 'shot_start') {
           if (!state.shotRunning) startShotClock();

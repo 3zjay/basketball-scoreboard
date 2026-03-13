@@ -1058,26 +1058,34 @@ function triggerBuzz(kind) {
   }).catch(()=>{});
 }
 
-// Clocks — no optimistic state updates, SSE is authoritative.
-// Server responds near-instantly so button text updates via SSE.
+// Clocks — optimistic button text, suppress SSE override briefly after a command
+let _lastClockCmd = 0;
 function toggleGameClock(){
+  _lastClockCmd = Date.now();
   if(S.gameRunning){
+    S.gameRunning = false; renderGameClock();
     cmd('game_stop');
   } else {
     if(S.gameSeconds <= 0) return;
+    S.gameRunning = true; renderGameClock();
     cmd('game_start');
   }
 }
 function toggleShotClock(){
+  _lastClockCmd = Date.now();
   if(S.shotRunning){
+    S.shotRunning = false; renderShotClock();
     cmd('shot_stop');
   } else {
     if(S.shotSeconds <= 0) return;
+    S.shotRunning = true; renderShotClock();
     cmd('shot_start');
   }
 }
 // Reset always starts the shot clock immediately
 function resetShot(n){
+  _lastClockCmd = Date.now();
+  S.shotSeconds = n; S.shotRunning = true; renderShotClock();
   cmd('shot_reset', n);
 }
 function setTimerPreset(){
@@ -1230,8 +1238,15 @@ function loadCustomOptions(){
 }
 
 // Referee manual buzzer
+let _lastLocalBuzz = 0;
 function refBuzzer(){
-  triggerBuzz('game');
+  _lastLocalBuzz = Date.now();
+  playGameBuzzer(); // play locally immediately
+  fetch('/buzz', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind: 'game' })
+  }).catch(()=>{});
   const btn = document.getElementById('refBuzzerBtn2');
   if(btn){
     btn.style.background = '#6a1515';
@@ -1274,29 +1289,24 @@ function connectSSE(){
       const msg = JSON.parse(e.data);
       if(msg.type === 'state') {
         const d = msg.data;
-        const activeTag = document.activeElement ? document.activeElement.tagName : '';
-        const activeId  = document.activeElement ? document.activeElement.id   : '';
-        // Always accept clock fields from server (server-owned)
-        S.gameSeconds  = d.gameSeconds  != null ? d.gameSeconds  : S.gameSeconds;
-        S.shotSeconds  = d.shotSeconds  != null ? d.shotSeconds  : S.shotSeconds;
-        S.gameRunning  = !!d.gameRunning;
-        S.shotRunning  = !!d.shotRunning;
-        // Only update non-clock fields if user isn't mid-edit
-        if(activeTag !== 'INPUT' && activeTag !== 'TEXTAREA'){
-          S = {...DEF, ...d};
-        } else {
-          // Merge everything except the field currently being edited
-          const merged = {...DEF, ...d};
-          merged.gameSeconds = S.gameSeconds;
-          merged.shotSeconds = S.shotSeconds;
-          merged.gameRunning = S.gameRunning;
-          merged.shotRunning = S.shotRunning;
-          S = merged;
+        const sinceCmd = Date.now() - _lastClockCmd;
+        // Within 700ms of a clock command, keep our optimistic values
+        // so buttons don't flicker back before server confirms
+        if(sinceCmd < 700){
+          d.gameRunning = S.gameRunning;
+          d.shotRunning = S.shotRunning;
+          d.gameSeconds = S.gameSeconds;
+          d.shotSeconds = S.shotSeconds;
         }
+        S = {...DEF, ...d};
         renderAll();
       } else if(msg.type === 'buzz') {
-        if(msg.kind === 'game') triggerBuzz('game');
-        else triggerBuzz('shot');
+        // Play audio directly — never call triggerBuzz() here or it re-broadcasts and loops
+        const sinceLocal = Date.now() - _lastLocalBuzz;
+        if(sinceLocal > 600){ // skip echo of our own ref-buzzer click
+          if(msg.kind === 'game') playGameBuzzer();
+          else playShotBuzzer();
+        }
       }
     } catch(err){}
   };
