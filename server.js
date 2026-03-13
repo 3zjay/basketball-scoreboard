@@ -124,10 +124,9 @@ http.createServer((req, res) => {
           pushToAll({ type: 'state', data: fullState() });
 
         } else if (cmd === 'game_set') {
-          if (!state.gameRunning) {
-            state.gameSeconds = seconds != null ? seconds : (state.gameSeconds || 600);
-            pushToAll({ type: 'state', data: fullState() });
-          }
+          stopGameClock();
+          state.gameSeconds = seconds != null ? seconds : (state.gameSeconds || 600);
+          pushToAll({ type: 'state', data: fullState() });
 
         } else if (cmd === 'shot_start') {
           if (!state.shotRunning) startShotClock();
@@ -139,14 +138,10 @@ http.createServer((req, res) => {
           }
 
         } else if (cmd === 'shot_reset') {
-          const wasRunning = state.gameRunning;
           stopShotClock();
           state.shotSeconds = seconds || 24;
-          if (wasRunning) {
-            startShotClock();
-          } else {
-            pushToAll({ type: 'state', data: fullState() });
-          }
+          // Always start shot clock on reset — pressing 24/14/8 = intent to run
+          startShotClock();
 
         } else if (cmd === 'reset_all') {
           stopGameClock();

@@ -1058,30 +1058,26 @@ function triggerBuzz(kind) {
   }).catch(()=>{});
 }
 
-// Clocks
+// Clocks — no optimistic state updates, SSE is authoritative.
+// Server responds near-instantly so button text updates via SSE.
 function toggleGameClock(){
-  // Optimistic UI update, server confirms via SSE
   if(S.gameRunning){
-    S.gameRunning = false; renderGameClock();
     cmd('game_stop');
   } else {
     if(S.gameSeconds <= 0) return;
-    S.gameRunning = true; renderGameClock();
     cmd('game_start');
   }
 }
 function toggleShotClock(){
   if(S.shotRunning){
-    S.shotRunning = false; renderShotClock();
     cmd('shot_stop');
   } else {
     if(S.shotSeconds <= 0) return;
-    S.shotRunning = true; renderShotClock();
     cmd('shot_start');
   }
 }
+// Reset always starts the shot clock immediately
 function resetShot(n){
-  S.shotSeconds = n; S.shotRunning = false; renderShotClock();
   cmd('shot_reset', n);
 }
 function setTimerPreset(){
@@ -1103,12 +1099,10 @@ function resetGameClock(){
   } else {
     seconds=(parseInt(document.getElementById('clkMin').value)||10)*60+(parseInt(document.getElementById('clkSec').value)||0);
   }
-  S.gameRunning=false; S.gameSeconds=seconds; renderGameClock();
   cmd('game_reset', seconds);
 }
 function setClockManual(){
   const seconds=(parseInt(document.getElementById('clkMin').value)||0)*60+Math.min(59,parseInt(document.getElementById('clkSec').value)||0);
-  S.gameSeconds=seconds; renderGameClock();
   cmd('game_set', seconds);
 }
 
@@ -1257,10 +1251,11 @@ function setPoss(side){ S.possession=side; save(); renderAll(); }
 // Reset
 function resetAll(){
   if(!confirm('Reset full game? Scores & clocks will clear.'))return;
-  S={...DEF};
   document.getElementById('clkMin').value=10;
   document.getElementById('clkSec').value=0;
   cmd('reset_all');
+  // Reset non-clock state locally and push
+  S={...DEF};
   saveNow(); renderAll();
 }
 
@@ -1279,8 +1274,25 @@ function connectSSE(){
       const msg = JSON.parse(e.data);
       if(msg.type === 'state') {
         const d = msg.data;
-        // Accept server clock state — server owns gameSeconds/shotSeconds/gameRunning/shotRunning
-        S = {...DEF, ...d};
+        const activeTag = document.activeElement ? document.activeElement.tagName : '';
+        const activeId  = document.activeElement ? document.activeElement.id   : '';
+        // Always accept clock fields from server (server-owned)
+        S.gameSeconds  = d.gameSeconds  != null ? d.gameSeconds  : S.gameSeconds;
+        S.shotSeconds  = d.shotSeconds  != null ? d.shotSeconds  : S.shotSeconds;
+        S.gameRunning  = !!d.gameRunning;
+        S.shotRunning  = !!d.shotRunning;
+        // Only update non-clock fields if user isn't mid-edit
+        if(activeTag !== 'INPUT' && activeTag !== 'TEXTAREA'){
+          S = {...DEF, ...d};
+        } else {
+          // Merge everything except the field currently being edited
+          const merged = {...DEF, ...d};
+          merged.gameSeconds = S.gameSeconds;
+          merged.shotSeconds = S.shotSeconds;
+          merged.gameRunning = S.gameRunning;
+          merged.shotRunning = S.shotRunning;
+          S = merged;
+        }
         renderAll();
       } else if(msg.type === 'buzz') {
         if(msg.kind === 'game') triggerBuzz('game');
