@@ -1071,35 +1071,65 @@ function triggerBuzz(kind) {
   }).catch(()=>{});
 }
 
-// Clocks — optimistic button text, suppress SSE override briefly after a command
+// Local tick — makes clocks move immediately on the control panel without waiting for SSE
+let _localGameTick = null;
+let _localShotTick = null;
+function startLocalGameTick(){
+  if(_localGameTick) return;
+  _localGameTick = setInterval(()=>{
+    if(S.gameRunning && S.gameSeconds > 0){ S.gameSeconds--; renderGameClock(); }
+    else { stopLocalGameTick(); }
+  }, 1000);
+}
+function stopLocalGameTick(){ clearInterval(_localGameTick); _localGameTick = null; }
+function startLocalShotTick(){
+  if(_localShotTick) return;
+  _localShotTick = setInterval(()=>{
+    if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; renderShotClock(); }
+    else { stopLocalShotTick(); }
+  }, 1000);
+}
+function stopLocalShotTick(){ clearInterval(_localShotTick); _localShotTick = null; }
+
 let _lastClockCmd = 0;
 let _lastStateCmd = 0; // for score/foul/non-clock changes
 function toggleGameClock(){
   _lastClockCmd = Date.now();
   if(S.gameRunning){
-    S.gameRunning = false; renderGameClock();
+    S.gameRunning = false;
+    stopLocalGameTick();
+    renderGameClock();
     cmd('game_stop');
   } else {
     if(S.gameSeconds <= 0) return;
-    S.gameRunning = true; renderGameClock();
+    S.gameRunning = true;
+    startLocalGameTick();
+    renderGameClock();
     cmd('game_start');
   }
 }
 function toggleShotClock(){
   _lastClockCmd = Date.now();
   if(S.shotRunning){
-    S.shotRunning = false; renderShotClock();
+    S.shotRunning = false;
+    stopLocalShotTick();
+    renderShotClock();
     cmd('shot_stop');
   } else {
     if(S.shotSeconds <= 0) return;
-    S.shotRunning = true; renderShotClock();
+    S.shotRunning = true;
+    startLocalShotTick();
+    renderShotClock();
     cmd('shot_start');
   }
 }
 // Reset always starts the shot clock immediately
 function resetShot(n){
   _lastClockCmd = Date.now();
-  S.shotSeconds = n; S.shotRunning = true; renderShotClock();
+  stopLocalShotTick();
+  S.shotSeconds = n; S.shotRunning = true;
+  startLocalShotTick();
+  renderShotClock();
   cmd('shot_reset', n);
 }
 function setTimerPreset(){
@@ -1123,6 +1153,7 @@ function resetGameClock(){
   // Update locally immediately so Start works right away after a reset
   S.gameSeconds = seconds;
   S.gameRunning = false;
+  stopLocalGameTick();
   _lastClockCmd = Date.now();
   renderGameClock();
   cmd('game_reset', seconds);
@@ -1318,6 +1349,8 @@ loadCustomOptions();
 setLiveStatus('connecting');
 fetch('/state').then(r=>r.json()).then(data=>{
   if(Object.keys(data).length){ S={...DEF,...data}; }
+  if(S.gameRunning) startLocalGameTick();
+  if(S.shotRunning) startLocalShotTick();
   renderAll();
 }).catch(()=>{ renderAll(); }).finally(()=>{ connectSSE(); });
 
@@ -1335,13 +1368,16 @@ function connectSSE(){
         const sinceClockCmd = now - _lastClockCmd;
         const sinceStateCmd = now - _lastStateCmd;
 
-        // Within 1500ms of a clock command, keep our optimistic clock values
+        // Within 1500ms of a clock command, protect only the running flags
+        // so buttons don't flicker — but always accept server's time values
         if(sinceClockCmd < 1500){
           d.gameRunning = S.gameRunning;
           d.shotRunning = S.shotRunning;
-          d.gameSeconds = S.gameSeconds;
-          d.shotSeconds = S.shotSeconds;
         }
+
+        // Stop local ticks before snapping to server values to prevent double-decrement
+        if(!d.gameRunning) stopLocalGameTick();
+        if(!d.shotRunning) stopLocalShotTick();
 
         // Within 1200ms of a score/foul/state change, keep our local non-clock values
         // so the 1-second SSE tick can't roll back a score press
@@ -1355,6 +1391,9 @@ function connectSSE(){
         }
 
         S = {...DEF, ...d};
+        // Sync local ticks to server-confirmed running state
+        if(S.gameRunning) startLocalGameTick(); else stopLocalGameTick();
+        if(S.shotRunning) startLocalShotTick(); else stopLocalShotTick();
         renderAll();
       } else if(msg.type === 'buzz') {
         // Play audio directly — never call triggerBuzz() here or it re-broadcasts and loops
