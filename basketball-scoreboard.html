@@ -789,34 +789,42 @@ const DEF = {
 };
 
 let S = {...DEF};
-let gT = null;
 let _saveTimer=null, _savePending=false;
 
-// Throttled save — used by per-tick timer callbacks (prevents fetch flood)
+// Throttled save — for rapid changes (score edits, etc.)
 function save(){
   try{ localStorage.setItem('bball_v3', JSON.stringify(S)); }catch(e){}
   if(_savePending) return;
   _savePending = true;
   clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(()=>{
-    _savePending = false;
-    pushState();
-  }, 900);
+  _saveTimer = setTimeout(()=>{ _savePending = false; pushState(); }, 400);
 }
-// Immediate save — used for manual actions (stop, reset, score change, etc.)
+// Immediate save — for discrete actions (period change, team name, etc.)
 function saveNow(){
   try{ localStorage.setItem('bball_v3', JSON.stringify(S)); }catch(e){}
   _savePending = false;
   clearTimeout(_saveTimer);
   pushState();
 }
+// Push non-clock state to server. Clock state is server-owned — never sent here.
 function pushState(){
-  const serverState = {...S, homeLogo: null, awayLogo: null};
+  const toSend = {...S, homeLogo: null, awayLogo: null};
+  delete toSend.gameRunning; delete toSend.shotRunning;
+  delete toSend.gameSeconds; delete toSend.shotSeconds;
   fetch('/update', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(serverState)
-  }).catch((err)=>{ console.warn('Sync failed:', err); });
+    body: JSON.stringify(toSend)
+  }).catch(()=>{});
+}
+// Send a clock command to the server
+function cmd(command, seconds){
+  const body = seconds != null ? {cmd: command, seconds} : {cmd: command};
+  fetch('/cmd', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).catch(()=>{});
 }
 function load(){
   try{
@@ -1052,62 +1060,29 @@ function triggerBuzz(kind) {
 
 // Clocks
 function toggleGameClock(){
+  // Optimistic UI update, server confirms via SSE
   if(S.gameRunning){
-    clearInterval(gT); S.gameRunning=false;
-    renderGameClock();
-    saveNow();
+    S.gameRunning = false; renderGameClock();
+    cmd('game_stop');
   } else {
-    if(S.gameSeconds<=0) return;
-    S.gameRunning=true;
-    clearInterval(gT);
-    gT=setInterval(()=>{
-      if(S.gameSeconds>0){ S.gameSeconds--; save(); renderGameClock(); }
-      else{ clearInterval(gT); S.gameRunning=false; renderGameClock(); triggerBuzz('game'); saveNow(); }
-    },1000);
-    saveNow();
-    renderGameClock();
+    if(S.gameSeconds <= 0) return;
+    S.gameRunning = true; renderGameClock();
+    cmd('game_start');
   }
 }
 function toggleShotClock(){
   if(S.shotRunning){
-    clearInterval(sT); S.shotRunning=false;
-    renderShotClock();
-    saveNow();
+    S.shotRunning = false; renderShotClock();
+    cmd('shot_stop');
   } else {
-    if(S.shotSeconds<=0) return;
-    S.shotRunning=true;
-    clearInterval(sT);
-    sT=setInterval(()=>{
-      if(S.shotSeconds>0){ S.shotSeconds--; save(); renderShotClock(); }
-      else{ clearInterval(sT); S.shotRunning=false; renderShotClock(); triggerBuzz('shot'); saveNow(); }
-    },1000);
-    // Also start game clock if it's not running
-    if(!S.gameRunning && S.gameSeconds>0){
-      S.gameRunning=true;
-      clearInterval(gT);
-      gT=setInterval(()=>{
-        if(S.gameSeconds>0){ S.gameSeconds--; save(); renderGameClock(); }
-        else{ clearInterval(gT); S.gameRunning=false; renderGameClock(); triggerBuzz('game'); saveNow(); }
-      },1000);
-      renderGameClock();
-    }
-    saveNow();
-    renderShotClock();
+    if(S.shotSeconds <= 0) return;
+    S.shotRunning = true; renderShotClock();
+    cmd('shot_start');
   }
 }
 function resetShot(n){
-  clearInterval(sT);
-  S.shotRunning = false;
-  S.shotSeconds = n;
-  if(S.gameRunning){
-    S.shotRunning = true;
-    sT = setInterval(()=>{
-      if(S.shotSeconds > 0){ S.shotSeconds--; save(); renderShotClock(); }
-      else{ clearInterval(sT); S.shotRunning=false; renderShotClock(); triggerBuzz('shot'); saveNow(); }
-    },1000);
-  }
-  saveNow();
-  renderShotClock();
+  S.shotSeconds = n; S.shotRunning = false; renderShotClock();
+  cmd('shot_reset', n);
 }
 function setTimerPreset(){
   const mins = parseInt(document.getElementById('clkMin').value)||0;
@@ -1119,21 +1094,22 @@ function setTimerPreset(){
   if(btn){ const orig=btn.textContent; btn.textContent='✓ Saved!'; btn.style.borderColor='#00ee44'; btn.style.color='#00ee44'; setTimeout(()=>{ btn.textContent=orig; btn.style.borderColor='#f5c842'; btn.style.color='#f5c842'; },1200); }
 }
 function resetGameClock(){
-  clearInterval(gT); S.gameRunning=false;
   const preset = S.timerPresetSeconds;
+  let seconds;
   if(preset != null && preset > 0){
-    S.gameSeconds = preset;
-    // Sync inputs to preset
+    seconds = preset;
     document.getElementById('clkMin').value = Math.floor(preset/60);
     document.getElementById('clkSec').value = preset%60;
   } else {
-    S.gameSeconds=(parseInt(document.getElementById('clkMin').value)||10)*60+(parseInt(document.getElementById('clkSec').value)||0);
+    seconds=(parseInt(document.getElementById('clkMin').value)||10)*60+(parseInt(document.getElementById('clkSec').value)||0);
   }
-  save(); renderGameClock();
+  S.gameRunning=false; S.gameSeconds=seconds; renderGameClock();
+  cmd('game_reset', seconds);
 }
 function setClockManual(){
-  S.gameSeconds=(parseInt(document.getElementById('clkMin').value)||0)*60+Math.min(59,parseInt(document.getElementById('clkSec').value)||0);
-  save(); renderGameClock();
+  const seconds=(parseInt(document.getElementById('clkMin').value)||0)*60+Math.min(59,parseInt(document.getElementById('clkSec').value)||0);
+  S.gameSeconds=seconds; renderGameClock();
+  cmd('game_set', seconds);
 }
 
 
@@ -1281,10 +1257,10 @@ function setPoss(side){ S.possession=side; save(); renderAll(); }
 // Reset
 function resetAll(){
   if(!confirm('Reset full game? Scores & clocks will clear.'))return;
-  clearInterval(gT); clearInterval(sT);
   S={...DEF};
   document.getElementById('clkMin').value=10;
   document.getElementById('clkSec').value=0;
+  cmd('reset_all');
   saveNow(); renderAll();
 }
 
@@ -1295,7 +1271,7 @@ fetch('/state').then(r=>r.json()).then(data=>{
   renderAll();
 }).catch(()=>{ renderAll(); });
 
-// SSE — keep control panel in sync if another device makes changes
+// SSE — server pushes state every second while clocks run, instantly on any action
 function connectSSE(){
   const es = new EventSource('/events');
   es.onmessage = (e) => {
@@ -1303,11 +1279,12 @@ function connectSSE(){
       const msg = JSON.parse(e.data);
       if(msg.type === 'state') {
         const d = msg.data;
-        if(document.activeElement.tagName !== 'INPUT'){
-          S = {...DEF, ...d};
-          S.gameRunning = false; S.shotRunning = false;
-          renderAll();
-        }
+        // Accept server clock state — server owns gameSeconds/shotSeconds/gameRunning/shotRunning
+        S = {...DEF, ...d};
+        renderAll();
+      } else if(msg.type === 'buzz') {
+        if(msg.kind === 'game') triggerBuzz('game');
+        else triggerBuzz('shot');
       }
     } catch(err){}
   };

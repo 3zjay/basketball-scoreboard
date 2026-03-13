@@ -7,6 +7,60 @@ let state   = {};
 let logos   = { home: null, away: null };
 let clients = [];
 
+// ── SERVER-OWNED CLOCKS ────────────────────────────────────────────────────
+// The server ticks both clocks and pushes SSE every second.
+// The control panel sends commands (/cmd). All clients stay perfectly in sync.
+
+let gameTimer = null;
+let shotTimer = null;
+
+function startGameClock() {
+  if (gameTimer) return;
+  if (!(state.gameSeconds > 0)) return;
+  state.gameRunning = true;
+  gameTimer = setInterval(() => {
+    state.gameSeconds = Math.max(0, (state.gameSeconds || 0) - 1);
+    if (state.gameSeconds <= 0) {
+      state.gameSeconds = 0;
+      stopGameClock();
+      pushToAll({ type: 'state', data: fullState() });
+      pushToAll({ type: 'buzz', kind: 'game' });
+    } else {
+      pushToAll({ type: 'state', data: fullState() });
+    }
+  }, 1000);
+  pushToAll({ type: 'state', data: fullState() });
+}
+
+function stopGameClock() {
+  if (gameTimer) { clearInterval(gameTimer); gameTimer = null; }
+  state.gameRunning = false;
+}
+
+function startShotClock() {
+  if (shotTimer) return;
+  if (!(state.shotSeconds > 0)) return;
+  state.shotRunning = true;
+  shotTimer = setInterval(() => {
+    state.shotSeconds = Math.max(0, (state.shotSeconds || 0) - 1);
+    if (state.shotSeconds <= 0) {
+      state.shotSeconds = 0;
+      stopShotClock();
+      pushToAll({ type: 'state', data: fullState() });
+      pushToAll({ type: 'buzz', kind: 'shot' });
+    } else {
+      pushToAll({ type: 'state', data: fullState() });
+    }
+  }, 1000);
+  pushToAll({ type: 'state', data: fullState() });
+}
+
+function stopShotClock() {
+  if (shotTimer) { clearInterval(shotTimer); shotTimer = null; }
+  state.shotRunning = false;
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 const ROUTES = {
   '/':                   'basketball-scoreboard.html',
   '/control':            'basketball-scoreboard.html',
@@ -49,10 +103,98 @@ http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-  // POST /update — game state
+  // POST /cmd — clock commands from the control panel
+  if (req.method === 'POST' && req.url === '/cmd') {
+    readBody(req).then(b => {
+      try {
+        const { cmd, seconds } = JSON.parse(b);
+
+        if (cmd === 'game_start') {
+          if (!state.gameRunning) startGameClock();
+
+        } else if (cmd === 'game_stop') {
+          if (state.gameRunning) {
+            stopGameClock();
+            pushToAll({ type: 'state', data: fullState() });
+          }
+
+        } else if (cmd === 'game_reset') {
+          stopGameClock();
+          state.gameSeconds = seconds || state.timerPresetSeconds || 600;
+          pushToAll({ type: 'state', data: fullState() });
+
+        } else if (cmd === 'game_set') {
+          if (!state.gameRunning) {
+            state.gameSeconds = seconds != null ? seconds : (state.gameSeconds || 600);
+            pushToAll({ type: 'state', data: fullState() });
+          }
+
+        } else if (cmd === 'shot_start') {
+          if (!state.shotRunning) startShotClock();
+
+        } else if (cmd === 'shot_stop') {
+          if (state.shotRunning) {
+            stopShotClock();
+            pushToAll({ type: 'state', data: fullState() });
+          }
+
+        } else if (cmd === 'shot_reset') {
+          const wasRunning = state.gameRunning;
+          stopShotClock();
+          state.shotSeconds = seconds || 24;
+          if (wasRunning) {
+            startShotClock();
+          } else {
+            pushToAll({ type: 'state', data: fullState() });
+          }
+
+        } else if (cmd === 'reset_all') {
+          stopGameClock();
+          stopShotClock();
+          const preset = state.timerPresetSeconds || 600;
+          state = {
+            homeScore: 0, awayScore: 0,
+            homeFouls: 0, awayFouls: 0,
+            homeAbbr: state.homeAbbr || 'HOME',
+            awayAbbr: state.awayAbbr || 'AWAY',
+            homeRecord: state.homeRecord || '0-0',
+            awayRecord: state.awayRecord || '0-0',
+            homeColor: state.homeColor || '#f5c842',
+            awayColor: state.awayColor || '#c8102e',
+            quarter: 1,
+            gameSeconds: preset,
+            shotSeconds: 24,
+            gameRunning: false,
+            shotRunning: false,
+            timerPresetSeconds: preset,
+            rp1Title: state.rp1Title || 'BROADCAST',
+            rp1Value: state.rp1Value || '',
+            rp2Title: state.rp2Title || 'VENUE',
+            rp2Value: state.rp2Value || '',
+            barColor: state.barColor || '#0d1117',
+            possession: null,
+          };
+          pushToAll({ type: 'state', data: fullState() });
+        }
+      } catch(e) {}
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end('{"ok":true}');
+    });
+    return;
+  }
+
+  // POST /update — non-clock state (scores, names, colors, period, etc.)
+  // Server owns clock fields — strips them from incoming data.
   if (req.method === 'POST' && req.url === '/update') {
     readBody(req).then(b => {
-      try { state = JSON.parse(b); } catch(e) {}
+      try {
+        const incoming = JSON.parse(b);
+        delete incoming.gameRunning;
+        delete incoming.shotRunning;
+        delete incoming.gameSeconds;
+        delete incoming.shotSeconds;
+        state = { ...state, ...incoming };
+      } catch(e) {}
       pushToAll({ type: 'state', data: fullState() });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end('{"ok":true}');
@@ -60,7 +202,7 @@ http.createServer((req, res) => {
     return;
   }
 
-  // POST /buzz — broadcast buzzer sound to all clients
+  // POST /buzz — broadcast buzzer sound
   if (req.method === 'POST' && req.url === '/buzz') {
     readBody(req).then(b => {
       let kind = 'game';
@@ -84,7 +226,7 @@ http.createServer((req, res) => {
     return;
   }
 
-  // GET /events — SSE stream
+  // GET /events — SSE stream for all clients
   if (req.url === '/events') {
     res.writeHead(200, {
       'Content-Type':  'text/event-stream',
@@ -106,7 +248,7 @@ http.createServer((req, res) => {
     return;
   }
 
-  // GET /state — initial load
+  // GET /state — initial snapshot
   if (req.url === '/state') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(fullState()));
