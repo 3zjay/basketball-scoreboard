@@ -6,96 +6,147 @@
 <link href="https://fonts.googleapis.com/css2?family=Teko:wght@700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-
 html, body {
-  width:100%; height:100%;
-  overflow:hidden;
-  background:#050505;
-  user-select:none;
+  width:100%; height:100%; overflow:hidden;
+  background:#050505; user-select:none;
 }
 
-/* ═══ LAYOUT: 2 rows ═══ */
-.row-clock {
-  position:fixed; top:0; left:0; right:0;
-  height:30vh;
-  background:#080808;
-  border-bottom:3px solid #1a1a1a;
-  display:flex; align-items:center; justify-content:space-between;
-  padding:0 3vw;
-}
-
-/* Possession arrows in clock row */
-.row-clock .poss-indicator {
-  display:flex; align-items:center;
-  opacity:0.12; transition:opacity 0.3s; flex-shrink:0;
-}
-.row-clock .poss-indicator.on { opacity:1; }
-.row-clock .poss-indicator.on .poss-arrow {
-  filter:drop-shadow(0 0 6px #ff8800) drop-shadow(0 0 14px #ff6600) drop-shadow(0 0 28px #ff4400);
-}
-.row-clock #possHome.on .poss-arrow { animation:arrowPulseRight 0.9s ease-in-out infinite alternate; }
-.row-clock #possAway.on .poss-arrow { animation:arrowPulseLeft  0.9s ease-in-out infinite alternate; }
-@keyframes arrowPulseRight { from{transform:translateX(0)} to{transform:translateX(8px)} }
-@keyframes arrowPulseLeft  { from{transform:translateX(0)} to{transform:translateX(-8px)} }
-
-.row-scores {
-  position:fixed; top:30vh; left:0; right:0;
-  height:70vh;
-  background:#0a0a0a;
+/* ═══ FULL-SCREEN 3-ROW GRID ═══ */
+.scoreboard {
+  width:100vw; height:100vh;
   display:grid;
-  grid-template-columns:1fr auto 1fr;
-  align-items:stretch;
+  grid-template-rows: 22vh 58vh 20vh;
 }
 
-/* ═══ GAME CLOCK ═══ */
-.clock-digits {
+/* ══ ROW 1: CLOCK + TEAM NAMES ══ */
+.row-clock {
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  background:#080808;
+  border-bottom:2px solid #1c1c1c;
+  overflow:hidden;
+}
+.team-header {
   display:flex; align-items:center; justify-content:center;
-  width:100%; height:100%;
+  padding:0 2vw;
+  font-family:'Teko',sans-serif; font-size:5.5vw; font-weight:700;
+  letter-spacing:0.3vw; text-transform:uppercase; color:#fff;
+  text-shadow:0 0 20px rgba(255,255,255,0.15);
+}
+.clock-wrap {
+  display:flex; align-items:center; justify-content:center;
+  padding:0 1vw;
 }
 .clock-digit {
-  font-family:'Teko',sans-serif; font-size:26vh; font-weight:700;
-  color:#ffaa00; line-height:1; text-align:center; flex:1;
-  text-shadow:0 0 40px rgba(255,170,0,0.5),0 0 80px rgba(255,130,0,0.2);
+  font-family:'Teko',sans-serif; font-size:20vh; font-weight:700;
+  color:#ffaa00; line-height:1; text-align:center; min-width:6.5vw;
+  text-shadow:0 0 40px rgba(255,170,0,0.5),0 0 80px rgba(255,130,0,0.15);
 }
 .clock-colon {
-  font-family:'Teko',sans-serif; font-size:22vh; font-weight:700;
-  color:#ffaa00; line-height:1; padding:0 0.5vw;
+  font-family:'Teko',sans-serif; font-size:18vh; font-weight:700;
+  color:#ffaa00; line-height:1; padding:0 0.3vw;
   text-shadow:0 0 40px rgba(255,170,0,0.5);
   animation:colonBlink 1s step-end infinite;
 }
-@keyframes colonBlink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+@keyframes colonBlink { 0%,100%{opacity:1} 50%{opacity:0.1} }
 
-/* ═══ TEAM BLOCK ═══ */
+/* ══ ROW 2: SCORES + CENTER ══ */
+.row-scores {
+  display:grid;
+  grid-template-columns: 1fr 18vw 1fr;
+  background:#0a0a0a;
+  border-bottom:2px solid #1c1c1c;
+}
 .team-block {
   display:flex; flex-direction:column;
-  align-items:center; justify-content:flex-start;
-  padding:1vh 1.5vw 1vh;
-  overflow:visible; position:relative;
+  align-items:center; justify-content:center;
+  padding:1vh 1vw; position:relative; overflow:hidden;
 }
+.team-block.home::after {
+  content:''; position:absolute; top:10%; right:0; bottom:10%;
+  width:4px; border-radius:2px; background:var(--team-color,#f5c842);
+  box-shadow:0 0 14px var(--team-color,#f5c842);
+}
+.team-block.away::before {
+  content:''; position:absolute; top:10%; left:0; bottom:10%;
+  width:4px; border-radius:2px; background:var(--team-color,#c8102e);
+  box-shadow:0 0 14px var(--team-color,#c8102e);
+}
+.score-val {
+  font-family:'Teko',sans-serif;
+  font-size:clamp(8rem,46vh,40vw);
+  font-weight:700; line-height:0.88;
+  text-align:center; color:#ff2200;
+  text-shadow:0 0 40px rgba(255,34,0,0.35);
+}
+@keyframes scoreBump {
+  0%{transform:scale(1)}
+  35%{transform:scale(1.1);color:#ff6600;text-shadow:0 0 50px rgba(255,100,0,0.9)}
+  100%{transform:scale(1)}
+}
+.bump { animation:scoreBump 0.45s ease; }
 
-/* FOULS row */
-.fouls-row {
+/* Center column */
+.center-col {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:1vh 0;
+  border-left:1px solid #1c1c1c;
+  border-right:1px solid #1c1c1c;
+}
+.lbl {
+  font-family:'Teko',sans-serif; font-size:1.6vh; font-weight:700;
+  color:#383838; letter-spacing:0.4vw; text-transform:uppercase; line-height:1;
+}
+.period-num {
+  font-family:'Teko',sans-serif; font-size:22vh; font-weight:700;
+  color:#00ee44; line-height:0.85; text-align:center;
+  text-shadow:0 0 24px rgba(0,238,68,0.5);
+}
+.divider { width:60%; height:1px; background:#1c1c1c; margin:0.5vh 0; }
+.shot-num {
+  font-family:'Teko',sans-serif; font-size:18vh; font-weight:700;
+  color:#ffaa00; line-height:0.85; text-align:center;
+  text-shadow:0 0 24px rgba(255,170,0,0.5); transition:color 0.2s;
+}
+.shot-num.urgent {
+  color:#ff2200;
+  text-shadow:0 0 28px rgba(255,30,0,0.8);
+  animation:urgentPulse 0.35s ease infinite alternate;
+}
+@keyframes urgentPulse { to{opacity:0.35} }
+
+/* ══ ROW 3: FOULS + POSSESSION ══ */
+.row-bottom {
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  background:#080808;
+}
+.fouls-block {
   display:flex; align-items:center; justify-content:center;
-  gap:0.8vw; width:100%; flex-shrink:0; margin-bottom:0.4vh;
+  gap:1.5vw; padding:0 3vw;
 }
 .fouls-lbl {
-  font-family:'Teko',sans-serif; font-size:2.2vh; font-weight:700;
-  color:#666; letter-spacing:0.3vw; text-transform:uppercase;
+  font-family:'Teko',sans-serif; font-size:2.8vh; font-weight:700;
+  color:#444; letter-spacing:0.4vw; text-transform:uppercase;
 }
 .fouls-val {
-  font-family:'Teko',sans-serif; font-size:6vh; font-weight:700;
+  font-family:'Teko',sans-serif; font-size:10vh; font-weight:700;
   color:#ff9900; line-height:1;
-  text-shadow:0 0 14px rgba(255,153,0,0.5);
+  text-shadow:0 0 16px rgba(255,153,0,0.5);
 }
 
-/* Possession arrow (used in clock row) */
-.poss-indicator {
-  display:flex; align-items:center; gap:0.8vw;
-  opacity:0.12; transition:opacity 0.3s; flex-shrink:0;
+/* Possession */
+.poss-wrap {
+  display:flex; align-items:center; justify-content:center;
+  gap:2vw; padding:0 2vw;
 }
-.poss-indicator.on { opacity:1; }
+.poss-item {
+  display:flex; align-items:center; gap:0.8vw;
+  opacity:0.12; transition:opacity 0.3s;
+}
+.poss-item.on { opacity:1; }
 .poss-logo {
-  width:8vh; height:8vh; border-radius:50%;
+  width:10vh; height:10vh; border-radius:50%;
   background:#111; border:3px solid #222;
   display:flex; align-items:center; justify-content:center;
   overflow:hidden; flex-shrink:0;
@@ -103,85 +154,25 @@ html, body {
 }
 .poss-logo img { width:88%; height:88%; object-fit:contain; }
 .poss-logo-ph {
-  font-family:'Teko',sans-serif; font-size:1.6vh; font-weight:700;
+  font-family:'Teko',sans-serif; font-size:1.8vh; font-weight:700;
   color:#555; text-align:center; text-transform:uppercase; letter-spacing:1px;
 }
-.poss-indicator.on .poss-logo {
-  box-shadow:0 0 12px rgba(255,136,0,0.9), 0 0 24px rgba(255,100,0,0.4);
+.poss-item.on .poss-logo {
+  box-shadow:0 0 16px rgba(255,136,0,0.9), 0 0 32px rgba(255,100,0,0.4);
 }
-.poss-arrow { transition:filter 0.3s; display:flex; align-items:center; }
-.poss-indicator.on .poss-arrow {
-  filter:drop-shadow(0 0 6px #ff8800) drop-shadow(0 0 14px #ff6600) drop-shadow(0 0 28px #ff4400);
+.poss-arrow { display:flex; align-items:center; }
+.poss-item.on .poss-arrow {
+  filter:drop-shadow(0 0 6px #ff8800) drop-shadow(0 0 14px #ff6600);
 }
-#possHome.on .poss-arrow { animation:arrowPulseRight 0.9s ease-in-out infinite alternate; }
-#possAway.on .poss-arrow { animation:arrowPulseLeft  0.9s ease-in-out infinite alternate; }
-@keyframes arrowPulseRight { from{transform:translateX(0)} to{transform:translateX(8px)} }
-@keyframes arrowPulseLeft  { from{transform:translateX(0)} to{transform:translateX(-8px)} }
+.poss-item.home.on .poss-arrow { animation:arrowRight 0.9s ease-in-out infinite alternate; }
+.poss-item.away.on .poss-arrow { animation:arrowLeft  0.9s ease-in-out infinite alternate; }
+@keyframes arrowRight { from{transform:translateX(0)} to{transform:translateX(6px)} }
+@keyframes arrowLeft  { from{transform:translateX(0)} to{transform:translateX(-6px)} }
 
-/* Team name — above score */
-.team-name {
-  font-family:'Teko',sans-serif; font-size:7vw; font-weight:700;
-  color:#fff; letter-spacing:0.4vw; text-transform:uppercase;
-  white-space:normal; text-align:center; width:100%;
-  text-shadow:0 2px 16px rgba(255,255,255,0.1); line-height:1;
-  flex-shrink:0; margin-bottom:0.2vh;
-}
-
-/* Score */
-.score-val {
-  font-family:'Teko',sans-serif;
-  font-size:clamp(6rem,36vh,46vw);
-  font-weight:700; color:#ff2200; line-height:0.9;
-  text-align:center;
-  text-shadow:0 0 30px rgba(255,34,0,0.4);
-  flex:1; display:flex; align-items:center; justify-content:center;
-}
-@keyframes scoreBump {
-  0%{transform:scale(1)} 35%{transform:scale(1.08);color:#ff6600;text-shadow:0 0 40px rgba(255,100,0,0.8)} 100%{transform:scale(1)}
-}
-.bump { animation:scoreBump 0.45s ease; }
-
-/* ═══ CENTER PANEL ═══ */
-.center-col {
-  display:flex; align-items:center; height:100%;
-}
-.divider-line {
-  width:1px; height:80%;
-  background:linear-gradient(180deg,transparent,#222 20%,#222 80%,transparent);
-}
-.center-panel {
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  height:100%; gap:0; padding:0 1.5vw; overflow:visible;
-}
-.period-lbl {
-  font-family:'Teko',sans-serif; font-size:1.8vh; font-weight:700;
-  color:#444; letter-spacing:0.4vw; text-transform:uppercase;
-}
-.period-num {
-  font-family:'Teko',sans-serif; font-size:16vh; font-weight:700;
-  color:#00ee44; line-height:0.9; text-align:center;
-  text-shadow:0 0 20px rgba(0,238,68,0.5);
-}
-.shot-lbl {
-  font-family:'Teko',sans-serif; font-size:1.8vh; font-weight:700;
-  color:#444; letter-spacing:0.4vw; text-transform:uppercase;
-}
-.shot-num {
-  font-family:'Teko',sans-serif; font-size:13vh; font-weight:700;
-  color:#ffaa00; line-height:0.9; text-align:center; min-width:8vw;
-  text-shadow:0 0 20px rgba(255,170,0,0.5); transition:color 0.3s;
-}
-.shot-num.urgent {
-  color:#ff3300;
-  text-shadow:0 0 24px rgba(255,50,0,0.7);
-  animation:urgentPulse 0.4s ease infinite alternate;
-}
-@keyframes urgentPulse { to { opacity:0.4; } }
-
-/* Flash */
+/* Score flash */
 .score-flash {
   position:fixed; inset:0; z-index:100; pointer-events:none; opacity:0;
-  background:radial-gradient(ellipse 60% 40% at 50% 55%,rgba(255,40,0,0.1),transparent 70%);
+  background:radial-gradient(ellipse 60% 40% at 50% 55%,rgba(255,40,0,0.12),transparent 70%);
 }
 @keyframes flash { 0%{opacity:0} 15%{opacity:1} 100%{opacity:0} }
 .flash-anim { animation:flash 0.7s ease forwards; }
@@ -189,28 +180,27 @@ html, body {
 /* Sound unlock */
 #soundUnlock {
   position:fixed; inset:0; z-index:99999;
-  background:rgba(0,0,0,0.88);
+  background:rgba(0,0,0,0.9);
   display:flex; flex-direction:column;
-  align-items:center; justify-content:center; gap:20px; cursor:pointer;
+  align-items:center; justify-content:center; gap:24px; cursor:pointer;
 }
-#soundUnlock h2 { font-family:'Teko',sans-serif; font-size:5vh; color:#fff; letter-spacing:4px; text-transform:uppercase; }
+#soundUnlock h2 { font-family:'Teko',sans-serif; font-size:6vh; color:#fff; letter-spacing:4px; text-transform:uppercase; }
 #soundUnlock button {
-  font-family:'Teko',sans-serif; font-size:3.5vh; font-weight:700;
+  font-family:'Teko',sans-serif; font-size:4vh; font-weight:700;
   letter-spacing:3px; text-transform:uppercase;
   background:#c8102e; color:#fff; border:none;
-  padding:20px 52px; border-radius:12px; cursor:pointer;
+  padding:22px 60px; border-radius:12px; cursor:pointer;
 }
 
-/* Fullscreen btn */
 #fsBtn {
-  position:fixed; bottom:20px; right:20px; z-index:9998;
-  width:56px; height:56px; border-radius:50%;
-  background:rgba(13,17,23,0.85); border:2px solid rgba(255,255,255,0.2);
-  color:#fff; font-size:22px; cursor:pointer;
+  position:fixed; bottom:16px; right:16px; z-index:9998;
+  width:48px; height:48px; border-radius:50%;
+  background:rgba(0,0,0,0.7); border:1px solid rgba(255,255,255,0.15);
+  color:#fff; font-size:20px; cursor:pointer;
   display:flex; align-items:center; justify-content:center;
-  backdrop-filter:blur(8px); transition:all 0.2s; opacity:0.5;
+  opacity:0.4; transition:opacity 0.2s;
 }
-#fsBtn:hover { opacity:1; border-color:rgba(255,255,255,0.5); }
+#fsBtn:hover { opacity:1; }
 </style>
 </head>
 <body>
@@ -219,84 +209,81 @@ html, body {
   <h2>🏀 Scoreboard Display</h2>
   <button>TAP TO ACTIVATE SOUND</button>
 </div>
-
-<button id="fsBtn" onclick="toggleFullscreen()" title="Fullscreen">⛶</button>
+<button id="fsBtn" onclick="toggleFullscreen()">⛶</button>
 <div class="score-flash" id="scoreFlash"></div>
 
-<!-- ROW 1: GAME CLOCK + POSSESSION ARROWS -->
-<div class="row-clock">
-  <!-- Home possession: logo + arrow pointing right -->
-  <div class="poss-indicator" id="possHome">
-    <div class="poss-logo" id="possLogoHome"><div class="poss-logo-ph">HOME</div></div>
-    <div class="poss-arrow" id="possArrowHome">
-      <svg viewBox="0 0 60 42" style="width:6vw;height:4.2vw;">
-        <defs><radialGradient id="arrowGlowHome" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#ffffff"/>
-          <stop offset="40%" stop-color="#ffcc00"/>
-          <stop offset="100%" stop-color="#ff6600"/>
-        </radialGradient></defs>
-        <polygon points="4,21 56,3 56,39" fill="url(#arrowGlowHome)"/>
-      </svg>
+<div class="scoreboard">
+
+  <!-- ROW 1: CLOCK -->
+  <div class="row-clock">
+    <div class="team-header" id="homeNameEl">HOME</div>
+    <div class="clock-wrap">
+      <div class="clock-digit" id="clkM1">1</div>
+      <div class="clock-digit" id="clkM2">0</div>
+      <div class="clock-colon">:</div>
+      <div class="clock-digit" id="clkS1">0</div>
+      <div class="clock-digit" id="clkS2">0</div>
+    </div>
+    <div class="team-header" id="guestNameEl">AWAY</div>
+  </div>
+
+  <!-- ROW 2: SCORES -->
+  <div class="row-scores">
+    <div class="team-block home" id="homeBlock">
+      <div class="score-val" id="homeScoreEl">0</div>
+    </div>
+    <div class="center-col">
+      <div class="lbl">PERIOD</div>
+      <div class="period-num" id="periodEl">1</div>
+      <div class="divider"></div>
+      <div class="lbl">SHOT</div>
+      <div class="shot-num" id="shotEl">24</div>
+    </div>
+    <div class="team-block away" id="awayBlock">
+      <div class="score-val" id="awayScoreEl">0</div>
     </div>
   </div>
 
-  <div class="clock-digits">
-    <div class="clock-digit" id="clkM1">1</div>
-    <div class="clock-digit" id="clkM2">0</div>
-    <div class="clock-colon">:</div>
-    <div class="clock-digit" id="clkS1">0</div>
-    <div class="clock-digit" id="clkS2">0</div>
-  </div>
-
-  <!-- Away possession: arrow pointing left + logo -->
-  <div class="poss-indicator" id="possAway">
-    <div class="poss-arrow" id="possArrowAway">
-      <svg viewBox="0 0 60 42" style="width:6vw;height:4.2vw;">
-        <defs><radialGradient id="arrowGlowAway" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#ffffff"/>
-          <stop offset="40%" stop-color="#ffcc00"/>
-          <stop offset="100%" stop-color="#ff6600"/>
-        </radialGradient></defs>
-        <polygon points="56,21 4,3 4,39" fill="url(#arrowGlowAway)"/>
-      </svg>
-    </div>
-    <div class="poss-logo" id="possLogoAway"><div class="poss-logo-ph">AWAY</div></div>
-  </div>
-</div>
-
-<!-- ROW 2: SCORES -->
-<div class="row-scores">
-
-  <!-- HOME -->
-  <div class="team-block home">
-    <div class="fouls-row">
+  <!-- ROW 3: FOULS + POSSESSION -->
+  <div class="row-bottom">
+    <div class="fouls-block">
       <div class="fouls-lbl">FOULS</div>
       <div class="fouls-val" id="homeFoulsEl">0</div>
     </div>
-    <div class="team-name" id="homeNameEl">HOME</div>
-    <div class="score-val" id="homeScoreEl">0</div>
-  </div>
 
-  <!-- CENTER -->
-  <div class="center-col">
-    <div class="divider-line"></div>
-    <div class="center-panel">
-      <div class="period-lbl">PERIOD</div>
-      <div class="period-num" id="periodEl">1</div>
-      <div class="shot-lbl">SHOT CLOCK</div>
-      <div class="shot-num" id="shotEl">24</div>
+    <div class="poss-wrap">
+      <div class="poss-item home" id="possHome">
+        <div class="poss-logo" id="possLogoHome"><div class="poss-logo-ph">HME</div></div>
+        <div class="poss-arrow">
+          <svg viewBox="0 0 60 42" style="width:5vw;height:3.5vw;">
+            <defs><radialGradient id="agHome" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="40%" stop-color="#ffcc00"/>
+              <stop offset="100%" stop-color="#ff6600"/>
+            </radialGradient></defs>
+            <polygon points="4,21 56,3 56,39" fill="url(#agHome)"/>
+          </svg>
+        </div>
+      </div>
+      <div class="poss-item away" id="possAway">
+        <div class="poss-arrow">
+          <svg viewBox="0 0 60 42" style="width:5vw;height:3.5vw;">
+            <defs><radialGradient id="agAway" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="40%" stop-color="#ffcc00"/>
+              <stop offset="100%" stop-color="#ff6600"/>
+            </radialGradient></defs>
+            <polygon points="56,21 4,3 4,39" fill="url(#agAway)"/>
+          </svg>
+        </div>
+        <div class="poss-logo" id="possLogoAway"><div class="poss-logo-ph">AWY</div></div>
+      </div>
     </div>
-    <div class="divider-line"></div>
-  </div>
 
-  <!-- AWAY -->
-  <div class="team-block away">
-    <div class="fouls-row">
+    <div class="fouls-block" style="justify-content:flex-end;">
       <div class="fouls-val" id="awayFoulsEl">0</div>
       <div class="fouls-lbl">FOULS</div>
     </div>
-    <div class="team-name" id="guestNameEl">AWAY</div>
-    <div class="score-val" id="awayScoreEl">0</div>
   </div>
 
 </div>
@@ -309,17 +296,27 @@ const DEF = {
   homeColor:'#f5c842', awayColor:'#c8102e',
   homeLogo:null, awayLogo:null,
   quarter:1, gameSeconds:600, shotSeconds:24,
+  gameRunning:false, shotRunning:false,
   possession:null,
 };
 
 let S = {...DEF};
 let lastHome = -1, lastAway = -1;
 
-function renderClocks() {
-  const m   = Math.floor(S.gameSeconds/60);
-  const sec = S.gameSeconds%60;
-  const mS  = m.toString().padStart(2,'0');
-  const sS  = sec.toString().padStart(2,'0');
+let localTick = null;
+function startLocalTick(){
+  if(localTick) return;
+  localTick = setInterval(()=>{
+    if(S.gameRunning && S.gameSeconds > 0){ S.gameSeconds--; renderClocks(); }
+    if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; renderClocks(); }
+  }, 1000);
+}
+function stopLocalTick(){ clearInterval(localTick); localTick = null; }
+function syncLocalTick(){ if(S.gameRunning || S.shotRunning){ startLocalTick(); } else { stopLocalTick(); } }
+
+function renderClocks(){
+  const m = Math.floor(S.gameSeconds/60), sec = S.gameSeconds%60;
+  const mS = m.toString().padStart(2,'0'), sS = sec.toString().padStart(2,'0');
   document.getElementById('clkM1').textContent = mS[0];
   document.getElementById('clkM2').textContent = mS[1];
   document.getElementById('clkS1').textContent = sS[0];
@@ -330,14 +327,12 @@ function renderClocks() {
     if(el){ el.style.color = warn?'#ff3300':'#ffaa00'; el.style.textShadow = warn?'0 0 30px rgba(255,50,0,0.7)':'0 0 40px rgba(255,170,0,0.5)'; }
   });
   const shotEl = document.getElementById('shotEl');
-  if(shotEl){ shotEl.textContent=S.shotSeconds; shotEl.className='shot-num'+(S.shotSeconds<=5?' urgent':''); }
+  if(shotEl){ shotEl.textContent = S.shotSeconds; shotEl.className = 'shot-num'+(S.shotSeconds<=5?' urgent':''); }
 }
 
-function render() {
-  // Game clock + shot clock
+function render(){
   renderClocks();
 
-  // Scores
   const hEl = document.getElementById('homeScoreEl');
   const aEl = document.getElementById('awayScoreEl');
   if(hEl && parseInt(hEl.textContent)!==S.homeScore){ hEl.textContent=S.homeScore; if(lastHome>=0) bump('homeScoreEl'); }
@@ -345,29 +340,29 @@ function render() {
   if((S.homeScore!==lastHome||S.awayScore!==lastAway)&&lastHome>=0) flashScreen();
   lastHome=S.homeScore; lastAway=S.awayScore;
 
-  // Fouls
   const hf = document.getElementById('homeFoulsEl');
   const af = document.getElementById('awayFoulsEl');
   if(hf) hf.textContent = S.homeFouls || 0;
   if(af) af.textContent = S.awayFouls || 0;
 
-  // Period
   const pEl = document.getElementById('periodEl');
   if(pEl) pEl.textContent = S.quarter;
 
-  // Team names
   const hn = document.getElementById('homeNameEl');
   const gn = document.getElementById('guestNameEl');
-  if(hn) hn.textContent=(S.homeAbbr||'HOME').toUpperCase();
-  if(gn) gn.textContent=(S.awayAbbr||'AWAY').toUpperCase();
+  if(hn) hn.textContent = (S.homeAbbr||'HOME').toUpperCase();
+  if(gn) gn.textContent = (S.awayAbbr||'AWAY').toUpperCase();
 
-  // Possession arrows (in clock row)
+  const hb = document.getElementById('homeBlock');
+  const ab = document.getElementById('awayBlock');
+  if(hb) hb.style.setProperty('--team-color', S.homeColor||'#f5c842');
+  if(ab) ab.style.setProperty('--team-color', S.awayColor||'#c8102e');
+
   const homeOn = S.possession==='home';
   const awayOn = S.possession==='away';
   document.getElementById('possHome')?.classList.toggle('on', homeOn);
   document.getElementById('possAway')?.classList.toggle('on', awayOn);
 
-  // Logos in possession circles
   const hlEl = document.getElementById('possLogoHome');
   const alEl = document.getElementById('possLogoAway');
   if(hlEl){
@@ -375,14 +370,14 @@ function render() {
       ? `<img src="${S.homeLogo}" alt="">`
       : `<div class="poss-logo-ph">${(S.homeAbbr||'HOME').substring(0,3).toUpperCase()}</div>`;
     hlEl.style.borderColor = S.homeColor||'#f5c842';
-    hlEl.style.boxShadow = homeOn ? `0 0 12px ${S.homeColor||'#f5c842'}, 0 0 24px ${S.homeColor||'#f5c842'}88` : '';
+    hlEl.style.boxShadow = homeOn ? `0 0 14px ${S.homeColor||'#f5c842'}, 0 0 28px ${S.homeColor||'#f5c842'}88` : '';
   }
   if(alEl){
     alEl.innerHTML = S.awayLogo
       ? `<img src="${S.awayLogo}" alt="">`
       : `<div class="poss-logo-ph">${(S.awayAbbr||'AWAY').substring(0,3).toUpperCase()}</div>`;
     alEl.style.borderColor = S.awayColor||'#c8102e';
-    alEl.style.boxShadow = awayOn ? `0 0 12px ${S.awayColor||'#c8102e'}, 0 0 24px ${S.awayColor||'#c8102e'}88` : '';
+    alEl.style.boxShadow = awayOn ? `0 0 14px ${S.awayColor||'#c8102e'}, 0 0 28px ${S.awayColor||'#c8102e'}88` : '';
   }
 }
 
@@ -411,17 +406,6 @@ document.addEventListener('fullscreenchange',()=>{ const btn=document.getElement
 
 function playGameBuzzer(){ const a=new Audio('/buzzer.mp3'); a.volume=1.0; a.play().catch(()=>{}); }
 function playShotBuzzer(){ const a=new Audio('/buzzer.mp3'); a.volume=1.0; a.play().catch(()=>{}); }
-
-let localTick = null;
-function startLocalTick(){
-  if(localTick) return;
-  localTick = setInterval(()=>{
-    if(S.gameRunning && S.gameSeconds > 0){ S.gameSeconds--; renderClocks(); }
-    if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; renderClocks(); }
-  }, 1000);
-}
-function stopLocalTick(){ clearInterval(localTick); localTick = null; }
-function syncLocalTick(){ if(S.gameRunning || S.shotRunning){ startLocalTick(); } else { stopLocalTick(); } }
 
 function connectSSE(){
   const es=new EventSource('/events');
