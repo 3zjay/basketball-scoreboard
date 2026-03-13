@@ -70,10 +70,20 @@ body {
   display: flex; align-items: center; gap: 8px;
   background: #2a1515; border: 1px solid #7f1d1d;
   border-radius: 20px; padding: 6px 16px;
+  transition: background 0.4s, border-color 0.4s;
 }
-.live-dot { width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 8px #ef4444;animation:livePulse 1.2s ease infinite; }
+.live-badge.connecting { background:#1a1a0a; border-color:#5a4e00; }
+.live-badge.connected  { background:#0a2a0a; border-color:#166534; }
+.live-badge.offline    { background:#2a1515; border-color:#7f1d1d; }
+.live-dot { width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 8px #ef4444;animation:livePulse 1.2s ease infinite; transition: background 0.4s, box-shadow 0.4s; }
+.live-badge.connecting .live-dot { background:#facc15;box-shadow:0 0 8px #facc15;animation:livePulse 0.6s ease infinite; }
+.live-badge.connected  .live-dot { background:#22c55e;box-shadow:0 0 8px #22c55e; }
+.live-badge.offline    .live-dot { background:#ef4444;box-shadow:0 0 8px #ef4444; }
 @keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.6)}}
-.live-text { font-size:12px;font-weight:800;letter-spacing:3px;color:#ef4444;text-transform:uppercase; }
+.live-text { font-size:12px;font-weight:800;letter-spacing:3px;color:#ef4444;text-transform:uppercase; transition: color 0.4s; }
+.live-badge.connecting .live-text { color:#facc15; }
+.live-badge.connected  .live-text { color:#22c55e; }
+.live-badge.offline    .live-text { color:#ef4444; }
 
 /* ── MAIN GRID ── */
 .main {
@@ -369,7 +379,9 @@ body.light {
   --text3:    #9aa0b2;
 }
 
-body.light .live-badge { background:#fff5f5; border-color:#fecaca; }
+body.light .live-badge.connecting { background:#fefce8; border-color:#fef08a; }
+body.light .live-badge.connected  { background:#f0fdf4; border-color:#bbf7d0; }
+body.light .live-badge.offline    { background:#fff5f5; border-color:#fecaca; }
 body.light .btn.g { background:#f0fdf4; border-color:#86efac; color:#16a34a; }
 body.light .btn.g:hover { background:#dcfce7; }
 body.light .btn.b { background:#eff6ff; border-color:#93c5fd; color:#2563eb; }
@@ -459,9 +471,9 @@ body.light .reset-btn:hover { background:#fee2e2; }
     <button class="mode-toggle" id="installBtn" onclick="installApp()" style="display:none;border-color:#22c55e;color:#22c55e;">📲 Install App</button>
     <button class="mode-toggle" id="fsToggle" onclick="toggleFullscreen()">⛶ Fullscreen</button>
     <button class="mode-toggle" id="modeToggle" onclick="toggleMode()">☀️ Light Mode</button>
-    <div class="live-badge">
+    <div class="live-badge connecting" id="liveBadge">
       <div class="live-dot"></div>
-      <div class="live-text">Live</div>
+      <div class="live-text" id="liveText">Connecting…</div>
     </div>
   </div>
 </div>
@@ -1110,9 +1122,20 @@ function resetGameClock(){
   }
   cmd('game_reset', seconds);
 }
+function setLiveStatus(status){ // 'connecting' | 'connected' | 'offline'
+  const badge = document.getElementById('liveBadge');
+  const text  = document.getElementById('liveText');
+  if(!badge) return;
+  badge.className = 'live-badge ' + status;
+  if(status === 'connecting') text.textContent = 'Connecting…';
+  else if(status === 'connected') text.textContent = 'Live';
+  else text.textContent = 'Offline';
+}
+
 function setClockManual(){
   const seconds=(parseInt(document.getElementById('clkMin').value)||0)*60+Math.min(59,parseInt(document.getElementById('clkSec').value)||0);
-  cmd('game_set', seconds);
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(()=>{ cmd('game_set', seconds); }, 600);
 }
 
 
@@ -1266,25 +1289,38 @@ function setPoss(side){ S.possession=side; _lastStateCmd=Date.now(); save(); ren
 
 // Reset
 function resetAll(){
-  if(!confirm('Reset full game? Scores & clocks will clear.'))return;
+  if(!confirm('Reset scores & clocks? Team setup will be kept.'))return;
   document.getElementById('clkMin').value=10;
   document.getElementById('clkSec').value=0;
   cmd('reset_all');
-  // Reset non-clock state locally and push
-  S={...DEF};
+  // Preserve team setup — only reset game state
+  S = {
+    ...DEF,
+    homeAbbr:   S.homeAbbr,   awayAbbr:   S.awayAbbr,
+    homeRecord: S.homeRecord, awayRecord: S.awayRecord,
+    homeColor:  S.homeColor,  awayColor:  S.awayColor,
+    homeLogo:   S.homeLogo,   awayLogo:   S.awayLogo,
+    rp1Title:   S.rp1Title,   rp1Value:   S.rp1Value,
+    rp2Title:   S.rp2Title,   rp2Value:   S.rp2Value,
+    barColor:   S.barColor,
+    timerPresetSeconds: S.timerPresetSeconds,
+  };
   saveNow(); renderAll();
 }
 
 // Load from server first (so tablet gets live state, not stale localStorage)
 loadCustomOptions();
+setLiveStatus('connecting');
 fetch('/state').then(r=>r.json()).then(data=>{
   if(Object.keys(data).length){ S={...DEF,...data}; }
   renderAll();
-}).catch(()=>{ renderAll(); });
+}).catch(()=>{ renderAll(); }).finally(()=>{ connectSSE(); });
 
 // SSE — server pushes state every second while clocks run, instantly on any action
 function connectSSE(){
+  setLiveStatus('connecting');
   const es = new EventSource('/events');
+  es.onopen = () => setLiveStatus('connected');
   es.onmessage = (e) => {
     try {
       const msg = JSON.parse(e.data);
@@ -1325,9 +1361,8 @@ function connectSSE(){
       }
     } catch(err){}
   };
-  es.onerror = () => { es.close(); setTimeout(connectSSE, 3000); };
+  es.onerror = () => { setLiveStatus('offline'); es.close(); setTimeout(connectSSE, 3000); };
 }
-connectSSE();
 
 // ── KEYBOARD SHORTCUTS ──────────────────────────────────────
 // Home score:  Q=+1  W=+2  E=+3  A=−1  S=−2

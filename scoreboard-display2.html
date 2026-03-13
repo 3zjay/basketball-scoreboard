@@ -315,8 +315,7 @@ const DEF = {
 let S = {...DEF};
 let lastHome = -1, lastAway = -1;
 
-function render() {
-  // Game clock
+function renderClocks() {
   const m   = Math.floor(S.gameSeconds/60);
   const sec = S.gameSeconds%60;
   const mS  = m.toString().padStart(2,'0');
@@ -330,10 +329,13 @@ function render() {
     const el = document.getElementById(id);
     if(el){ el.style.color = warn?'#ff3300':'#ffaa00'; el.style.textShadow = warn?'0 0 30px rgba(255,50,0,0.7)':'0 0 40px rgba(255,170,0,0.5)'; }
   });
-
-  // Shot clock
   const shotEl = document.getElementById('shotEl');
   if(shotEl){ shotEl.textContent=S.shotSeconds; shotEl.className='shot-num'+(S.shotSeconds<=5?' urgent':''); }
+}
+
+function render() {
+  // Game clock + shot clock
+  renderClocks();
 
   // Scores
   const hEl = document.getElementById('homeScoreEl');
@@ -410,20 +412,31 @@ document.addEventListener('fullscreenchange',()=>{ const btn=document.getElement
 function playGameBuzzer(){ const a=new Audio('/buzzer.mp3'); a.volume=1.0; a.play().catch(()=>{}); }
 function playShotBuzzer(){ const a=new Audio('/buzzer.mp3'); a.volume=1.0; a.play().catch(()=>{}); }
 
+let localTick = null;
+function startLocalTick(){
+  if(localTick) return;
+  localTick = setInterval(()=>{
+    if(S.gameRunning && S.gameSeconds > 0){ S.gameSeconds--; renderClocks(); }
+    if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; renderClocks(); }
+  }, 1000);
+}
+function stopLocalTick(){ clearInterval(localTick); localTick = null; }
+function syncLocalTick(){ if(S.gameRunning || S.shotRunning){ startLocalTick(); } else { stopLocalTick(); } }
+
 function connectSSE(){
   const es=new EventSource('/events');
   es.onmessage=(e)=>{
     try {
       const msg=JSON.parse(e.data);
       if(msg.type==='buzz'){ if(msg.kind==='game') playGameBuzzer(); else playShotBuzzer(); }
-      else if(msg.type==='state'){ S={...DEF,...msg.data}; render(); }
+      else if(msg.type==='state'){ stopLocalTick(); S={...DEF,...msg.data}; render(); syncLocalTick(); }
     } catch(err){}
   };
   es.onerror=()=>{ es.close(); setTimeout(connectSSE,2000); };
 }
 
 fetch('/state').then(r=>r.json()).then(data=>{
-  if(Object.keys(data).length){ S={...DEF,...data}; render(); }
+  if(Object.keys(data).length){ S={...DEF,...data}; render(); syncLocalTick(); }
 }).catch(()=>{}).finally(()=>{ connectSSE(); });
 </script>
 </body>
