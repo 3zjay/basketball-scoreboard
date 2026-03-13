@@ -1120,6 +1120,11 @@ function resetGameClock(){
   } else {
     seconds=(parseInt(document.getElementById('clkMin').value)||10)*60+(parseInt(document.getElementById('clkSec').value)||0);
   }
+  // Update locally immediately so Start works right away after a reset
+  S.gameSeconds = seconds;
+  S.gameRunning = false;
+  _lastClockCmd = Date.now();
+  renderGameClock();
   cmd('game_reset', seconds);
 }
 function setLiveStatus(status){ // 'connecting' | 'connected' | 'offline'
@@ -1330,8 +1335,8 @@ function connectSSE(){
         const sinceClockCmd = now - _lastClockCmd;
         const sinceStateCmd = now - _lastStateCmd;
 
-        // Within 700ms of a clock command, keep our optimistic clock values
-        if(sinceClockCmd < 700){
+        // Within 1500ms of a clock command, keep our optimistic clock values
+        if(sinceClockCmd < 1500){
           d.gameRunning = S.gameRunning;
           d.shotRunning = S.shotRunning;
           d.gameSeconds = S.gameSeconds;
