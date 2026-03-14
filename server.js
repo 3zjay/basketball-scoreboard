@@ -97,6 +97,7 @@ const ROUTES = {
   '/overlay':            'basketball-overlay.html',
   '/fullscreen':         'basketball-fullscreen.html',
   '/nbaoverlay':         'basketball-nbaoverlay.html',
+  '/nbaoverlay2':        'basketball-nbaoverlay2.html',
   '/mobile-overlay':     'mobile-overlay.html',
   '/display':            'scoreboard-display.html',
   '/display2':           'scoreboard-display2.html',
