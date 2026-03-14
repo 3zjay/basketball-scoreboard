@@ -2,116 +2,281 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Scoreboard Overlay 2</title>
+<title>Scoreboard Scorebug</title>
 <link href="https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-body { background: transparent; font-family: 'Barlow Condensed', sans-serif; }
-
-#overlay2 {
-  display: inline-flex;
-  flex-direction: column;
-  background: transparent;
-  width: 520px;
+html, body {
+  background:transparent;
+  font-family:'Barlow Condensed',sans-serif;
+  overflow:hidden;
+  width:100%; height:100%;
 }
 
+/* Scorebug sits top-left — compact, same vw scaling as fullscreen bar */
+#scorebug {
+  position:fixed;
+  top:1.5vw; left:1.5vw;
+  display:inline-flex;
+  flex-direction:column;
+  min-width:22vw;
+}
+
+/* ── TOP ROW: Period · Clock · Shot ── */
 .top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #1a1a1a;
-  border-radius: 8px 8px 0 0;
-  height: 32px;
-  overflow: hidden;
+  display:flex;
+  align-items:center;
+  background:#0d1117;
+  border-top:0.18vw solid #c8102e;
+  border-radius:0.42vw 0.42vw 0 0;
+  height:1.82vw;
+  overflow:hidden;
 }
 .top-seg {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  padding: 0 16px;
-  border-right: 1px solid rgba(255,255,255,0.1);
+  display:flex; align-items:center; justify-content:center;
+  height:100%; padding:0 0.78vw;
+  border-right:1px solid rgba(255,255,255,0.07);
 }
-.top-seg:last-child { border-right: none; }
-.period-lbl { font-size: 12px; font-weight: 800; letter-spacing: 3px; color: rgba(255,255,255,0.55); text-transform: uppercase; }
-.game-clock { font-family: 'Teko',sans-serif; font-size: 20px; font-weight: 700; color: #fff; letter-spacing: 2px; line-height: 1; font-variant-numeric: tabular-nums; }
-.game-clock.warn { color: #ff5f5f; }
-.shot-wrap { display: flex; align-items: baseline; gap: 2px; }
-.shot-colon { font-size: 14px; font-weight: 800; color: rgba(255,255,255,0.35); }
-.shot-num { font-family: 'Teko',sans-serif; font-size: 18px; font-weight: 700; color: #f5c842; letter-spacing: 1px; line-height: 1; font-variant-numeric: tabular-nums; min-width: 24px; text-align: center; }
-.shot-num.urgent { color: #e84040; animation: scPulse 0.45s ease infinite alternate; }
-@keyframes scPulse { to { opacity: 0.35; } }
+.top-seg:last-child { border-right:none; flex:1; }
+.period-lbl {
+  font-size:0.52vw; font-weight:800;
+  letter-spacing:0.16vw; color:rgba(255,255,255,0.45);
+  text-transform:uppercase; white-space:nowrap;
+}
+.game-clock {
+  font-family:'Teko',sans-serif; font-size:1.3vw; font-weight:700;
+  color:#fff; letter-spacing:0.1vw; line-height:1;
+  font-variant-numeric:tabular-nums; transition:color 0.3s;
+}
+.game-clock.warn { color:#ff5f5f; }
+.shot-row { display:flex; align-items:center; gap:0.26vw; }
+.shot-label {
+  font-size:0.47vw; font-weight:800;
+  letter-spacing:0.1vw; color:#8a95a8; text-transform:uppercase;
+}
+.shot-num {
+  font-family:'Teko',sans-serif; font-size:1.04vw; font-weight:700;
+  color:#f5c842; letter-spacing:0.05vw; line-height:1;
+  font-variant-numeric:tabular-nums; min-width:1.3vw; text-align:center;
+}
+.shot-num.urgent { color:#e84040; animation:scPulse 0.45s ease infinite alternate; }
+@keyframes scPulse { to { opacity:0.4; } }
 
-.main-row { display: flex; align-items: center; background: #111; height: 90px; }
+.live-seg {
+  display:flex; align-items:center; gap:0.36vw;
+  padding:0 0.78vw;
+}
+.live-dot {
+  width:0.31vw; height:0.31vw; border-radius:50%;
+  background:#e84040; box-shadow:0 0 0.36vw #e84040;
+  animation:livePulse 1.2s ease infinite;
+}
+@keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.6)} }
+.live-text {
+  font-size:0.42vw; font-weight:800; letter-spacing:0.16vw;
+  color:rgba(255,255,255,0.45); text-transform:uppercase;
+}
 
-.logo-seg { display: flex; align-items: center; justify-content: center; width: 100px; height: 100%; flex-shrink: 0; padding: 0 8px; }
-.logo-wrap { width: 80px; height: 80px; border-radius: 50%; background: #1a1a1a; border: 3px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; overflow: hidden; transition: border-color 0.3s, box-shadow 0.3s; }
-.logo-wrap img { width: 72px; height: 72px; object-fit: contain; }
+/* ── MAIN ROW: Logo · Score | Center | Score · Logo ── */
+.main-row {
+  display:flex; align-items:center;
+  background:#0d1117;
+  border-bottom:0.18vw solid #c8102e;
+  border-radius:0 0 0.42vw 0.42vw;
+  height:5.73vw;
+  overflow:visible;
+}
 
-.score-seg { flex: 1; display: flex; align-items: center; justify-content: center; background: #1a1a1a; height: 100%; border-left: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.08); }
-.score-num { font-family: 'Teko',sans-serif; font-size: 68px; font-weight: 700; color: #fff; letter-spacing: 1px; line-height: 1; font-variant-numeric: tabular-nums; min-width: 70px; text-align: center; }
+/* Team segments */
+.team-seg {
+  display:flex; align-items:center;
+  padding:0 0.42vw; flex-shrink:0;
+}
+.team-seg.home { flex-direction:row; padding-left:0.52vw; }
+.team-seg.away { flex-direction:row; padding-right:0.52vw; }
 
-.bottom-bar { display: flex; align-items: center; background: #0d0d0d; border-radius: 0 0 8px 8px; height: 28px; padding: 0 12px; }
-.name-lbl { font-family: 'Teko',sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 1px; color: rgba(255,255,255,0.55); text-transform: uppercase; flex: 1; }
-.name-lbl.away { text-align: right; }
+.logo-wrap {
+  width:5.73vw; height:5.73vw; flex-shrink:0;
+  position:relative; z-index:9;
+}
+.logo-circle {
+  width:5.73vw; height:5.73vw; border-radius:50%;
+  background:#111; border:0.18vw solid rgba(255,255,255,0.12);
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden; box-shadow:0 0.16vw 1vw rgba(0,0,0,0.8);
+  transition:border-color 0.3s, box-shadow 0.3s;
+}
+.logo-circle img { width:5.1vw; height:5.1vw; object-fit:contain; }
+.logo-ph {
+  font-size:0.42vw; font-weight:700; color:rgba(255,255,255,0.2);
+  text-transform:uppercase; text-align:center; line-height:1.3;
+}
 
-.poss-wrap { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-.poss-arrow { opacity: 0; transition: opacity 0.3s, filter 0.3s; display: flex; align-items: center; }
-.poss-arrow.on { opacity: 1; filter: drop-shadow(0 0 5px #ff8800) drop-shadow(0 0 14px #ff6600) drop-shadow(0 0 24px #ff4400); }
-.poss-arrow.home.on { animation: bLeft  0.8s ease-in-out infinite alternate; }
-.poss-arrow.away.on { animation: bRight 0.8s ease-in-out infinite alternate; }
-@keyframes bLeft  { from{transform:translateX(0)} to{transform:translateX(-3px)} }
-@keyframes bRight { from{transform:translateX(0)} to{transform:translateX( 3px)} }
+.team-text {
+  display:flex; flex-direction:column; justify-content:center;
+  padding:0 0.26vw; flex-shrink:0;
+}
+.team-seg.away .team-text { align-items:flex-end; }
+.team-abbrev {
+  font-family:'Teko',sans-serif; font-size:1.3vw; font-weight:700;
+  color:#fff; letter-spacing:0.05vw; line-height:1;
+  text-transform:uppercase; white-space:nowrap;
+}
+.team-record {
+  font-size:0.52vw; font-weight:700;
+  color:#8a95a8; letter-spacing:0.03vw; white-space:nowrap;
+}
 
-@keyframes scoreBump { 0%{transform:scale(1)} 40%{transform:scale(1.12);color:#f5c842} 100%{transform:scale(1)} }
+/* Score blocks */
+.score-block {
+  display:flex; align-items:center; justify-content:center;
+  background:#161b26; height:100%; width:4.69vw; flex-shrink:0;
+  border-left:1px solid rgba(255,255,255,0.07);
+  border-right:1px solid rgba(255,255,255,0.07);
+}
+.score-num {
+  font-family:'Teko',sans-serif; font-size:3.65vw; font-weight:700;
+  color:#fff; letter-spacing:0.05vw; line-height:1;
+  text-align:center; font-variant-numeric:tabular-nums;
+}
+@keyframes scoreBump {
+  0%{transform:scale(1);color:#fff}
+  40%{transform:scale(1.2);color:#f5c842}
+  100%{transform:scale(1);color:#fff}
+}
 .bump { animation:scoreBump 0.38s ease; }
+
+/* Center: period / clock / shot */
+.center-block {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:#161b26; height:100%; width:7.81vw; flex-shrink:0;
+  border-left:1px solid rgba(255,255,255,0.07);
+  border-right:1px solid rgba(255,255,255,0.07);
+  gap:0.1vw; padding:0 0.52vw;
+}
+
+/* Possession arrows */
+.poss-arrow-ov {
+  display:flex; align-items:center; justify-content:center;
+  width:1.46vw; flex-shrink:0; opacity:0;
+  transition:opacity 0.3s, filter 0.3s;
+}
+.poss-arrow-ov svg { width:1.15vw; height:0.83vw; }
+.poss-arrow-ov.on {
+  opacity:1;
+  filter:drop-shadow(0 0 0.26vw #ff8800) drop-shadow(0 0 0.52vw #ff6600) drop-shadow(0 0 1vw #ff4400);
+}
+.poss-arrow-ov.home.on { animation:arrowLeft  0.8s ease-in-out infinite alternate; }
+.poss-arrow-ov.away.on { animation:arrowRight 0.8s ease-in-out infinite alternate; }
+@keyframes arrowLeft  { from{transform:translateX(0)} to{transform:translateX(-0.18vw)} }
+@keyframes arrowRight { from{transform:translateX(0)} to{transform:translateX( 0.18vw)} }
 </style>
 </head>
 <body>
-<div id="overlay2">
 
+<div id="scorebug">
+
+  <!-- TOP: Period · Clock · Shot · Live -->
   <div class="top-bar">
-    <div class="top-seg"><div class="period-lbl" id="periodOv2">1ST</div></div>
-    <div class="top-seg"><div class="game-clock" id="gameClkOv2">10:00</div></div>
     <div class="top-seg">
-      <div class="shot-wrap">
-        <div class="shot-colon">:</div>
+      <div class="period-lbl" id="periodOv2">1ST</div>
+    </div>
+    <div class="top-seg">
+      <div class="game-clock" id="gameClkOv2">10:00</div>
+    </div>
+    <div class="top-seg">
+      <div class="shot-row">
+        <div class="shot-label">SHOT</div>
         <div class="shot-num" id="shotClkOv2">24</div>
       </div>
     </div>
+    <div class="top-seg live-seg">
+      <div class="live-dot"></div>
+      <div class="live-text">LIVE</div>
+    </div>
   </div>
 
+  <!-- MAIN: Team + Score + Center + Score + Team -->
   <div class="main-row">
-    <div class="logo-seg"><div class="logo-wrap" id="homeLogoOv2"></div></div>
-    <div class="score-seg"><div class="score-num" id="homeScoreOv2">0</div></div>
-    <div class="score-seg"><div class="score-num" id="awayScoreOv2">0</div></div>
-    <div class="logo-seg"><div class="logo-wrap" id="awayLogoOv2"></div></div>
-  </div>
 
-  <div class="bottom-bar">
-    <div class="name-lbl home" id="homeNameOv2">HOME</div>
-    <div class="poss-wrap">
-      <div class="poss-arrow home" id="possArrowHomeOv2">
-        <svg viewBox="0 0 60 42" width="18" height="13">
-          <defs><radialGradient id="ag2h" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffffff"/><stop offset="40%" stop-color="#ffcc00"/><stop offset="100%" stop-color="#ff6600"/></radialGradient></defs>
-          <polygon points="4,21 56,3 56,39" fill="url(#ag2h)"/>
-        </svg>
+    <!-- HOME -->
+    <div class="team-seg home">
+      <div class="logo-wrap">
+        <div class="logo-circle" id="homeLogoOv2"><div class="logo-ph">LOGO</div></div>
       </div>
-      <div class="poss-arrow away" id="possArrowAwayOv2">
-        <svg viewBox="0 0 60 42" width="18" height="13">
-          <defs><radialGradient id="ag2a" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffffff"/><stop offset="40%" stop-color="#ffcc00"/><stop offset="100%" stop-color="#ff6600"/></radialGradient></defs>
-          <polygon points="56,21 4,3 4,39" fill="url(#ag2a)"/>
-        </svg>
+      <div class="team-text">
+        <div class="team-abbrev" id="homeAbbrOv2">HOME</div>
+        <div class="team-record" id="homeRecOv2">0-0</div>
       </div>
     </div>
-    <div class="name-lbl away" id="awayNameOv2">AWAY</div>
-  </div>
 
+    <!-- HOME POSS ARROW -->
+    <div class="poss-arrow-ov home" id="possArrowHomeOv2">
+      <svg viewBox="0 0 60 42">
+        <defs><radialGradient id="ag2h" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="40%" stop-color="#ffcc00"/>
+          <stop offset="100%" stop-color="#ff6600"/>
+        </radialGradient></defs>
+        <polygon points="4,21 56,3 56,39" fill="url(#ag2h)"/>
+      </svg>
+    </div>
+
+    <div class="score-block">
+      <div class="score-num" id="homeScoreOv2">0</div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="center-block">
+      <div class="period-lbl" id="periodCenterOv2">1ST</div>
+      <div class="game-clock" id="gameClkCenterOv2">10:00</div>
+      <div class="shot-row">
+        <div class="shot-label">SHOT</div>
+        <div class="shot-num" id="shotClkCenterOv2">24</div>
+      </div>
+    </div>
+
+    <div class="score-block">
+      <div class="score-num" id="awayScoreOv2">0</div>
+    </div>
+
+    <!-- AWAY POSS ARROW -->
+    <div class="poss-arrow-ov away" id="possArrowAwayOv2">
+      <svg viewBox="0 0 60 42">
+        <defs><radialGradient id="ag2a" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="40%" stop-color="#ffcc00"/>
+          <stop offset="100%" stop-color="#ff6600"/>
+        </radialGradient></defs>
+        <polygon points="56,21 4,3 4,39" fill="url(#ag2a)"/>
+      </svg>
+    </div>
+
+    <!-- AWAY -->
+    <div class="team-seg away">
+      <div class="team-text" style="align-items:flex-end;">
+        <div class="team-abbrev" id="awayAbbrOv2">AWAY</div>
+        <div class="team-record" id="awayRecOv2">0-0</div>
+      </div>
+      <div class="logo-wrap">
+        <div class="logo-circle" id="awayLogoOv2"><div class="logo-ph">LOGO</div></div>
+      </div>
+    </div>
+
+  </div>
 </div>
+
 <script>
-const DEF = { homeScore:0, awayScore:0, homeAbbr:'HOME', homeColor:'#f5c842', homeLogo:null, awayAbbr:'AWAY', awayColor:'#c8102e', awayLogo:null, quarter:1, gameSeconds:600, shotSeconds:24, possession:null };
+const DEF = {
+  homeScore:0, awayScore:0,
+  homeAbbr:'HOME', homeRecord:'0-0', homeColor:'#f5c842', homeLogo:null,
+  awayAbbr:'AWAY', awayRecord:'0-0', awayColor:'#c8102e', awayLogo:null,
+  quarter:1, gameSeconds:600, shotSeconds:24,
+  gameRunning:false, shotRunning:false, possession:null,
+};
 const PERIODS = ['1ST','2ND','3RD','4TH','OT','2OT'];
 let S = {...DEF};
+
 let localTick = null;
 function startLocalTick(){
   if(localTick) return;
@@ -122,37 +287,91 @@ function startLocalTick(){
 }
 function stopLocalTick(){ clearInterval(localTick); localTick = null; }
 function syncLocalTick(){ if(S.gameRunning || S.shotRunning){ startLocalTick(); } else { stopLocalTick(); } }
+
 function renderClocks(){
-  const m=Math.floor(S.gameSeconds/60), sec=S.gameSeconds%60;
-  const clkEl=document.getElementById('gameClkOv2');
-  if(clkEl){ clkEl.textContent=`${m}:${sec.toString().padStart(2,'0')}`; clkEl.className='game-clock'+(S.gameSeconds<=30?' warn':''); }
-  const shotEl=document.getElementById('shotClkOv2');
-  if(shotEl){ shotEl.textContent=S.shotSeconds; shotEl.className='shot-num'+(S.shotSeconds<=5?' urgent':''); }
+  const m = Math.floor(S.gameSeconds/60), sec = S.gameSeconds%60;
+  const txt = `${m}:${sec.toString().padStart(2,'0')}`;
+  const warn = S.gameSeconds <= 30;
+  ['gameClkOv2','gameClkCenterOv2'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){ el.textContent = txt; el.className = 'game-clock'+(warn?' warn':''); }
+  });
+  const shotCls = 'shot-num'+(S.shotSeconds<=5?' urgent':'');
+  ['shotClkOv2','shotClkCenterOv2'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){ el.textContent = S.shotSeconds; el.className = shotCls; }
+  });
 }
 
-function s(id,val){ const e=document.getElementById(id); if(e) e.textContent=val; }
+let lastHome = -1, lastAway = -1;
+function s(id, val){ const e = document.getElementById(id); if(e) e.textContent = val; }
+
 function render(){
-  s('homeScoreOv2', S.homeScore); s('awayScoreOv2', S.awayScore);
-  s('homeNameOv2', S.homeAbbr.toUpperCase()); s('awayNameOv2', S.awayAbbr.toUpperCase());
   const qL = typeof S.quarter==='number' ? (PERIODS[S.quarter-1]||`Q${S.quarter}`) : S.quarter;
   s('periodOv2', qL);
-  const m=Math.floor(S.gameSeconds/60), sec=S.gameSeconds%60;
-  const clkEl=document.getElementById('gameClkOv2');
-  if(clkEl){ clkEl.textContent=`${m}:${sec.toString().padStart(2,'0')}`; clkEl.className='game-clock'+(S.gameSeconds<=30?' warn':''); }
-  const shotEl=document.getElementById('shotClkOv2');
-  if(shotEl){ shotEl.textContent=S.shotSeconds; shotEl.className='shot-num'+(S.shotSeconds<=5?' urgent':''); }
-  const hL=document.getElementById('homeLogoOv2'), aL=document.getElementById('awayLogoOv2');
-  if(hL){ hL.innerHTML=S.homeLogo?`<img src="${S.homeLogo}" alt="">`:''; hL.style.border=`3px solid ${S.homeColor||'#f5c842'}`; hL.style.boxShadow=`0 0 10px ${S.homeColor||'#f5c842'}`; }
-  if(aL){ aL.innerHTML=S.awayLogo?`<img src="${S.awayLogo}" alt="">`:''; aL.style.border=`3px solid ${S.awayColor||'#c8102e'}`; aL.style.boxShadow=`0 0 10px ${S.awayColor||'#c8102e'}`; }
+  s('periodCenterOv2', qL);
+
+  // Score with bump animation
+  const hEl = document.getElementById('homeScoreOv2');
+  const aEl = document.getElementById('awayScoreOv2');
+  if(hEl && parseInt(hEl.textContent) !== S.homeScore){
+    hEl.textContent = S.homeScore;
+    if(lastHome >= 0){ hEl.classList.remove('bump'); void hEl.offsetWidth; hEl.classList.add('bump'); }
+  }
+  if(aEl && parseInt(aEl.textContent) !== S.awayScore){
+    aEl.textContent = S.awayScore;
+    if(lastAway >= 0){ aEl.classList.remove('bump'); void aEl.offsetWidth; aEl.classList.add('bump'); }
+  }
+  lastHome = S.homeScore; lastAway = S.awayScore;
+
+  s('homeAbbrOv2', S.homeAbbr.toUpperCase());
+  s('awayAbbrOv2', S.awayAbbr.toUpperCase());
+  s('homeRecOv2', S.homeRecord || '0-0');
+  s('awayRecOv2', S.awayRecord || '0-0');
+
+  renderClocks();
+
+  // Logos
+  const hL = document.getElementById('homeLogoOv2');
+  const aL = document.getElementById('awayLogoOv2');
+  if(hL){
+    hL.innerHTML = S.homeLogo ? `<img src="${S.homeLogo}" alt="">` : '<div class="logo-ph">LOGO</div>';
+    hL.style.borderColor = S.homeColor || '#f5c842';
+    hL.style.boxShadow = `0 0 0.52vw ${S.homeColor||'#f5c842'}, 0 0.16vw 1vw rgba(0,0,0,0.8)`;
+  }
+  if(aL){
+    aL.innerHTML = S.awayLogo ? `<img src="${S.awayLogo}" alt="">` : '<div class="logo-ph">LOGO</div>';
+    aL.style.borderColor = S.awayColor || '#c8102e';
+    aL.style.boxShadow = `0 0 0.52vw ${S.awayColor||'#c8102e'}, 0 0.16vw 1vw rgba(0,0,0,0.8)`;
+  }
+
+  // Possession
   document.getElementById('possArrowHomeOv2')?.classList.toggle('on', S.possession==='home');
   document.getElementById('possArrowAwayOv2')?.classList.toggle('on', S.possession==='away');
 }
+
+window.addEventListener('load', () => {
+  const audio = new Audio('/buzzer.mp3'); audio.volume = 0;
+  audio.play().then(()=>{ audio.pause(); audio.currentTime=0; }).catch(()=>{});
+});
+function playGameBuzzer(){ const a=new Audio('/buzzer.mp3'); a.volume=1.0; a.play().catch(()=>{}); }
+function playShotBuzzer(){ const a=new Audio('/buzzer.mp3'); a.volume=1.0; a.play().catch(()=>{}); }
+
 function connectSSE(){
-  const es=new EventSource('/events');
-  es.onmessage=e=>{ try{ const msg=JSON.parse(e.data); if(msg.type==='state'){ stopLocalTick(); S={...DEF,...msg.data}; render(); syncLocalTick(); } }catch(err){} };
-  es.onerror=()=>{ setTimeout(connectSSE,3000); es.close(); };
+  const es = new EventSource('/events');
+  es.onmessage = e => {
+    try {
+      const msg = JSON.parse(e.data);
+      if(msg.type==='buzz'){ if(msg.kind==='game') playGameBuzzer(); else playShotBuzzer(); }
+      else if(msg.type==='state'){ stopLocalTick(); S={...DEF,...msg.data}; render(); syncLocalTick(); }
+    } catch(err){}
+  };
+  es.onerror = () => { es.close(); setTimeout(connectSSE, 2000); };
 }
-fetch('/state').then(r=>r.json()).then(d=>{ S={...DEF,...d}; render(); syncLocalTick(); }).catch(()=>{}).finally(()=>connectSSE());
+
+fetch('/state').then(r=>r.json()).then(d=>{
+  if(Object.keys(d).length){ S={...DEF,...d}; render(); syncLocalTick(); }
+}).catch(()=>{}).finally(()=>{ connectSSE(); });
 </script>
 </body>
 </html>
