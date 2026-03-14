@@ -218,7 +218,7 @@ html, body {
       </svg>
     </div>
 
-    <div class="score-block">
+    <div class="score-block" id="homeScoreBlock">
       <div class="score-num" id="homeScoreOv2">0</div>
     </div>
 
@@ -232,7 +232,7 @@ html, body {
       </div>
     </div>
 
-    <div class="score-block">
+    <div class="score-block" id="awayScoreBlock">
       <div class="score-num" id="awayScoreOv2">0</div>
     </div>
 
@@ -332,22 +332,29 @@ function render(){
 
   renderClocks();
 
-  // Logos
+  // Score block backgrounds + logo glows — all use team color
+  const hc = S.homeColor || '#f5c842';
+  const ac = S.awayColor || '#c8102e';
+
+  const hSB = document.getElementById('homeScoreBlock');
+  const aSB = document.getElementById('awayScoreBlock');
+  if(hSB) hSB.style.background = hc;
+  if(aSB) aSB.style.background = ac;
+
   const hL = document.getElementById('homeLogoOv2');
   const aL = document.getElementById('awayLogoOv2');
   if(hL){
     hL.innerHTML = S.homeLogo ? `<img src="${S.homeLogo}" alt="">` : '<div class="logo-ph">LOGO</div>';
-    hL.style.borderColor = S.homeColor || '#f5c842';
-    hL.style.background = darken(S.homeColor||'#f5c842', 0.4);
-    hL.style.boxShadow = `0 0 0.8vw ${S.homeColor||'#f5c842'}, 0 0 2vw ${S.homeColor||'#f5c842'}66, 0 0.16vw 1vw rgba(0,0,0,0.8)`;
+    hL.style.borderColor = hc;
+    hL.style.background = darken(hc, 0.4);
+    hL.style.boxShadow = `0 0 0.8vw ${hc}, 0 0 2vw ${hc}66, 0 0.16vw 1vw rgba(0,0,0,0.8)`;
   }
   if(aL){
     aL.innerHTML = S.awayLogo ? `<img src="${S.awayLogo}" alt="">` : '<div class="logo-ph">LOGO</div>';
-    aL.style.borderColor = S.awayColor || '#c8102e';
-    aL.style.background = darken(S.awayColor||'#c8102e', 0.4);
-    aL.style.boxShadow = `0 0 0.8vw ${S.awayColor||'#c8102e'}, 0 0 2vw ${S.awayColor||'#c8102e'}66, 0 0.16vw 1vw rgba(0,0,0,0.8)`;
+    aL.style.borderColor = ac;
+    aL.style.background = darken(ac, 0.4);
+    aL.style.boxShadow = `0 0 0.8vw ${ac}, 0 0 2vw ${ac}66, 0 0.16vw 1vw rgba(0,0,0,0.8)`;
   }
-
   // Possession
   document.getElementById('possArrowHomeOv2')?.classList.toggle('on', S.possession==='home');
   document.getElementById('possArrowAwayOv2')?.classList.toggle('on', S.possession==='away');
