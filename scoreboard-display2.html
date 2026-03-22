@@ -216,7 +216,7 @@ html, body {
 
   <!-- ROW 1: CLOCK -->
   <div class="row-clock">
-    <div class="team-header" id="homeNameEl">HOME</div>
+    <div class="team-header" id="guestNameEl">AWAY</div>
     <div class="clock-wrap">
       <div class="clock-digit" id="clkM1">1</div>
       <div class="clock-digit" id="clkM2">0</div>
@@ -224,13 +224,13 @@ html, body {
       <div class="clock-digit" id="clkS1">0</div>
       <div class="clock-digit" id="clkS2">0</div>
     </div>
-    <div class="team-header" id="guestNameEl">AWAY</div>
+    <div class="team-header" id="homeNameEl">HOME</div>
   </div>
 
   <!-- ROW 2: SCORES -->
   <div class="row-scores">
-    <div class="team-block home" id="homeBlock">
-      <div class="score-val" id="homeScoreEl">0</div>
+    <div class="team-block away" id="awayBlock">
+      <div class="score-val" id="awayScoreEl">0</div>
     </div>
     <div class="center-col">
       <div class="lbl">PERIOD</div>
@@ -239,33 +239,21 @@ html, body {
       <div class="lbl">SHOT</div>
       <div class="shot-num" id="shotEl">24</div>
     </div>
-    <div class="team-block away" id="awayBlock">
-      <div class="score-val" id="awayScoreEl">0</div>
+    <div class="team-block home" id="homeBlock">
+      <div class="score-val" id="homeScoreEl">0</div>
     </div>
   </div>
 
   <!-- ROW 3: FOULS + POSSESSION -->
   <div class="row-bottom">
     <div class="fouls-block">
+      <div class="fouls-val" id="awayFoulsEl">0</div>
       <div class="fouls-lbl">FOULS</div>
-      <div class="fouls-val" id="homeFoulsEl">0</div>
     </div>
 
     <div class="poss-wrap">
-      <div class="poss-item home" id="possHome">
-        <div class="poss-logo" id="possLogoHome"><div class="poss-logo-ph">HME</div></div>
-        <div class="poss-arrow">
-          <svg viewBox="0 0 60 42" style="width:5vw;height:3.5vw;">
-            <defs><radialGradient id="agHome" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#ffffff"/>
-              <stop offset="40%" stop-color="#ffcc00"/>
-              <stop offset="100%" stop-color="#ff6600"/>
-            </radialGradient></defs>
-            <polygon points="4,21 56,3 56,39" fill="url(#agHome)"/>
-          </svg>
-        </div>
-      </div>
       <div class="poss-item away" id="possAway">
+        <div class="poss-logo" id="possLogoAway"><div class="poss-logo-ph">AWY</div></div>
         <div class="poss-arrow">
           <svg viewBox="0 0 60 42" style="width:5vw;height:3.5vw;">
             <defs><radialGradient id="agAway" cx="50%" cy="50%" r="50%">
@@ -273,16 +261,28 @@ html, body {
               <stop offset="40%" stop-color="#ffcc00"/>
               <stop offset="100%" stop-color="#ff6600"/>
             </radialGradient></defs>
-            <polygon points="56,21 4,3 4,39" fill="url(#agAway)"/>
+            <polygon points="4,21 56,3 56,39" fill="url(#agAway)"/>
           </svg>
         </div>
-        <div class="poss-logo" id="possLogoAway"><div class="poss-logo-ph">AWY</div></div>
+      </div>
+      <div class="poss-item home" id="possHome">
+        <div class="poss-arrow">
+          <svg viewBox="0 0 60 42" style="width:5vw;height:3.5vw;">
+            <defs><radialGradient id="agHome" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="40%" stop-color="#ffcc00"/>
+              <stop offset="100%" stop-color="#ff6600"/>
+            </radialGradient></defs>
+            <polygon points="56,21 4,3 4,39" fill="url(#agHome)"/>
+          </svg>
+        </div>
+        <div class="poss-logo" id="possLogoHome"><div class="poss-logo-ph">HME</div></div>
       </div>
     </div>
 
     <div class="fouls-block">
-      <div class="fouls-val" id="awayFoulsEl">0</div>
       <div class="fouls-lbl">FOULS</div>
+      <div class="fouls-val" id="homeFoulsEl">0</div>
     </div>
   </div>
 

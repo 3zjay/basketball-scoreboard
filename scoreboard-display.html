@@ -223,17 +223,17 @@ html, body {
 
 <!-- ROW 1: GAME CLOCK + POSSESSION ARROWS -->
 <div class="row-clock">
-  <!-- Home possession: logo + arrow pointing right -->
-  <div class="poss-indicator" id="possHome">
-    <div class="poss-logo" id="possLogoHome"><div class="poss-logo-ph">HOME</div></div>
-    <div class="poss-arrow" id="possArrowHome">
+  <!-- Away possession: logo + arrow pointing right (left side) -->
+  <div class="poss-indicator" id="possAway">
+    <div class="poss-logo" id="possLogoAway"><div class="poss-logo-ph">AWAY</div></div>
+    <div class="poss-arrow" id="possArrowAway">
       <svg viewBox="0 0 60 42" style="width:6vw;height:4.2vw;">
-        <defs><radialGradient id="arrowGlowHome" cx="50%" cy="50%" r="50%">
+        <defs><radialGradient id="arrowGlowAway" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stop-color="#ffffff"/>
           <stop offset="40%" stop-color="#ffcc00"/>
           <stop offset="100%" stop-color="#ff6600"/>
         </radialGradient></defs>
-        <polygon points="4,21 56,3 56,39" fill="url(#arrowGlowHome)"/>
+        <polygon points="4,21 56,3 56,39" fill="url(#arrowGlowAway)"/>
       </svg>
     </div>
   </div>
@@ -246,33 +246,33 @@ html, body {
     <div class="clock-digit" id="clkS2">0</div>
   </div>
 
-  <!-- Away possession: arrow pointing left + logo -->
-  <div class="poss-indicator" id="possAway">
-    <div class="poss-arrow" id="possArrowAway">
+  <!-- Home possession: arrow pointing left + logo (right side) -->
+  <div class="poss-indicator" id="possHome">
+    <div class="poss-arrow" id="possArrowHome">
       <svg viewBox="0 0 60 42" style="width:6vw;height:4.2vw;">
-        <defs><radialGradient id="arrowGlowAway" cx="50%" cy="50%" r="50%">
+        <defs><radialGradient id="arrowGlowHome" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stop-color="#ffffff"/>
           <stop offset="40%" stop-color="#ffcc00"/>
           <stop offset="100%" stop-color="#ff6600"/>
         </radialGradient></defs>
-        <polygon points="56,21 4,3 4,39" fill="url(#arrowGlowAway)"/>
+        <polygon points="56,21 4,3 4,39" fill="url(#arrowGlowHome)"/>
       </svg>
     </div>
-    <div class="poss-logo" id="possLogoAway"><div class="poss-logo-ph">AWAY</div></div>
+    <div class="poss-logo" id="possLogoHome"><div class="poss-logo-ph">HOME</div></div>
   </div>
 </div>
 
 <!-- ROW 2: SCORES -->
 <div class="row-scores">
 
-  <!-- HOME -->
-  <div class="team-block home">
+  <!-- AWAY (left) -->
+  <div class="team-block away">
     <div class="fouls-row">
+      <div class="fouls-val" id="awayFoulsEl">0</div>
       <div class="fouls-lbl">FOULS</div>
-      <div class="fouls-val" id="homeFoulsEl">0</div>
     </div>
-    <div class="team-name" id="homeNameEl">HOME</div>
-    <div class="score-val" id="homeScoreEl">0</div>
+    <div class="team-name" id="guestNameEl">AWAY</div>
+    <div class="score-val" id="awayScoreEl">0</div>
   </div>
 
   <!-- CENTER -->
@@ -287,14 +287,14 @@ html, body {
     <div class="divider-line"></div>
   </div>
 
-  <!-- AWAY -->
-  <div class="team-block away">
+  <!-- HOME (right) -->
+  <div class="team-block home">
     <div class="fouls-row">
-      <div class="fouls-val" id="awayFoulsEl">0</div>
       <div class="fouls-lbl">FOULS</div>
+      <div class="fouls-val" id="homeFoulsEl">0</div>
     </div>
-    <div class="team-name" id="guestNameEl">AWAY</div>
-    <div class="score-val" id="awayScoreEl">0</div>
+    <div class="team-name" id="homeNameEl">HOME</div>
+    <div class="score-val" id="homeScoreEl">0</div>
   </div>
 
 </div>
