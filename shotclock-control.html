@@ -88,6 +88,24 @@ html, body {
 /* Offline */
 .offline-banner { display:none; align-items:center; justify-content:center; background:#7f1d1d; color:#fca5a5; font-size:3.5vw; font-weight:800; letter-spacing:0.2vw; padding:1.5vh 4vw; text-transform:uppercase; gap:2vw; flex-shrink:0; }
 .offline-banner.show { display:flex; }
+
+/* Buzzer */
+.btn-buzzer {
+  width:100%; height:10vh;
+  border-radius:3vw; border:2px solid #ef4444; cursor:pointer;
+  background:#2a0f0f;
+  font-family:'Barlow Condensed', sans-serif;
+  font-size:5.5vw; font-weight:900; letter-spacing:0.3vw;
+  text-transform:uppercase; color:#ef4444;
+  display:flex; align-items:center; justify-content:center; gap:2vw;
+  box-shadow:0 0 16px rgba(239,68,68,0.3);
+  transition:transform 0.1s, background 0.15s, box-shadow 0.15s;
+}
+.btn-buzzer:active {
+  transform:scale(0.97);
+  background:#450f0f;
+  box-shadow:0 0 30px rgba(239,68,68,0.7);
+}
 </style>
 </head>
 <body>
@@ -119,6 +137,7 @@ html, body {
       <button class="btn-reset r14" onclick="resetShot(14,event)">14<span class="sub">Reset</span></button>
       <button class="btn-reset r8"  onclick="resetShot(8,event)">8<span class="sub">Reset</span></button>
     </div>
+    <button class="btn-buzzer" id="buzzerBtn" onclick="soundBuzzer(event)">🔔 SOUND BUZZER</button>
   </div>
 
 </div>
@@ -159,10 +178,19 @@ function cmd(command,seconds){
 
 function toggleShot(e){
   ripple(e,document.getElementById('mainBtn'));
-  if(shotRunning){ shotRunning=false; renderClock(); cmd('shot_stop'); }
-  else { if(shotSeconds<=0)return; shotRunning=true; renderClock(); cmd('shot_start'); }
+  if(shotRunning){
+    shotRunning=false; stopLocalTick(); renderClock(); cmd('shot_stop');
+  } else {
+    if(shotSeconds<=0)return;
+    shotRunning=true; startLocalTick(); renderClock(); cmd('shot_start');
+  }
 }
-function resetShot(n,e){ if(e)ripple(e,e.currentTarget); shotSeconds=n; shotRunning=true; renderClock(); cmd('shot_reset',n); }
+function resetShot(n,e){
+  if(e)ripple(e,e.currentTarget);
+  shotSeconds=n; shotRunning=true;
+  stopLocalTick(); startLocalTick();
+  renderClock(); cmd('shot_reset',n);
+}
 
 function ripple(e,btn){
   const r=document.createElement('span'); r.className='ripple';
@@ -182,6 +210,17 @@ function playBuzz(){ const a=new Audio('/buzzer.mp3'); a.volume=1; a.play().catc
 
 // SSE
 let _lastCmd=0;
+let _localTick=null;
+
+function startLocalTick(){
+  if(_localTick) return;
+  _localTick=setInterval(()=>{
+    if(shotRunning&&shotSeconds>0){ shotSeconds--; renderClock(); }
+    else if(shotSeconds<=0){ stopLocalTick(); }
+  },1000);
+}
+function stopLocalTick(){ if(_localTick){clearInterval(_localTick);_localTick=null;} }
+
 function connectSSE(){
   setConnected(false);
   const es=new EventSource('/events');
@@ -192,17 +231,20 @@ function connectSSE(){
       if(msg.type==='state'){
         const d=msg.data;
         const since=Date.now()-_lastCmd;
-        if(since>800){
-          shotSeconds=d.shotSeconds!=null?d.shotSeconds:shotSeconds;
+        // Only suppress running flags briefly after a button press — always accept time values
+        if(since>500){
           shotRunning=!!d.shotRunning;
-          renderClock();
         }
+        shotSeconds=d.shotSeconds!=null?d.shotSeconds:shotSeconds;
+        // Sync local tick to server running state
+        if(shotRunning) startLocalTick(); else stopLocalTick();
+        renderClock();
       } else if(msg.type==='buzz'&&msg.kind==='shot'){
         playBuzz();
       }
     }catch(err){}
   };
-  es.onerror=()=>{ setConnected(false); es.close(); setTimeout(connectSSE,2000); };
+  es.onerror=()=>{ setConnected(false); stopLocalTick(); es.close(); setTimeout(connectSSE,2000); };
 }
 
 function cmd(command,seconds){
@@ -211,9 +253,17 @@ function cmd(command,seconds){
   fetch('/cmd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).catch(()=>{});
 }
 
+function soundBuzzer(e){
+  ripple(e, document.getElementById('buzzerBtn'));
+  playBuzz();
+  fetch('/buzz',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'shot'})}).catch(()=>{});
+}
+
 fetch('/state').then(r=>r.json()).then(d=>{
   if(d.shotSeconds!=null)shotSeconds=d.shotSeconds;
-  shotRunning=!!d.shotRunning; renderClock();
+  shotRunning=!!d.shotRunning;
+  if(shotRunning) startLocalTick();
+  renderClock();
 }).catch(()=>{}).finally(()=>connectSSE());
 </script>
 </body>
