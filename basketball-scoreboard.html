@@ -626,9 +626,17 @@ body.light .reset-btn:hover { background:#fee2e2; }
             <button class="btn primary" id="sClkBtn" onclick="toggleShotClock()">▶ Start</button>
             <button class="btn danger"  onclick="resetShot(24)">↺ 24</button>
           </div>
-          <div class="two">
+          <div class="two" style="margin-bottom:6px;">
             <button class="btn" style="background:var(--surface2);border-color:var(--border);color:var(--text2);" onclick="resetShot(14)">Reset 14</button>
-            <button class="btn" style="background:var(--surface2);border-color:var(--border);color:var(--text2);" onclick="resetShot(8)">Reset 8</button>
+          </div>
+          <div class="two" style="align-items:center;gap:6px;">
+            <input type="number" id="shotCustomIn" min="1" max="60" value="24" style="
+              flex:1; background:var(--surface2); border:1px solid var(--border);
+              color:var(--text); border-radius:8px; padding:8px 6px;
+              font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700;
+              text-align:center; outline:none; -moz-appearance:textfield;
+            ">
+            <button class="btn" style="background:var(--surface2);border-color:var(--border);color:var(--text2);white-space:nowrap;" onclick="resetShotCustom()">↺ Set</button>
           </div>
         </div>
 
@@ -1140,6 +1148,11 @@ function resetShot(n){
   startLocalShotTick();
   renderShotClock();
   cmd('shot_reset', n);
+}
+function resetShotCustom(){
+  const n = parseInt(document.getElementById('shotCustomIn').value);
+  if(isNaN(n) || n < 1 || n > 60) return;
+  resetShot(n);
 }
 function setTimerPreset(){
   const mins = parseInt(document.getElementById('clkMin').value)||0;

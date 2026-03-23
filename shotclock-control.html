@@ -78,8 +78,8 @@ html, body {
 .btn-reset.r24:active { background:#1e1000; }
 .btn-reset.r14 { border-color:#ff6600; color:#ff6600; }
 .btn-reset.r14:active { background:#1e0d00; }
-.btn-reset.r8  { border-color:#ff3300; color:#ff3300; }
-.btn-reset.r8:active  { background:#1e0700; }
+.btn-reset.rcustom { border-color:#888; color:#fff; }
+.btn-reset.rcustom:active { background:#1a1a1a; }
 
 /* Ripple */
 .ripple { position:absolute; border-radius:50%; background:rgba(255,255,255,0.22); width:10vw; height:10vw; transform:scale(0); animation:rippleAnim 0.5s ease-out forwards; pointer-events:none; }
@@ -135,7 +135,14 @@ html, body {
     <div class="btn-row">
       <button class="btn-reset r24" onclick="resetShot(24,event)">24<span class="sub">Reset</span></button>
       <button class="btn-reset r14" onclick="resetShot(14,event)">14<span class="sub">Reset</span></button>
-      <button class="btn-reset r8"  onclick="resetShot(8,event)">8<span class="sub">Reset</span></button>
+      <button class="btn-reset rcustom" onclick="resetShotCustom(event)">
+        <input id="shotCustomIn" type="number" min="1" max="60" value="10"
+          onclick="event.stopPropagation()" onfocus="event.stopPropagation()"
+          style="width:11vw;background:transparent;border:none;color:inherit;
+          font-family:'Teko',sans-serif;font-size:10vw;font-weight:700;
+          text-align:center;outline:none;-moz-appearance:textfield;pointer-events:auto;">
+        <span class="sub">Set</span>
+      </button>
     </div>
     <button class="btn-buzzer" id="buzzerBtn" onclick="soundBuzzer(event)">🔔 SOUND BUZZER</button>
   </div>
@@ -253,7 +260,11 @@ function cmd(command,seconds){
   fetch('/cmd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).catch(()=>{});
 }
 
-function soundBuzzer(e){
+function resetShotCustom(e){
+  const n = parseInt(document.getElementById('shotCustomIn').value);
+  if(isNaN(n) || n < 1 || n > 60) return;
+  resetShot(n, e);
+}
   ripple(e, document.getElementById('buzzerBtn'));
   playBuzz();
   fetch('/buzz',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'shot'})}).catch(()=>{});
