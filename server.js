@@ -101,6 +101,8 @@ const ROUTES = {
   '/mobile-overlay':     'mobile-overlay.html',
   '/display':            'scoreboard-display.html',
   '/display2':           'scoreboard-display2.html',
+  '/shotclock':          'shotclock-control.html',
+  '/shotclock-display':  'shotclock-display.html',
   '/manifest.json':      'manifest.json',
   '/sw.js':              'sw.js',
   '/icon-192.png':       'icon-192.png',

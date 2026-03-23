@@ -2,293 +2,219 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Shot Clock — Operator</title>
-<link href="https://fonts.googleapis.com/css2?family=Teko:wght@700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Shot Clock Operator</title>
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@700&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
-*, *::before, *::after {
-  box-sizing:border-box; margin:0; padding:0;
-  -webkit-tap-highlight-color:transparent;
-  touch-action:manipulation;
-  user-select:none; -webkit-user-select:none;
-}
-:root {
-  --bg:#09090f; --surface:#111318; --border:rgba(255,255,255,0.07);
-  --orange:#ff8c00; --red:#ff2244; --green:#00e090; --blue:#4d9fff;
-  --white:#eef2ff; --dim:#374060;
-}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 html, body {
-  height:100%; overflow:hidden;
-  background:var(--bg); color:var(--white);
-  font-family:-apple-system,'Helvetica Neue',sans-serif;
+  width:100%; height:100%; overflow:hidden;
+  background:#0a0c12;
+  font-family:'Barlow Condensed', sans-serif;
+  user-select:none; -webkit-tap-highlight-color:transparent;
 }
+.page { display:flex; flex-direction:column; height:100vh; }
 
-.wrap {
-  display:flex; flex-direction:column;
-  height:100dvh; padding:14px 14px 20px; gap:10px;
+/* Header */
+.header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:1.5vh 5vw; background:#0d1117;
+  border-bottom:2px solid #1c2030; flex-shrink:0;
 }
+.header-title { font-size:5vw; font-weight:900; letter-spacing:0.2vw; color:#fff; text-transform:uppercase; }
+.conn-badge { display:flex; align-items:center; gap:1.5vw; }
+.conn-dot { width:2.5vw; height:2.5vw; border-radius:50%; background:#ef4444; box-shadow:0 0 6px #ef4444; animation:pulse 1.2s ease infinite; }
+.conn-dot.live { background:#22c55e; box-shadow:0 0 6px #22c55e; }
+.conn-text { font-size:3.2vw; font-weight:800; letter-spacing:0.2vw; color:#ef4444; text-transform:uppercase; }
+.conn-dot.live + .conn-text { color:#22c55e; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
 
-/* HEADER */
-.hdr { display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
-.hdr-title { font-size:11px; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--dim); }
-.conn { display:flex; align-items:center; gap:6px; }
-.conn-dot { width:7px; height:7px; border-radius:50%; background:var(--dim); transition:all .3s; }
-.conn-dot.live { background:var(--green); box-shadow:0 0 7px var(--green); }
-.conn-lbl { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--dim); transition:color .3s; }
-.conn-dot.live ~ .conn-lbl { color:var(--green); }
+/* Clock display */
+.clock-display {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding:2vh 5vw; gap:1.5vh;
+}
+.clock-label { font-size:4vw; font-weight:800; letter-spacing:0.5vw; color:#444; text-transform:uppercase; }
+.clock-number {
+  font-family:'Teko', sans-serif; font-size:42vw; font-weight:700; line-height:0.82;
+  color:#ffaa00; text-shadow:0 0 40px rgba(255,170,0,0.4);
+  transition:color 0.2s; font-variant-numeric:tabular-nums;
+  min-width:58vw; text-align:center;
+}
+.clock-number.warn   { color:#ff9900; text-shadow:0 0 40px rgba(255,153,0,0.5); }
+.clock-number.danger { color:#ff3300; text-shadow:0 0 50px rgba(255,50,0,0.7); animation:dangerPulse 0.4s ease infinite alternate; }
+.clock-number.zero   { color:#ff0000; text-shadow:0 0 60px rgba(255,0,0,0.9); }
+@keyframes dangerPulse { to{ opacity:0.45; } }
+.status-row { display:flex; align-items:center; gap:2vw; }
+.run-dot { width:2.5vw; height:2.5vw; border-radius:50%; background:#333; transition:background 0.2s; }
+.run-dot.running { background:#22c55e; box-shadow:0 0 8px #22c55e; animation:pulse 0.8s ease infinite; }
+.status-text { font-size:3.5vw; font-weight:800; letter-spacing:0.3vw; color:#444; text-transform:uppercase; }
+.status-text.running { color:#22c55e; }
 
-/* BIG COUNT — the hero number */
-.count-zone {
-  flex-shrink:0;
-  background:var(--surface);
-  border:1px solid var(--border);
-  border-radius:20px;
-  padding:16px 20px 12px;
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  position:relative;
-}
-.count-label {
-  font-family:'Teko',sans-serif;
-  font-size:12px; font-weight:700; letter-spacing:3px;
-  text-transform:uppercase; color:var(--dim);
-  margin-bottom:2px;
-}
-.big-count {
-  font-family:'Teko',sans-serif;
-  font-size:min(38vw, 160px);
-  font-weight:700;
-  font-variant-numeric:tabular-nums;
-  line-height:0.88;
-  letter-spacing:-2px;
-  transition:color .15s, text-shadow .15s;
-}
-.big-count.cn { color:#ff2200; text-shadow:0 0 30px rgba(255,34,0,0.3); }
-.big-count.cw { color:#ff6600; text-shadow:0 0 30px rgba(255,100,0,0.4); }
-.big-count.cd {
-  color:#ff2200;
-  text-shadow:0 0 40px rgba(255,34,0,0.7);
-  animation:urgPulse .4s ease infinite alternate;
-}
-@keyframes urgPulse { to { opacity:0.35; } }
-
-.count-badge {
-  font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
-  padding:4px 12px; border-radius:20px; margin-top:8px; transition:all .2s;
-}
-.count-badge.running { background:rgba(0,224,144,.1);  color:var(--green); border:1px solid rgba(0,224,144,.25); }
-.count-badge.stopped { background:rgba(255,255,255,.04); color:var(--dim);  border:1px solid rgba(255,255,255,.07); }
-.count-badge.expired { background:rgba(255,34,68,.1);   color:var(--red);  border:1px solid rgba(255,34,68,.22); }
-
-/* MAIN TAP BUTTON */
-.main-zone { flex:1; display:flex; align-items:center; justify-content:center; min-height:0; }
+/* Buttons */
+.btn-area { display:flex; flex-direction:column; gap:3vw; padding:0 5vw 4vh; flex-shrink:0; }
 .btn-main {
-  width:min(62vw, 240px); aspect-ratio:1;
-  border-radius:50%; border:none; cursor:pointer;
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
-  position:relative; overflow:hidden;
-  transition:transform .09s cubic-bezier(.2,.8,.3,1), box-shadow .09s;
-  -webkit-appearance:none;
+  width:100%; height:16vh; border-radius:3.5vw; border:none; cursor:pointer;
+  font-family:'Barlow Condensed', sans-serif; font-size:7.5vw; font-weight:900;
+  letter-spacing:0.3vw; text-transform:uppercase; color:#fff;
+  display:flex; align-items:center; justify-content:center; gap:2vw;
+  transition:transform 0.1s; position:relative; overflow:hidden;
 }
-.btn-main.s-start {
-  background:radial-gradient(circle at 38% 32%, #22ff90, #00be58);
-  box-shadow:0 0 55px rgba(0,190,88,.3), 0 12px 44px rgba(0,0,0,.65);
+.btn-main:active { transform:scale(0.97); }
+.btn-main.start { background:linear-gradient(135deg,#15803d,#22c55e); box-shadow:0 0 28px rgba(34,197,94,0.35),0 4px 16px rgba(0,0,0,0.5); }
+.btn-main.stop  { background:linear-gradient(135deg,#991b1b,#ef4444); box-shadow:0 0 28px rgba(239,68,68,0.35),0 4px 16px rgba(0,0,0,0.5); }
+.btn-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:3vw; }
+.btn-reset {
+  height:12vh; border-radius:3vw; border:2px solid #2a3040; cursor:pointer;
+  background:#141822;
+  font-family:'Teko', sans-serif; font-size:11vw; font-weight:700;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  line-height:0.85; transition:transform 0.1s, background 0.15s;
 }
-.btn-main.s-stop {
-  background:radial-gradient(circle at 38% 32%, #ff5577, #cc0030);
-  box-shadow:0 0 55px rgba(255,30,70,.32), 0 12px 44px rgba(0,0,0,.65);
-}
-.btn-main:active { transform:scale(0.90); }
-
-/* Icon is actual text character — no HTML entities */
-.btn-icon {
-  font-size:44px; line-height:1;
-  color:rgba(0,0,0,.6);
-  filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));
-}
-.btn-label {
-  font-size:17px; font-weight:900; letter-spacing:4px; text-transform:uppercase;
-  color:rgba(0,0,0,.65); text-shadow:0 1px 0 rgba(255,255,255,.2);
-}
+.btn-reset:active { transform:scale(0.96); }
+.btn-reset .sub { font-family:'Barlow Condensed', sans-serif; font-size:3vw; font-weight:800; letter-spacing:0.2vw; text-transform:uppercase; color:#555; }
+.btn-reset.r24 { border-color:#ff9900; color:#ff9900; }
+.btn-reset.r24:active { background:#1e1000; }
+.btn-reset.r14 { border-color:#ff6600; color:#ff6600; }
+.btn-reset.r14:active { background:#1e0d00; }
+.btn-reset.r8  { border-color:#ff3300; color:#ff3300; }
+.btn-reset.r8:active  { background:#1e0700; }
 
 /* Ripple */
-.ripple { position:absolute; border-radius:50%; background:rgba(255,255,255,.22); transform:scale(0); animation:rpl .5s ease-out forwards; pointer-events:none; }
-@keyframes rpl { to { transform:scale(4.5); opacity:0; } }
-
-/* RESET BUTTONS */
-.resets { display:grid; grid-template-columns:1fr 1fr; gap:10px; flex-shrink:0; }
-.btn-reset {
-  border:none; border-radius:16px; padding:14px 10px; cursor:pointer;
-  display:flex; flex-direction:column; align-items:center; gap:2px;
-  transition:transform .09s, opacity .1s; -webkit-appearance:none;
-}
-.btn-reset:active { transform:scale(0.93); opacity:.72; }
-.r24 { background:rgba(255,140,0,.09);  border:1.5px solid rgba(255,140,0,.22); }
-.r14 { background:rgba(77,159,255,.09); border:1.5px solid rgba(77,159,255,.2); }
-.rnum { font-family:'Teko',sans-serif; font-size:36px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1; }
-.r24 .rnum { color:var(--orange); }
-.r14 .rnum { color:var(--blue); }
-.rlbl { font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; }
-.r24 .rlbl { color:rgba(255,140,0,.45); }
-.r14 .rlbl { color:rgba(77,159,255,.4); }
+.ripple { position:absolute; border-radius:50%; background:rgba(255,255,255,0.22); width:10vw; height:10vw; transform:scale(0); animation:rippleAnim 0.5s ease-out forwards; pointer-events:none; }
+@keyframes rippleAnim { to { transform:scale(8); opacity:0; } }
 
 /* Offline */
-.offline { position:fixed; top:0; left:0; right:0; background:#cc1133; color:white; text-align:center; font-size:11px; font-weight:700; letter-spacing:1px; padding:7px; transform:translateY(-100%); transition:transform .3s; z-index:99; }
-.offline.show { transform:translateY(0); }
-
-@keyframes bflash { 0%,100%{background:var(--bg)} 35%,65%{background:rgba(255,34,68,.15)} }
-.bflash { animation:bflash .45s ease 3; }
+.offline-banner { display:none; align-items:center; justify-content:center; background:#7f1d1d; color:#fca5a5; font-size:3.5vw; font-weight:800; letter-spacing:0.2vw; padding:1.5vh 4vw; text-transform:uppercase; gap:2vw; flex-shrink:0; }
+.offline-banner.show { display:flex; }
 </style>
 </head>
 <body>
-<div class="offline" id="offline">RECONNECTING TO SERVER...</div>
-<div class="wrap">
+<div class="page">
 
-  <div class="hdr">
-    <div class="hdr-title">Shot Clock Operator</div>
-    <div class="conn">
-      <div class="conn-dot" id="dot"></div>
-      <div class="conn-lbl" id="connLbl">OFFLINE</div>
+  <div class="offline-banner" id="offlineBanner">⚠ Disconnected — Reconnecting…</div>
+
+  <div class="header">
+    <div class="header-title">⏱ Shot Clock</div>
+    <div class="conn-badge">
+      <div class="conn-dot" id="connDot"></div>
+      <div class="conn-text" id="connText">Offline</div>
     </div>
   </div>
 
-  <!-- BIG readable count -->
-  <div class="count-zone">
-    <div class="count-label">Shot Clock</div>
-    <div class="big-count cn" id="bigCount">24</div>
-    <div class="count-badge stopped" id="countBadge">STOPPED</div>
+  <div class="clock-display">
+    <div class="clock-label">Shot Clock</div>
+    <div class="clock-number" id="clockNum">24</div>
+    <div class="status-row">
+      <div class="run-dot" id="runDot"></div>
+      <div class="status-text" id="statusText">Stopped</div>
+    </div>
   </div>
 
-  <!-- Start / Stop button -->
-  <div class="main-zone">
-    <button class="btn-main s-start" id="btnMain">
-      <div class="btn-icon" id="btnIcon">▶</div>
-      <div class="btn-label" id="btnLabel">START</div>
-    </button>
-  </div>
-
-  <!-- Reset buttons -->
-  <div class="resets">
-    <button class="btn-reset r24" id="r24">
-      <div class="rnum">24</div>
-      <div class="rlbl">Reset</div>
-    </button>
-    <button class="btn-reset r14" id="r14">
-      <div class="rnum">14</div>
-      <div class="rlbl">Reset</div>
-    </button>
+  <div class="btn-area">
+    <button class="btn-main start" id="mainBtn" onclick="toggleShot(event)">▶ START</button>
+    <div class="btn-row">
+      <button class="btn-reset r24" onclick="resetShot(24,event)">24<span class="sub">Reset</span></button>
+      <button class="btn-reset r14" onclick="resetShot(14,event)">14<span class="sub">Reset</span></button>
+      <button class="btn-reset r8"  onclick="resetShot(8,event)">8<span class="sub">Reset</span></button>
+    </div>
   </div>
 
 </div>
-
 <script>
-var S = { shotSeconds:24, shotRunning:false };
-var sse = null, retryTimer = null, audioCtx = null;
+let shotSeconds=24, shotRunning=false;
 
-var bigCount  = document.getElementById('bigCount');
-var countBadge= document.getElementById('countBadge');
-var btnMain   = document.getElementById('btnMain');
-var btnIcon   = document.getElementById('btnIcon');
-var btnLabel  = document.getElementById('btnLabel');
-var dot       = document.getElementById('dot');
-var connLbl   = document.getElementById('connLbl');
-var offline   = document.getElementById('offline');
-
-/* ── Audio ── */
-function unlockAudio(){ if(audioCtx)return; audioCtx=new(window.AudioContext||window.webkitAudioContext)(); }
-function buzz(){
-  if(!audioCtx)return;
-  [0,0.2,0.4].forEach(function(t){
-    var o=audioCtx.createOscillator(), g=audioCtx.createGain();
-    o.connect(g); g.connect(audioCtx.destination);
-    o.type='square'; o.frequency.setValueAtTime(160,audioCtx.currentTime+t);
-    g.gain.setValueAtTime(0.35,audioCtx.currentTime+t);
-    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+t+0.16);
-    o.start(audioCtx.currentTime+t); o.stop(audioCtx.currentTime+t+0.18);
-  });
-  document.body.classList.add('bflash');
-  setTimeout(function(){ document.body.classList.remove('bflash'); }, 1500);
+function setConnected(v){
+  const dot=document.getElementById('connDot');
+  const txt=document.getElementById('connText');
+  const ban=document.getElementById('offlineBanner');
+  if(v){ dot.classList.add('live'); txt.textContent='Live'; txt.style.color='#22c55e'; ban.classList.remove('show'); }
+  else  { dot.classList.remove('live'); txt.textContent='Offline'; txt.style.color='#ef4444'; ban.classList.add('show'); }
 }
-document.body.addEventListener('touchstart', unlockAudio, {once:true});
-document.body.addEventListener('click',      unlockAudio, {once:true});
 
-/* ── Render ── */
-function render(){
-  var s = S.shotSeconds, r = S.shotRunning;
-
-  bigCount.textContent = s < 10 ? '0'+s : ''+s;
-  bigCount.className   = 'big-count ' + (s<=5 ? 'cd' : s<=10 ? 'cw' : 'cn');
-
-  if(r){
-    countBadge.textContent = 'RUNNING'; countBadge.className = 'count-badge running';
-    btnMain.className = 'btn-main s-stop';
-    btnIcon.textContent = '⏹'; btnLabel.textContent = 'STOP';
-  } else if(s===0){
-    countBadge.textContent = 'EXPIRED'; countBadge.className = 'count-badge expired';
-    btnMain.className = 'btn-main s-start';
-    btnIcon.textContent = '↺'; btnLabel.textContent = 'RESET';
+function renderClock(){
+  const el=document.getElementById('clockNum');
+  const dot=document.getElementById('runDot');
+  const st=document.getElementById('statusText');
+  const btn=document.getElementById('mainBtn');
+  el.textContent=shotSeconds;
+  el.className='clock-number';
+  if(shotSeconds===0)       el.classList.add('zero');
+  else if(shotSeconds<=5)   el.classList.add('danger');
+  else if(shotSeconds<=10)  el.classList.add('warn');
+  if(shotRunning){
+    dot.classList.add('running'); st.textContent='Running'; st.classList.add('running');
+    btn.className='btn-main stop'; btn.innerHTML='⏸ PAUSE';
   } else {
-    countBadge.textContent = 'STOPPED'; countBadge.className = 'count-badge stopped';
-    btnMain.className = 'btn-main s-start';
-    btnIcon.textContent = '▶'; btnLabel.textContent = 'START';
+    dot.classList.remove('running'); st.textContent='Stopped'; st.classList.remove('running');
+    btn.className='btn-main start'; btn.innerHTML='▶ START';
   }
 }
 
-/* ── Send command to main scoreboard ── */
-function sendCmd(command, seconds){
-  var body = seconds!==undefined ? {cmd:command,seconds:seconds} : {cmd:command};
-  fetch('/sc-cmd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).catch(function(){});
+function cmd(command,seconds){
+  const body=seconds!=null?{cmd:command,seconds}:{cmd:command};
+  fetch('/cmd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).catch(()=>{});
 }
 
-/* ── Button handlers ── */
-btnMain.addEventListener('click', function(e){
-  addRipple(e, this);
-  if(S.shotSeconds===0 && !S.shotRunning){ sendCmd('reset',24); return; }
-  S.shotRunning ? sendCmd('stop') : sendCmd('start');
-});
-document.getElementById('r24').addEventListener('click', function(e){ addRipple(e,this); sendCmd('reset',24); });
-document.getElementById('r14').addEventListener('click', function(e){ addRipple(e,this); sendCmd('reset',14); });
+function toggleShot(e){
+  ripple(e,document.getElementById('mainBtn'));
+  if(shotRunning){ shotRunning=false; renderClock(); cmd('shot_stop'); }
+  else { if(shotSeconds<=0)return; shotRunning=true; renderClock(); cmd('shot_start'); }
+}
+function resetShot(n,e){ if(e)ripple(e,e.currentTarget); shotSeconds=n; shotRunning=true; renderClock(); cmd('shot_reset',n); }
 
-function addRipple(e, el){
-  var rect=el.getBoundingClientRect();
-  var cx=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
-  var cy=(e.touches?e.touches[0].clientY:e.clientY)-rect.top;
-  var r=document.createElement('span'); r.className='ripple';
-  var sz=Math.max(rect.width,rect.height);
-  r.style.cssText='width:'+sz+'px;height:'+sz+'px;left:'+(cx-sz/2)+'px;top:'+(cy-sz/2)+'px';
-  el.appendChild(r); r.addEventListener('animationend',function(){r.remove();});
+function ripple(e,btn){
+  const r=document.createElement('span'); r.className='ripple';
+  const rect=btn.getBoundingClientRect();
+  const x=(e.clientX||rect.left+rect.width/2)-rect.left;
+  const y=(e.clientY||rect.top+rect.height/2)-rect.top;
+  r.style.left=x-20+'px'; r.style.top=y-20+'px';
+  btn.appendChild(r); r.addEventListener('animationend',()=>r.remove());
 }
 
-/* ── SSE — listen to main game state ── */
-function connect(){
-  if(sse) sse.close();
-  sse = new EventSource('/events');
-  sse.onopen = function(){ dot.classList.add('live'); connLbl.textContent='LIVE'; offline.classList.remove('show'); clearTimeout(retryTimer); };
-  sse.onmessage = function(e){
+const AudioCtx=window.AudioContext||window.webkitAudioContext;
+let audioCtx=null;
+function getAudio(){ if(!audioCtx)audioCtx=new AudioCtx(); if(audioCtx.state==='suspended')audioCtx.resume(); return audioCtx; }
+document.addEventListener('touchstart',()=>getAudio(),{once:false,passive:true});
+document.addEventListener('click',()=>getAudio(),{once:false,passive:true});
+function playBuzz(){ const a=new Audio('/buzzer.mp3'); a.volume=1; a.play().catch(()=>{}); }
+
+// SSE
+let _lastCmd=0;
+function connectSSE(){
+  setConnected(false);
+  const es=new EventSource('/events');
+  es.onopen=()=>setConnected(true);
+  es.onmessage=(e)=>{
     try{
-      var msg = JSON.parse(e.data);
+      const msg=JSON.parse(e.data);
       if(msg.type==='state'){
-        var prev = S.shotRunning;
-        S.shotSeconds = msg.data.shotSeconds!=null ? msg.data.shotSeconds : S.shotSeconds;
-        S.shotRunning = msg.data.shotRunning || false;
-        render();
-        if(prev && !S.shotRunning && S.shotSeconds===0) buzz();
+        const d=msg.data;
+        const since=Date.now()-_lastCmd;
+        if(since>800){
+          shotSeconds=d.shotSeconds!=null?d.shotSeconds:shotSeconds;
+          shotRunning=!!d.shotRunning;
+          renderClock();
+        }
+      } else if(msg.type==='buzz'&&msg.kind==='shot'){
+        playBuzz();
       }
-      if(msg.type==='buzz' && msg.kind==='shot') buzz();
-    } catch(err){}
+    }catch(err){}
   };
-  sse.onerror = function(){ dot.classList.remove('live'); connLbl.textContent='OFFLINE'; offline.classList.add('show'); sse.close(); retryTimer=setTimeout(connect,2500); };
+  es.onerror=()=>{ setConnected(false); es.close(); setTimeout(connectSSE,2000); };
 }
 
-/* ── Init ── */
-fetch('/state').then(function(r){ return r.json(); }).then(function(d){
-  S.shotSeconds = d.shotSeconds!=null ? d.shotSeconds : 24;
-  S.shotRunning = d.shotRunning || false;
-  render();
-}).catch(function(){}).finally(function(){ connect(); });
+function cmd(command,seconds){
+  _lastCmd=Date.now();
+  const body=seconds!=null?{cmd:command,seconds}:{cmd:command};
+  fetch('/cmd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).catch(()=>{});
+}
 
-render();
+fetch('/state').then(r=>r.json()).then(d=>{
+  if(d.shotSeconds!=null)shotSeconds=d.shotSeconds;
+  shotRunning=!!d.shotRunning; renderClock();
+}).catch(()=>{}).finally(()=>connectSSE());
 </script>
 </body>
 </html>
