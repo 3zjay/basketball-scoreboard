@@ -73,19 +73,19 @@ html, body {
   overflow:hidden; position:relative;
 }
 
-/* FOULS row */
+/* FOULS row — now below score */
 .fouls-row {
   display:flex; align-items:center; justify-content:center;
-  gap:0.8vw; width:100%; flex-shrink:0; margin-bottom:0.4vh;
+  gap:1vw; width:100%; flex-shrink:0; margin-top:0.5vh;
 }
 .fouls-lbl {
-  font-family:'Teko',sans-serif; font-size:2.2vh; font-weight:700;
-  color:#666; letter-spacing:0.3vw; text-transform:uppercase;
+  font-family:'Teko',sans-serif; font-size:3.5vh; font-weight:700;
+  color:#555; letter-spacing:0.4vw; text-transform:uppercase;
 }
 .fouls-val {
-  font-family:'Teko',sans-serif; font-size:6vh; font-weight:700;
+  font-family:'Teko',sans-serif; font-size:9vh; font-weight:700;
   color:#ff9900; line-height:1;
-  text-shadow:0 0 14px rgba(255,153,0,0.5);
+  text-shadow:0 0 16px rgba(255,153,0,0.5);
 }
 
 /* Possession arrow (used in clock row) */
@@ -268,12 +268,12 @@ html, body {
 
   <!-- AWAY (left) -->
   <div class="team-block away">
+    <div class="team-name" id="guestNameEl">AWAY</div>
+    <div class="score-val" id="awayScoreEl">0</div>
     <div class="fouls-row">
       <div class="fouls-val" id="awayFoulsEl">0</div>
       <div class="fouls-lbl">FOULS</div>
     </div>
-    <div class="team-name" id="guestNameEl">AWAY</div>
-    <div class="score-val" id="awayScoreEl">0</div>
   </div>
 
   <!-- CENTER -->
@@ -290,12 +290,12 @@ html, body {
 
   <!-- HOME (right) -->
   <div class="team-block home">
+    <div class="team-name" id="homeNameEl">HOME</div>
+    <div class="score-val" id="homeScoreEl">0</div>
     <div class="fouls-row">
       <div class="fouls-lbl">FOULS</div>
       <div class="fouls-val" id="homeFoulsEl">0</div>
     </div>
-    <div class="team-name" id="homeNameEl">HOME</div>
-    <div class="score-val" id="homeScoreEl">0</div>
   </div>
 
 </div>
