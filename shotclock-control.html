@@ -7,105 +7,200 @@
 <link href="https://fonts.googleapis.com/css2?family=Teko:wght@700&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
 html, body {
-  width:100%; height:100%; overflow:hidden;
+  width:100%; height:100%;
   background:#0a0c12;
   font-family:'Barlow Condensed', sans-serif;
-  user-select:none; -webkit-tap-highlight-color:transparent;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  overflow:hidden;
 }
-.page { display:flex; flex-direction:column; height:100vh; }
 
-/* Header */
+/* Full page flex column */
+.page {
+  display:flex; flex-direction:column;
+  width:100%; height:100%;
+  /* Use dvh for devices with dynamic toolbars (iOS Safari) */
+  height:100dvh;
+  min-height:100vh;
+}
+
+/* ── OFFLINE BANNER ── */
+.offline-banner {
+  display:none; align-items:center; justify-content:center;
+  background:#7f1d1d; color:#fca5a5;
+  font-size:clamp(12px,3.5vw,18px); font-weight:800; letter-spacing:0.15vw;
+  padding:8px 4vw; text-transform:uppercase; gap:2vw;
+  flex-shrink:0;
+}
+.offline-banner.show { display:flex; }
+
+/* ── HEADER ── */
 .header {
   display:flex; align-items:center; justify-content:space-between;
-  padding:1.5vh 5vw; background:#0d1117;
-  border-bottom:2px solid #1c2030; flex-shrink:0;
+  padding:clamp(8px,1.5vh,16px) 5vw;
+  background:#0d1117;
+  border-bottom:2px solid #1c2030;
+  flex-shrink:0;
 }
-.header-title { font-size:5vw; font-weight:900; letter-spacing:0.2vw; color:#fff; text-transform:uppercase; }
-.conn-badge { display:flex; align-items:center; gap:1.5vw; }
-.conn-dot { width:2.5vw; height:2.5vw; border-radius:50%; background:#ef4444; box-shadow:0 0 6px #ef4444; animation:pulse 1.2s ease infinite; }
-.conn-dot.live { background:#22c55e; box-shadow:0 0 6px #22c55e; }
-.conn-text { font-size:3.2vw; font-weight:800; letter-spacing:0.2vw; color:#ef4444; text-transform:uppercase; }
-.conn-dot.live + .conn-text { color:#22c55e; }
-@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+.header-title {
+  font-size:clamp(18px,5vw,28px); font-weight:900;
+  letter-spacing:0.2vw; color:#fff; text-transform:uppercase;
+}
+.conn-badge { display:flex; align-items:center; gap:2vw; }
+.conn-dot {
+  width:clamp(8px,2.5vw,14px); height:clamp(8px,2.5vw,14px);
+  border-radius:50%; background:#ef4444;
+  box-shadow:0 0 6px #ef4444; animation:blink 1.2s ease infinite;
+}
+.conn-dot.live { background:#22c55e; box-shadow:0 0 6px #22c55e; animation:none; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.conn-text {
+  font-size:clamp(12px,3.2vw,18px); font-weight:800;
+  letter-spacing:0.15vw; color:#ef4444; text-transform:uppercase;
+}
+.conn-dot.live ~ .conn-text { color:#22c55e; }
 
-/* Clock display */
+/* ── CLOCK DISPLAY ── */
 .clock-display {
   flex:1; display:flex; flex-direction:column;
   align-items:center; justify-content:center;
-  padding:2vh 5vw; gap:1.5vh;
+  padding:1vh 4vw; gap:0; min-height:0;
 }
-.clock-label { font-size:4vw; font-weight:800; letter-spacing:0.5vw; color:#444; text-transform:uppercase; }
+.clock-label {
+  font-size:clamp(12px,3.5vw,20px); font-weight:800;
+  letter-spacing:0.5vw; color:#444; text-transform:uppercase;
+  margin-bottom:0;
+}
 .clock-number {
-  font-family:'Teko', sans-serif; font-size:42vw; font-weight:700; line-height:0.82;
-  color:#ffaa00; text-shadow:0 0 40px rgba(255,170,0,0.4);
+  font-family:'Teko', sans-serif;
+  font-size:clamp(80px,35vw,45vh);
+  font-weight:700; line-height:0.85;
+  color:#ffaa00;
+  text-shadow:0 0 30px rgba(255,170,0,0.35);
   transition:color 0.2s; font-variant-numeric:tabular-nums;
-  min-width:58vw; text-align:center;
+  text-align:center;
 }
-.clock-number.warn   { color:#ff9900; text-shadow:0 0 40px rgba(255,153,0,0.5); }
-.clock-number.danger { color:#ff3300; text-shadow:0 0 50px rgba(255,50,0,0.7); animation:dangerPulse 0.4s ease infinite alternate; }
-.clock-number.zero   { color:#ff0000; text-shadow:0 0 60px rgba(255,0,0,0.9); }
-@keyframes dangerPulse { to{ opacity:0.45; } }
-.status-row { display:flex; align-items:center; gap:2vw; }
-.run-dot { width:2.5vw; height:2.5vw; border-radius:50%; background:#333; transition:background 0.2s; }
-.run-dot.running { background:#22c55e; box-shadow:0 0 8px #22c55e; animation:pulse 0.8s ease infinite; }
-.status-text { font-size:3.5vw; font-weight:800; letter-spacing:0.3vw; color:#444; text-transform:uppercase; }
+.clock-number.warn   { color:#ff9900; }
+.clock-number.danger { color:#ff3300; animation:dangerPulse 0.4s ease infinite alternate; }
+.clock-number.zero   { color:#ff0000; }
+@keyframes dangerPulse { to{ opacity:0.4; } }
+
+.status-row {
+  display:flex; align-items:center; gap:2vw; margin-top:0.5vh;
+}
+.run-dot {
+  width:clamp(8px,2.2vw,12px); height:clamp(8px,2.2vw,12px);
+  border-radius:50%; background:#333; transition:background 0.2s;
+}
+.run-dot.running {
+  background:#22c55e; box-shadow:0 0 8px #22c55e;
+  animation:blink 0.8s ease infinite;
+}
+.status-text {
+  font-size:clamp(12px,3.2vw,18px); font-weight:800;
+  letter-spacing:0.3vw; color:#444; text-transform:uppercase;
+}
 .status-text.running { color:#22c55e; }
 
-/* Buttons */
-.btn-area { display:flex; flex-direction:column; gap:3vw; padding:0 5vw 4vh; flex-shrink:0; }
+/* ── BUTTONS ── */
+.btn-area {
+  display:flex; flex-direction:column;
+  gap:clamp(6px,2vw,14px);
+  padding:0 5vw clamp(12px,3vh,24px);
+  flex-shrink:0;
+}
+
 .btn-main {
-  width:100%; height:16vh; border-radius:3.5vw; border:none; cursor:pointer;
-  font-family:'Barlow Condensed', sans-serif; font-size:7.5vw; font-weight:900;
+  width:100%; height:clamp(52px,14vh,90px);
+  border-radius:clamp(10px,2.5vw,18px); border:none; cursor:pointer;
+  font-family:'Barlow Condensed', sans-serif;
+  font-size:clamp(20px,6vw,36px); font-weight:900;
   letter-spacing:0.3vw; text-transform:uppercase; color:#fff;
   display:flex; align-items:center; justify-content:center; gap:2vw;
-  transition:transform 0.1s; position:relative; overflow:hidden;
+  position:relative; overflow:hidden;
+  transition:transform 0.1s, filter 0.1s;
 }
-.btn-main:active { transform:scale(0.97); }
-.btn-main.start { background:linear-gradient(135deg,#15803d,#22c55e); box-shadow:0 0 28px rgba(34,197,94,0.35),0 4px 16px rgba(0,0,0,0.5); }
-.btn-main.stop  { background:linear-gradient(135deg,#991b1b,#ef4444); box-shadow:0 0 28px rgba(239,68,68,0.35),0 4px 16px rgba(0,0,0,0.5); }
-.btn-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:3vw; }
+.btn-main:active { transform:scale(0.97); filter:brightness(0.9); }
+.btn-main.start {
+  background:linear-gradient(135deg,#15803d,#22c55e);
+  box-shadow:0 0 24px rgba(34,197,94,0.3), 0 4px 12px rgba(0,0,0,0.4);
+}
+.btn-main.stop {
+  background:linear-gradient(135deg,#991b1b,#ef4444);
+  box-shadow:0 0 24px rgba(239,68,68,0.3), 0 4px 12px rgba(0,0,0,0.4);
+}
+
+/* Reset row — 3 equal columns */
+.btn-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:clamp(6px,2vw,12px); }
+
 .btn-reset {
-  height:12vh; border-radius:3vw; border:2px solid #2a3040; cursor:pointer;
-  background:#141822;
-  font-family:'Teko', sans-serif; font-size:11vw; font-weight:700;
+  height:clamp(56px,11vh,80px);
+  border-radius:clamp(8px,2vw,14px); border:2px solid #2a3040;
+  cursor:pointer; background:#141822;
+  font-family:'Teko', sans-serif;
+  font-size:clamp(22px,8vw,48px); font-weight:700;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
-  line-height:0.85; transition:transform 0.1s, background 0.15s;
+  line-height:0.88; transition:transform 0.1s, background 0.15s;
+  padding:0;
 }
 .btn-reset:active { transform:scale(0.96); }
-.btn-reset .sub { font-family:'Barlow Condensed', sans-serif; font-size:3vw; font-weight:800; letter-spacing:0.2vw; text-transform:uppercase; color:#555; }
+.btn-reset .sub {
+  font-family:'Barlow Condensed', sans-serif;
+  font-size:clamp(9px,2.2vw,14px); font-weight:800;
+  letter-spacing:0.15vw; text-transform:uppercase; color:#666;
+  line-height:1;
+}
 .btn-reset.r24 { border-color:#ff9900; color:#ff9900; }
 .btn-reset.r24:active { background:#1e1000; }
 .btn-reset.r14 { border-color:#ff6600; color:#ff6600; }
 .btn-reset.r14:active { background:#1e0d00; }
-.btn-reset.rcustom { border-color:#888; color:#fff; }
-.btn-reset.rcustom:active { background:#1a1a1a; }
+.btn-reset.rcustom { border-color:#6b7280; color:#d1d5db; }
+.btn-reset.rcustom:active { background:#1a1f2e; }
 
-/* Ripple */
-.ripple { position:absolute; border-radius:50%; background:rgba(255,255,255,0.22); width:10vw; height:10vw; transform:scale(0); animation:rippleAnim 0.5s ease-out forwards; pointer-events:none; }
-@keyframes rippleAnim { to { transform:scale(8); opacity:0; } }
-
-/* Offline */
-.offline-banner { display:none; align-items:center; justify-content:center; background:#7f1d1d; color:#fca5a5; font-size:3.5vw; font-weight:800; letter-spacing:0.2vw; padding:1.5vh 4vw; text-transform:uppercase; gap:2vw; flex-shrink:0; }
-.offline-banner.show { display:flex; }
+/* Custom input inside button */
+.custom-wrap {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  width:100%; height:100%; padding:0; gap:0;
+}
+.custom-input {
+  width:90%; background:transparent; border:none; outline:none;
+  font-family:'Teko', sans-serif;
+  font-size:clamp(22px,8vw,48px); font-weight:700;
+  color:#d1d5db; text-align:center; line-height:0.88;
+  -moz-appearance:textfield;
+}
+.custom-input::-webkit-outer-spin-button,
+.custom-input::-webkit-inner-spin-button { -webkit-appearance:none; }
 
 /* Buzzer */
 .btn-buzzer {
-  width:100%; height:10vh;
-  border-radius:3vw; border:2px solid #ef4444; cursor:pointer;
-  background:#2a0f0f;
+  width:100%; height:clamp(44px,9vh,70px);
+  border-radius:clamp(8px,2vw,14px); border:2px solid #ef4444;
+  cursor:pointer; background:#2a0f0f;
   font-family:'Barlow Condensed', sans-serif;
-  font-size:5.5vw; font-weight:900; letter-spacing:0.3vw;
-  text-transform:uppercase; color:#ef4444;
+  font-size:clamp(16px,5vw,28px); font-weight:900;
+  letter-spacing:0.3vw; text-transform:uppercase; color:#ef4444;
   display:flex; align-items:center; justify-content:center; gap:2vw;
-  box-shadow:0 0 16px rgba(239,68,68,0.3);
+  box-shadow:0 0 14px rgba(239,68,68,0.25);
   transition:transform 0.1s, background 0.15s, box-shadow 0.15s;
+  position:relative; overflow:hidden;
 }
 .btn-buzzer:active {
-  transform:scale(0.97);
-  background:#450f0f;
-  box-shadow:0 0 30px rgba(239,68,68,0.7);
+  transform:scale(0.97); background:#450f0f;
+  box-shadow:0 0 28px rgba(239,68,68,0.6);
 }
+
+/* Ripple */
+.ripple {
+  position:absolute; border-radius:50%;
+  background:rgba(255,255,255,0.2);
+  width:40px; height:40px;
+  transform:scale(0); animation:rippleAnim 0.5s ease-out forwards;
+  pointer-events:none;
+}
+@keyframes rippleAnim { to { transform:scale(10); opacity:0; } }
 </style>
 </head>
 <body>
@@ -131,151 +226,197 @@ html, body {
   </div>
 
   <div class="btn-area">
+
     <button class="btn-main start" id="mainBtn" onclick="toggleShot(event)">▶ START</button>
+
     <div class="btn-row">
-      <button class="btn-reset r24" onclick="resetShot(24,event)">24<span class="sub">Reset</span></button>
-      <button class="btn-reset r14" onclick="resetShot(14,event)">14<span class="sub">Reset</span></button>
+      <button class="btn-reset r24" onclick="resetShot(24, event)">
+        24<span class="sub">Reset</span>
+      </button>
+      <button class="btn-reset r14" onclick="resetShot(14, event)">
+        14<span class="sub">Reset</span>
+      </button>
       <button class="btn-reset rcustom" onclick="resetShotCustom(event)">
-        <input id="shotCustomIn" type="number" min="1" max="60" value="10"
-          onclick="event.stopPropagation()" onfocus="event.stopPropagation()"
-          style="width:11vw;background:transparent;border:none;color:inherit;
-          font-family:'Teko',sans-serif;font-size:10vw;font-weight:700;
-          text-align:center;outline:none;-moz-appearance:textfield;pointer-events:auto;">
-        <span class="sub">Set</span>
+        <div class="custom-wrap">
+          <input id="shotCustomIn" class="custom-input" type="number"
+            min="1" max="60" value="10"
+            onclick="event.stopPropagation()"
+            ontouchstart="event.stopPropagation()">
+          <span class="sub">Set</span>
+        </div>
       </button>
     </div>
+
     <button class="btn-buzzer" id="buzzerBtn" onclick="soundBuzzer(event)">🔔 SOUND BUZZER</button>
+
   </div>
 
 </div>
 <script>
-let shotSeconds=24, shotRunning=false;
+let shotSeconds = 24;
+let shotRunning = false;
+let _lastCmd = 0;
+let _localTick = null;
 
-function setConnected(v){
-  const dot=document.getElementById('connDot');
-  const txt=document.getElementById('connText');
-  const ban=document.getElementById('offlineBanner');
-  if(v){ dot.classList.add('live'); txt.textContent='Live'; txt.style.color='#22c55e'; ban.classList.remove('show'); }
-  else  { dot.classList.remove('live'); txt.textContent='Offline'; txt.style.color='#ef4444'; ban.classList.add('show'); }
-}
-
-function renderClock(){
-  const el=document.getElementById('clockNum');
-  const dot=document.getElementById('runDot');
-  const st=document.getElementById('statusText');
-  const btn=document.getElementById('mainBtn');
-  el.textContent=shotSeconds;
-  el.className='clock-number';
-  if(shotSeconds===0)       el.classList.add('zero');
-  else if(shotSeconds<=5)   el.classList.add('danger');
-  else if(shotSeconds<=10)  el.classList.add('warn');
-  if(shotRunning){
-    dot.classList.add('running'); st.textContent='Running'; st.classList.add('running');
-    btn.className='btn-main stop'; btn.innerHTML='⏸ PAUSE';
+// ── Connection status ──
+function setConnected(v) {
+  const dot = document.getElementById('connDot');
+  const txt = document.getElementById('connText');
+  const ban = document.getElementById('offlineBanner');
+  if (v) {
+    dot.classList.add('live');
+    txt.textContent = 'Live'; txt.style.color = '#22c55e';
+    ban.classList.remove('show');
   } else {
-    dot.classList.remove('running'); st.textContent='Stopped'; st.classList.remove('running');
-    btn.className='btn-main start'; btn.innerHTML='▶ START';
+    dot.classList.remove('live');
+    txt.textContent = 'Offline'; txt.style.color = '#ef4444';
+    ban.classList.add('show');
   }
 }
 
-function cmd(command,seconds){
-  const body=seconds!=null?{cmd:command,seconds}:{cmd:command};
-  fetch('/cmd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).catch(()=>{});
-}
+// ── Render ──
+function renderClock() {
+  const el  = document.getElementById('clockNum');
+  const dot = document.getElementById('runDot');
+  const st  = document.getElementById('statusText');
+  const btn = document.getElementById('mainBtn');
 
-function toggleShot(e){
-  ripple(e,document.getElementById('mainBtn'));
-  if(shotRunning){
-    shotRunning=false; stopLocalTick(); renderClock(); cmd('shot_stop');
+  el.textContent = shotSeconds;
+  el.className = 'clock-number';
+  if      (shotSeconds === 0) el.classList.add('zero');
+  else if (shotSeconds <= 5)  el.classList.add('danger');
+  else if (shotSeconds <= 10) el.classList.add('warn');
+
+  if (shotRunning) {
+    dot.classList.add('running');
+    st.textContent = 'Running'; st.classList.add('running');
+    btn.className = 'btn-main stop'; btn.innerHTML = '⏸ PAUSE';
   } else {
-    if(shotSeconds<=0)return;
-    shotRunning=true; startLocalTick(); renderClock(); cmd('shot_start');
+    dot.classList.remove('running');
+    st.textContent = 'Stopped'; st.classList.remove('running');
+    btn.className = 'btn-main start'; btn.innerHTML = '▶ START';
   }
 }
-function resetShot(n,e){
-  if(e)ripple(e,e.currentTarget);
-  shotSeconds=n; shotRunning=true;
+
+// ── Local tick (smooth display between SSE pushes) ──
+function startLocalTick() {
+  if (_localTick) return;
+  _localTick = setInterval(() => {
+    if (shotRunning && shotSeconds > 0) { shotSeconds--; renderClock(); }
+    else { stopLocalTick(); }
+  }, 1000);
+}
+function stopLocalTick() {
+  if (_localTick) { clearInterval(_localTick); _localTick = null; }
+}
+
+// ── Server command ──
+function cmd(command, seconds) {
+  _lastCmd = Date.now();
+  const body = seconds != null ? { cmd: command, seconds } : { cmd: command };
+  fetch('/cmd', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).catch(() => {});
+}
+
+// ── Button actions ──
+function toggleShot(e) {
+  ripple(e, document.getElementById('mainBtn'));
+  if (shotRunning) {
+    shotRunning = false; stopLocalTick(); renderClock(); cmd('shot_stop');
+  } else {
+    if (shotSeconds <= 0) return;
+    shotRunning = true; startLocalTick(); renderClock(); cmd('shot_start');
+  }
+}
+
+function resetShot(n, e) {
+  if (e) ripple(e, e.currentTarget);
+  shotSeconds = n; shotRunning = true;
   stopLocalTick(); startLocalTick();
-  renderClock(); cmd('shot_reset',n);
+  renderClock(); cmd('shot_reset', n);
 }
 
-function ripple(e,btn){
-  const r=document.createElement('span'); r.className='ripple';
-  const rect=btn.getBoundingClientRect();
-  const x=(e.clientX||rect.left+rect.width/2)-rect.left;
-  const y=(e.clientY||rect.top+rect.height/2)-rect.top;
-  r.style.left=x-20+'px'; r.style.top=y-20+'px';
-  btn.appendChild(r); r.addEventListener('animationend',()=>r.remove());
-}
-
-const AudioCtx=window.AudioContext||window.webkitAudioContext;
-let audioCtx=null;
-function getAudio(){ if(!audioCtx)audioCtx=new AudioCtx(); if(audioCtx.state==='suspended')audioCtx.resume(); return audioCtx; }
-document.addEventListener('touchstart',()=>getAudio(),{once:false,passive:true});
-document.addEventListener('click',()=>getAudio(),{once:false,passive:true});
-function playBuzz(){ const a=new Audio('/buzzer.mp3'); a.volume=1; a.play().catch(()=>{}); }
-
-// SSE
-let _lastCmd=0;
-let _localTick=null;
-
-function startLocalTick(){
-  if(_localTick) return;
-  _localTick=setInterval(()=>{
-    if(shotRunning&&shotSeconds>0){ shotSeconds--; renderClock(); }
-    else if(shotSeconds<=0){ stopLocalTick(); }
-  },1000);
-}
-function stopLocalTick(){ if(_localTick){clearInterval(_localTick);_localTick=null;} }
-
-function connectSSE(){
-  setConnected(false);
-  const es=new EventSource('/events');
-  es.onopen=()=>setConnected(true);
-  es.onmessage=(e)=>{
-    try{
-      const msg=JSON.parse(e.data);
-      if(msg.type==='state'){
-        const d=msg.data;
-        const since=Date.now()-_lastCmd;
-        // Only suppress running flags briefly after a button press — always accept time values
-        if(since>500){
-          shotRunning=!!d.shotRunning;
-        }
-        shotSeconds=d.shotSeconds!=null?d.shotSeconds:shotSeconds;
-        // Sync local tick to server running state
-        if(shotRunning) startLocalTick(); else stopLocalTick();
-        renderClock();
-      } else if(msg.type==='buzz'&&msg.kind==='shot'){
-        playBuzz();
-      }
-    }catch(err){}
-  };
-  es.onerror=()=>{ setConnected(false); stopLocalTick(); es.close(); setTimeout(connectSSE,2000); };
-}
-
-function cmd(command,seconds){
-  _lastCmd=Date.now();
-  const body=seconds!=null?{cmd:command,seconds}:{cmd:command};
-  fetch('/cmd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).catch(()=>{});
-}
-
-function resetShotCustom(e){
+function resetShotCustom(e) {
   const n = parseInt(document.getElementById('shotCustomIn').value);
-  if(isNaN(n) || n < 1 || n > 60) return;
+  if (isNaN(n) || n < 1 || n > 60) return;
   resetShot(n, e);
 }
+
+function soundBuzzer(e) {
   ripple(e, document.getElementById('buzzerBtn'));
   playBuzz();
-  fetch('/buzz',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'shot'})}).catch(()=>{});
+  fetch('/buzz', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind: 'shot' })
+  }).catch(() => {});
 }
 
-fetch('/state').then(r=>r.json()).then(d=>{
-  if(d.shotSeconds!=null)shotSeconds=d.shotSeconds;
-  shotRunning=!!d.shotRunning;
-  if(shotRunning) startLocalTick();
+// ── Ripple effect ──
+function ripple(e, btn) {
+  if (!btn) return;
+  const r = document.createElement('span');
+  r.className = 'ripple';
+  const rect = btn.getBoundingClientRect();
+  const x = (e.clientX || rect.left + rect.width / 2) - rect.left;
+  const y = (e.clientY || rect.top + rect.height / 2) - rect.top;
+  r.style.left = (x - 20) + 'px';
+  r.style.top  = (y - 20) + 'px';
+  btn.appendChild(r);
+  r.addEventListener('animationend', () => r.remove());
+}
+
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+function getAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+document.addEventListener('touchstart', () => getAudio(), { passive: true });
+document.addEventListener('click',      () => getAudio(), { passive: true });
+function playBuzz() { const a = new Audio('/buzzer.mp3'); a.volume = 1; a.play().catch(() => {}); }
+
+// ── SSE ──
+function connectSSE() {
+  setConnected(false);
+  const es = new EventSource('/events');
+  es.onopen = () => setConnected(true);
+  es.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'state') {
+        const d = msg.data;
+        const since = Date.now() - _lastCmd;
+        // Always update time; only suppress running flag briefly after a tap
+        shotSeconds = d.shotSeconds != null ? d.shotSeconds : shotSeconds;
+        if (since > 500) {
+          shotRunning = !!d.shotRunning;
+        }
+        if (shotRunning) startLocalTick(); else stopLocalTick();
+        renderClock();
+      } else if (msg.type === 'buzz' && msg.kind === 'shot') {
+        playBuzz();
+      }
+    } catch (err) {}
+  };
+  es.onerror = () => {
+    setConnected(false); stopLocalTick();
+    es.close(); setTimeout(connectSSE, 2000);
+  };
+}
+
+// ── Init ──
+fetch('/state').then(r => r.json()).then(d => {
+  if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
+  shotRunning = !!d.shotRunning;
+  if (shotRunning) startLocalTick();
   renderClock();
-}).catch(()=>{}).finally(()=>connectSSE());
+}).catch(() => {}).finally(() => connectSSE());
 </script>
 </body>
 </html>
