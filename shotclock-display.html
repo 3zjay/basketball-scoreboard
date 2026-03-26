@@ -180,13 +180,14 @@ function connectSSE(){
       const msg=JSON.parse(e.data);
       if(msg.type==='state'){
         const d=msg.data;
-        // Always stop local tick, snap to server value, then restart
-        // This re-phases the local tick to stay in sync with the server's interval
-        stopLocalTick();
+        const wasRunning=shotRunning;
         shotSeconds=d.shotSeconds!=null?d.shotSeconds:shotSeconds;
         shotRunning=!!d.shotRunning;
+        // Snap to server time value always (corrects drift)
+        // Only restart local tick if running state changed, to avoid phase reset
+        if(shotRunning && !wasRunning){ stopLocalTick(); startLocalTick(); }
+        else if(!shotRunning && wasRunning){ stopLocalTick(); }
         render();
-        if(shotRunning) startLocalTick();
       } else if(msg.type==='buzz'&&msg.kind==='shot'){
         playBuzz();
       }

@@ -1413,10 +1413,9 @@ function connectSSE(){
         }
 
         S = {...DEF, ...d};
-        // Always resync local tick phases to prevent double-decrement drift
-        stopLocalGameTick(); stopLocalShotTick();
-        if(S.gameRunning) startLocalGameTick();
-        if(S.shotRunning) startLocalShotTick();
+        // Sync local ticks to server-confirmed running state
+        if(S.gameRunning) startLocalGameTick(); else stopLocalGameTick();
+        if(S.shotRunning) startLocalShotTick(); else stopLocalShotTick();
         renderAll();
       } else if(msg.type === 'buzz') {
         // Play audio directly — never call triggerBuzz() here or it re-broadcasts and loops

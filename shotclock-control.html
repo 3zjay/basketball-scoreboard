@@ -397,9 +397,7 @@ function connectSSE() {
         if (since > 500) {
           shotRunning = !!d.shotRunning;
         }
-        // Always resync local tick phase to server to prevent double-decrement drift
-        stopLocalTick();
-        if (shotRunning) startLocalTick();
+        if (shotRunning) startLocalTick(); else stopLocalTick();
         renderClock();
       } else if (msg.type === 'buzz' && msg.kind === 'shot') {
         playBuzz();
