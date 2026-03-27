@@ -12,92 +12,110 @@ html, body {
   background:#000; user-select:none;
 }
 
-/* Unlock overlay */
+/* ── UNLOCK OVERLAY ── */
 #unlock {
   position:fixed; inset:0; z-index:9999;
-  background:rgba(0,0,0,0.92);
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4vh;
+  background:rgba(0,0,0,0.93);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:4vh;
   cursor:pointer;
 }
-#unlock h2 { font-family:'Teko',sans-serif; font-size:8vh; color:#fff; letter-spacing:4px; text-transform:uppercase; }
+#unlock h2 {
+  font-family:'Teko',sans-serif; font-size:clamp(32px,8vh,64px);
+  color:#fff; letter-spacing:4px; text-transform:uppercase;
+}
 #unlock button {
-  font-family:'Teko',sans-serif; font-size:5vh; font-weight:700; letter-spacing:3px;
-  text-transform:uppercase; background:#ff6600; color:#fff; border:none;
-  padding:2.5vh 8vw; border-radius:1.5vh; cursor:pointer;
+  font-family:'Teko',sans-serif;
+  font-size:clamp(20px,5vh,40px); font-weight:700; letter-spacing:3px;
+  text-transform:uppercase; background:#ff1a1a; color:#fff;
+  border:none; padding:2.5vh 10vw; border-radius:2vh; cursor:pointer;
 }
 
-/* No signal */
+/* ── NO SIGNAL ── */
 #noSignal {
   position:fixed; inset:0; z-index:100;
-  display:none; align-items:center; justify-content:center;
   background:#000;
-  font-family:'Teko',sans-serif; font-size:8vh; font-weight:700;
-  color:#333; letter-spacing:4px; text-transform:uppercase;
+  display:none; align-items:center; justify-content:center;
+  font-family:'Teko',sans-serif; font-size:clamp(24px,6vh,48px);
+  color:#222; letter-spacing:4px; text-transform:uppercase;
 }
 #noSignal.show { display:flex; }
 
-/* Main display */
+/* ── BUZZ FLASH ── */
+.buzz-flash {
+  position:fixed; inset:0; z-index:50; pointer-events:none; opacity:0;
+  background:radial-gradient(ellipse 80% 60% at 50% 50%, rgba(255,0,0,0.3), transparent 70%);
+}
+@keyframes buzzFlash { 0%{opacity:0} 15%{opacity:1} 100%{opacity:0} }
+.buzz-flash.flash { animation:buzzFlash 0.8s ease forwards; }
+
+/* ── MAIN DISPLAY ── */
 .display {
   width:100vw; height:100vh;
   display:flex; flex-direction:column;
   align-items:center; justify-content:center;
-  gap:0; padding:0;
 }
+
 .shot-label {
-  font-family:'Teko',sans-serif; font-size:3.5vh; font-weight:700;
-  letter-spacing:1.5vw; color:#440000; text-transform:uppercase;
-  margin-bottom:0;
+  font-family:'Teko',sans-serif;
+  font-size:clamp(14px,3.5vh,28px); font-weight:700;
+  letter-spacing:1.5vw; color:#2a0000; text-transform:uppercase;
 }
+
 .shot-number {
   font-family:'Teko',sans-serif;
-  font-size:clamp(10rem,78vw,96vh);
-  font-weight:700; line-height:0.85;
+  /* Fill ~85% of screen height */
+  font-size:clamp(120px,80vh,90vw);
+  font-weight:700; line-height:0.88;
   color:#ff1a1a;
-  text-shadow:0 0 8vw rgba(255,20,20,0.5), 0 0 20vw rgba(255,0,0,0.2);
-  transition:color 0.2s, text-shadow 0.2s;
+  text-shadow:0 0 8vw rgba(255,20,20,0.4);
   font-variant-numeric:tabular-nums;
-  text-align:center; width:100vw;
+  text-align:center; width:100%;
+  transition:color 0.15s;
 }
-.shot-number.warn   { color:#ff1a1a; text-shadow:0 0 8vw rgba(255,20,20,0.6); }
 .shot-number.danger {
   color:#ff0000;
-  text-shadow:0 0 10vw rgba(255,0,0,0.9), 0 0 25vw rgba(255,0,0,0.4);
-  animation:dangerPulse 0.35s ease infinite alternate;
+  text-shadow:0 0 10vw rgba(255,0,0,0.8);
+  animation:dangerPulse 0.4s ease infinite alternate;
 }
-.shot-number.zero   { color:#ff0000; text-shadow:0 0 12vw rgba(255,0,0,1), 0 0 30vw rgba(255,0,0,0.5); }
-@keyframes dangerPulse { to{ opacity:0.3; } }
+.shot-number.zero {
+  color:#ff0000;
+  text-shadow:0 0 15vw rgba(255,0,0,1);
+}
+@keyframes dangerPulse { to { opacity:0.3; } }
 
-/* Status dot */
+/* ── STATUS ── */
 .status-bar {
-  display:flex; align-items:center; gap:2vw; margin-top:1.5vh;
+  display:flex; align-items:center; gap:2vw; margin-top:1vh;
 }
-.run-indicator {
-  width:1.8vw; height:1.8vw; border-radius:50%;
-  background:#330000; transition:background 0.2s;
+.run-dot {
+  width:clamp(8px,1.5vw,14px); height:clamp(8px,1.5vw,14px);
+  border-radius:50%; background:#1a0000;
+  transition:background 0.2s, box-shadow 0.2s;
 }
-.run-indicator.running { background:#22c55e; box-shadow:0 0 2vw #22c55e; animation:glow 0.8s ease infinite alternate; }
-@keyframes glow { from{box-shadow:0 0 1vw #22c55e} to{box-shadow:0 0 3vw #22c55e} }
-.run-label { font-family:'Teko',sans-serif; font-size:3vh; font-weight:700; letter-spacing:0.5vw; color:#440000; text-transform:uppercase; }
+.run-dot.running {
+  background:#22c55e; box-shadow:0 0 2vw #22c55e;
+  animation:dotPulse 0.9s ease infinite alternate;
+}
+@keyframes dotPulse { from{transform:scale(1)} to{transform:scale(1.5)} }
+.run-label {
+  font-family:'Teko',sans-serif;
+  font-size:clamp(12px,2.5vh,24px); font-weight:700;
+  letter-spacing:0.5vw; color:#2a0000; text-transform:uppercase;
+}
 .run-label.running { color:#22c55e; }
 
-/* Flash on buzz */
-.buzz-flash {
-  position:fixed; inset:0; z-index:50; pointer-events:none; opacity:0;
-  background:radial-gradient(ellipse 80% 60% at 50% 50%, rgba(255,50,0,0.25), transparent 70%);
-}
-@keyframes buzzFlash { 0%{opacity:0} 20%{opacity:1} 100%{opacity:0} }
-.buzz-flash.flash { animation:buzzFlash 0.8s ease forwards; }
-
-/* Fullscreen btn */
+/* ── FULLSCREEN BTN ── */
 #fsBtn {
   position:fixed; bottom:2vh; right:2vw; z-index:200;
-  width:6vh; height:6vh; border-radius:50%;
-  background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.15);
-  color:#fff; font-size:3vh; cursor:pointer;
-  display:flex; align-items:center; justify-content:center; opacity:0.35;
-  transition:opacity 0.2s;
+  width:clamp(32px,5vh,48px); height:clamp(32px,5vh,48px);
+  border-radius:50%;
+  background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1);
+  color:rgba(255,255,255,0.3); font-size:clamp(14px,2.5vh,22px);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:color 0.2s, border-color 0.2s;
 }
-#fsBtn:hover { opacity:1; }
+#fsBtn:hover { color:#fff; border-color:rgba(255,255,255,0.4); }
 </style>
 </head>
 <body>
@@ -108,14 +126,13 @@ html, body {
 </div>
 
 <div id="noSignal" class="show">NO SIGNAL</div>
-
 <div class="buzz-flash" id="buzzFlash"></div>
 
 <div class="display">
   <div class="shot-label">SHOT CLOCK</div>
   <div class="shot-number" id="shotNum">24</div>
   <div class="status-bar">
-    <div class="run-indicator" id="runIndicator"></div>
+    <div class="run-dot" id="runDot"></div>
     <div class="run-label" id="runLabel">STOPPED</div>
   </div>
 </div>
@@ -123,91 +140,116 @@ html, body {
 <button id="fsBtn" onclick="toggleFullscreen()">⛶</button>
 
 <script>
-let shotSeconds=24, shotRunning=false;
-let lastTick=null;
+'use strict';
 
-const AudioCtx=window.AudioContext||window.webkitAudioContext;
-let audioCtx=null;
-function initAudio(){
-  if(!audioCtx)audioCtx=new AudioCtx();
-  if(audioCtx.state==='suspended')audioCtx.resume();
-  const a=new Audio('/buzzer.mp3'); a.volume=0;
-  a.play().then(()=>{a.pause();a.currentTime=0;}).catch(()=>{});
-  document.getElementById('unlock').style.display='none';
-}
-document.addEventListener('touchstart',()=>{ if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume(); },{passive:true});
+let shotSeconds = 24;
+let shotRunning = false;
 
-function playBuzz(){
-  const a=new Audio('/buzzer.mp3'); a.volume=1; a.play().catch(()=>{});
-  const fl=document.getElementById('buzzFlash');
-  fl.classList.remove('flash'); void fl.offsetWidth; fl.classList.add('flash');
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  // Pre-warm buzzer
+  const a = new Audio('/buzzer.mp3'); a.volume = 0;
+  a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => {});
+  document.getElementById('unlock').style.display = 'none';
 }
 
-function render(){
-  const el=document.getElementById('shotNum');
-  const ind=document.getElementById('runIndicator');
-  const lbl=document.getElementById('runLabel');
+document.addEventListener('touchstart', () => {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}, { passive: true });
 
-  el.textContent=shotSeconds;
-  el.className='shot-number';
-  if(shotSeconds===0)       el.classList.add('zero');
-  else if(shotSeconds<=5)   el.classList.add('danger');
-  else if(shotSeconds<=10)  el.classList.add('warn');
+function playBuzz() {
+  const a = new Audio('/buzzer.mp3');
+  a.volume = 1;
+  a.play().catch(() => {});
+  // Flash screen
+  const fl = document.getElementById('buzzFlash');
+  fl.classList.remove('flash');
+  void fl.offsetWidth;
+  fl.classList.add('flash');
+}
 
-  if(shotRunning){
-    ind.classList.add('running'); lbl.textContent='RUNNING'; lbl.classList.add('running');
+// ── Render (server is source of truth — no local tick) ──
+function render() {
+  const numEl   = document.getElementById('shotNum');
+  const dotEl   = document.getElementById('runDot');
+  const lblEl   = document.getElementById('runLabel');
+
+  numEl.textContent = shotSeconds;
+
+  numEl.className = 'shot-number';
+  if      (shotSeconds === 0)  numEl.classList.add('zero');
+  else if (shotSeconds <= 5)   numEl.classList.add('danger');
+
+  if (shotRunning) {
+    dotEl.classList.add('running');
+    lblEl.textContent = 'RUNNING'; lblEl.classList.add('running');
   } else {
-    ind.classList.remove('running'); lbl.textContent='STOPPED'; lbl.classList.remove('running');
+    dotEl.classList.remove('running');
+    lblEl.textContent = 'STOPPED'; lblEl.classList.remove('running');
   }
 }
 
-// Local tick for smoothness between SSE pushes
-function startLocalTick(){
-  stopLocalTick();
-  lastTick=setInterval(()=>{
-    if(shotRunning&&shotSeconds>0){ shotSeconds--; render(); }
-    else if(shotSeconds<=0){ stopLocalTick(); }
-  },1000);
-}
-function stopLocalTick(){ if(lastTick){clearInterval(lastTick);lastTick=null;} }
+// ── SSE ── Server pushes every second — no local tick needed ──
+function connectSSE() {
+  const ns = document.getElementById('noSignal');
+  ns.classList.add('show');
 
-function connectSSE(){
-  document.getElementById('noSignal').classList.add('show');
-  const es=new EventSource('/events');
-  es.onopen=()=>document.getElementById('noSignal').classList.remove('show');
-  es.onmessage=(e)=>{
-    try{
-      const msg=JSON.parse(e.data);
-      if(msg.type==='state'){
-        const d=msg.data;
-        const wasRunning=shotRunning;
-        shotSeconds=d.shotSeconds!=null?d.shotSeconds:shotSeconds;
-        shotRunning=!!d.shotRunning;
-        // Snap to server time value always (corrects drift)
-        // Only restart local tick if running state changed, to avoid phase reset
-        if(shotRunning && !wasRunning){ stopLocalTick(); startLocalTick(); }
-        else if(!shotRunning && wasRunning){ stopLocalTick(); }
+  const es = new EventSource('/events');
+
+  es.onopen = () => ns.classList.remove('show');
+
+  es.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'state') {
+        const d = msg.data;
+        shotSeconds = d.shotSeconds != null ? d.shotSeconds : shotSeconds;
+        shotRunning = !!d.shotRunning;
         render();
-      } else if(msg.type==='buzz'&&msg.kind==='shot'){
+      } else if (msg.type === 'buzz' && msg.kind === 'shot') {
         playBuzz();
       }
-    }catch(err){}
+    } catch (_) {}
   };
-  es.onerror=()=>{ stopLocalTick(); document.getElementById('noSignal').classList.add('show'); es.close(); setTimeout(connectSSE,2000); };
+
+  es.onerror = () => {
+    ns.classList.add('show');
+    es.close();
+    setTimeout(connectSSE, 2000);
+  };
 }
 
-function toggleFullscreen(){
-  const btn=document.getElementById('fsBtn');
-  if(!document.fullscreenElement){ document.documentElement.requestFullscreen().catch(()=>{}); if(btn)btn.textContent='✕'; }
-  else { document.exitFullscreen(); if(btn)btn.textContent='⛶'; }
+// ── Fullscreen ──
+function toggleFullscreen() {
+  const btn = document.getElementById('fsBtn');
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+    if (btn) btn.textContent = '✕';
+  } else {
+    document.exitFullscreen();
+    if (btn) btn.textContent = '⛶';
+  }
 }
-document.addEventListener('fullscreenchange',()=>{ const btn=document.getElementById('fsBtn'); if(btn)btn.textContent=document.fullscreenElement?'✕':'⛶'; });
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('fsBtn');
+  if (btn) btn.textContent = document.fullscreenElement ? '✕' : '⛶';
+});
 
-fetch('/state').then(r=>r.json()).then(d=>{
-  if(d.shotSeconds!=null)shotSeconds=d.shotSeconds;
-  shotRunning=!!d.shotRunning; render();
-  if(shotRunning)startLocalTick();
-}).catch(()=>{}).finally(()=>connectSSE());
+// ── Init ──
+fetch('/state')
+  .then(r => r.json())
+  .then(d => {
+    if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
+    shotRunning = !!d.shotRunning;
+    render();
+  })
+  .catch(() => {})
+  .finally(() => connectSSE());
 </script>
 </body>
 </html>
