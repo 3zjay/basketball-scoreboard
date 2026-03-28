@@ -509,6 +509,7 @@ body.light .reset-btn:hover { background:#fee2e2; }
           <div class="inp-row" style="margin-top:6px;">
             <input class="inp rec" id="homeRecIn" value="0-0" placeholder="W-L" oninput="updateTeam('home')" maxlength="10">
             <input type="color" class="inp col" id="homeColorIn" value="#f5c842" onchange="updateColors()">
+            <button class="btn" style="padding:0 8px;font-size:11px;letter-spacing:0.5px;" onclick="saveTeamColor('home')" title="Save this color for the selected team">💾</button>
             <span style="font-size:11px;color:var(--text3);align-self:center;">Color</span>
           </div>
         </div>
@@ -565,6 +566,7 @@ body.light .reset-btn:hover { background:#fee2e2; }
           <div class="inp-row" style="margin-top:6px;">
             <input class="inp rec" id="awayRecIn" value="0-0" placeholder="W-L" oninput="updateTeam('away')" maxlength="10">
             <input type="color" class="inp col" id="awayColorIn" value="#c8102e" onchange="updateColors()">
+            <button class="btn" style="padding:0 8px;font-size:11px;letter-spacing:0.5px;" onclick="saveTeamColor('away')" title="Save this color for the selected team">💾</button>
             <span style="font-size:11px;color:var(--text3);align-self:center;">Color</span>
           </div>
         </div>
@@ -968,8 +970,11 @@ function bump(id){
 
 // Team
 function updateTeam(t2){
-  S[t2+'Abbr']  =document.getElementById(t2+'AbbrIn').value;
-  S[t2+'Record']=document.getElementById(t2+'RecIn').value;
+  const abbr = document.getElementById(t2+'AbbrIn').value;
+  S[t2+'Abbr']  = abbr;
+  S[t2+'Record'] = document.getElementById(t2+'RecIn').value;
+  // Auto-load saved color for this team name if one exists
+  loadSavedTeamColor(t2, abbr);
   save(); renderAll();
 }
 function updateColors(){
@@ -979,6 +984,43 @@ function updateColors(){
 }
 function updateBarColor(){ S.barColor=document.getElementById('barColorIn').value; save(); }
 
+// Save the current color associated with the currently selected team name
+function saveTeamColor(team){
+  const abbr = (team==='home'
+    ? document.getElementById('homeAbbrIn').value
+    : document.getElementById('awayAbbrIn').value
+  ).trim().toUpperCase();
+  if(!abbr) return;
+  const color = document.getElementById(team+'ColorIn').value;
+  try{
+    const saved = JSON.parse(localStorage.getItem('team_colors')||'{}');
+    saved[abbr] = color;
+    localStorage.setItem('team_colors', JSON.stringify(saved));
+  }catch(e){}
+  // Visual feedback
+  const btn = event.currentTarget;
+  const orig = btn.textContent;
+  btn.textContent='✓'; btn.style.color='#00ee44';
+  setTimeout(()=>{ btn.textContent=orig; btn.style.color=''; },1200);
+}
+
+// Load saved color for a team name if one exists
+function loadSavedTeamColor(team, abbr){
+  try{
+    const saved = JSON.parse(localStorage.getItem('team_colors')||'{}');
+    const color = saved[abbr.trim().toUpperCase()];
+    if(color){
+      const inp = document.getElementById(team+'ColorIn');
+      if(inp){ inp.value = color; }
+      if(team==='home') S.homeColor = color;
+      else              S.awayColor = color;
+      save();
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
 // Dominant color extraction from logo
 function getDominantColor(canvas){
   const ctx = canvas.getContext('2d');
@@ -986,23 +1028,31 @@ function getDominantColor(canvas){
   const colorMap = {};
   for(let i = 0; i < data.length; i += 4){
     const a = data[i+3];
-    if(a < 128) continue; // skip transparent pixels
-    const r = Math.round(data[i]   / 32) * 32;
-    const g = Math.round(data[i+1] / 32) * 32;
-    const b = Math.round(data[i+2] / 32) * 32;
-    // Skip near-white and near-black
-    if(r > 220 && g > 220 && b > 220) continue;
-    if(r < 30  && g < 30  && b < 30)  continue;
-    const key = `${r},${g},${b}`;
+    if(a < 180) continue; // skip transparent/semi-transparent
+    const r = data[i], g = data[i+1], b = data[i+2];
+    // Skip near-white
+    if(r > 210 && g > 210 && b > 210) continue;
+    // Skip near-black
+    if(r < 25 && g < 25 && b < 25) continue;
+    // Skip very low-saturation (grey tones) — require meaningful color
+    const max = Math.max(r,g,b), min = Math.min(r,g,b);
+    const saturation = max === 0 ? 0 : (max - min) / max;
+    if(saturation < 0.25) continue;
+    // Quantize to 24-step buckets for better grouping
+    const qr = Math.round(r / 24) * 24;
+    const qg = Math.round(g / 24) * 24;
+    const qb = Math.round(b / 24) * 24;
+    const key = `${qr},${qg},${qb}`;
     colorMap[key] = (colorMap[key] || 0) + 1;
   }
+  // Find most frequent color
   let maxCount = 0, dominant = null;
   for(const [key, count] of Object.entries(colorMap)){
     if(count > maxCount){ maxCount = count; dominant = key; }
   }
   if(!dominant) return null;
   const [r,g,b] = dominant.split(',').map(Number);
-  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+  return '#' + [r,g,b].map(v => Math.min(255,v).toString(16).padStart(2,'0')).join('');
 }
 
 // Logos — resize to 200x200, auto-detect dominant color
