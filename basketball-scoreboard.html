@@ -1095,34 +1095,35 @@ function applyLogo(team, src){
 }
 
 // ── BUZZER SOUNDS ──────────────────────────────────────────
-const AudioCtx = window.AudioContext || window.webkitAudioContext;
-let audioCtx = null;
+// Preload both buzzer instances once at startup — eliminates per-trigger
+// network download so the sound fires as soon as the SSE event arrives.
+const _gameBuzzer = new Audio('/buzzer.mp3');
+_gameBuzzer.volume = 1.0;
+_gameBuzzer.load();
 
-function getAudioCtx(){
-  if(!audioCtx) audioCtx = new AudioCtx();
-  // Mobile Chrome suspends AudioContext — resume on every call
-  if(audioCtx.state === 'suspended') audioCtx.resume();
-  return audioCtx;
+const _shotBuzzer = new Audio('/buzzer.mp3');
+_shotBuzzer.volume = 1.0;
+_shotBuzzer.load();
+
+// Unlock preloaded audio on first user interaction (required for mobile/Safari)
+function _unlockBuzzers(){
+  [_gameBuzzer, _shotBuzzer].forEach(a => {
+    a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(()=>{});
+  });
 }
-
-// Unlock AudioContext on first touch anywhere on the page (required for mobile)
-document.addEventListener('touchstart', () => { getAudioCtx(); }, { once: false, passive: true });
-document.addEventListener('click',      () => { getAudioCtx(); }, { once: false, passive: true });
+document.addEventListener('touchstart', _unlockBuzzers, { once: true, passive: true });
+document.addEventListener('click',      _unlockBuzzers, { once: true, passive: true });
 
 function playGameBuzzer(){
-  const audio = new Audio('/buzzer.mp3');
-  audio.volume = 1.0;
-  audio.play().catch(()=>{});
+  _gameBuzzer.currentTime = 0;
+  _gameBuzzer.play().catch(()=>{});
 }
-
-
 
 
 
 function playShotBuzzer(){
-  const audio = new Audio('/buzzer.mp3');
-  audio.volume = 1.0;
-  audio.play().catch(()=>{});
+  _shotBuzzer.currentTime = 0;
+  _shotBuzzer.play().catch(()=>{});
 }
 
 
