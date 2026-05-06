@@ -990,6 +990,7 @@ function updateTeam(t2){
 function updateColors(){
   S.homeColor=document.getElementById('homeColorIn').value;
   S.awayColor=document.getElementById('awayColorIn').value;
+  _lastStateCmd = Date.now();
   save();
 }
 function updateBarColor(){ S.barColor=document.getElementById('barColorIn').value; save(); }
@@ -1095,6 +1096,7 @@ function setLogo(team, input){
       const dominant = getDominantColor(canvas);
       if(dominant){
         S[team+'Color'] = dominant;
+        _lastStateCmd = Date.now(); // protect from SSE race before pushState fires
         const colorInput = document.getElementById(team+'ColorIn');
         if(colorInput) colorInput.value = dominant;
       }
@@ -1504,6 +1506,8 @@ function connectSSE(){
           d.awayFouls  = S.awayFouls;
           d.possession = S.possession;
           d.quarter    = S.quarter;
+          d.homeColor  = S.homeColor;
+          d.awayColor  = S.awayColor;
         }
 
         // Save current logos before overwriting S
