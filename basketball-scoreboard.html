@@ -896,6 +896,12 @@ function renderAll(){
 
   if(S.homeLogo) applyLogo('home', S.homeLogo);
   if(S.awayLogo) applyLogo('away', S.awayLogo);
+
+  // Sync color pickers — SSE can deliver new colors from another device
+  const hcEl = document.getElementById('homeColorIn');
+  const acEl = document.getElementById('awayColorIn');
+  if(hcEl && document.activeElement !== hcEl) hcEl.value = S.homeColor || '#f5c842';
+  if(acEl && document.activeElement !== acEl) acEl.value = S.awayColor || '#c8102e';
 }
 
 function t(id,val){ if(val===null)return; const e=document.getElementById(id); if(e) e.textContent=val; }
@@ -1070,6 +1076,7 @@ function setLogo(team, input){
       canvas.getContext('2d').drawImage(img, 0, 0, 200, 200);
       const resized = canvas.toDataURL('image/png');
       S[team+'Logo'] = resized;
+      S[team+'LogoTs'] = Date.now(); // version stamp — lets other devices know to fetch the new logo
       applyLogo(team, resized);
 
       // Auto-detect and apply dominant color
@@ -1487,7 +1494,28 @@ function connectSSE(){
           d.quarter    = S.quarter;
         }
 
+        // Save current logos and timestamps before overwriting S
+        const prevHomeLogo    = S.homeLogo;
+        const prevAwayLogo    = S.awayLogo;
+        const prevHomeLogoTs  = S.homeLogoTs;
+        const prevAwayLogoTs  = S.awayLogoTs;
+
         S = {...DEF, ...d};
+        // Logos are never in SSE state (server strips them) — preserve what we already have
+        // unless a new logoTs signals a fresh upload, in which case fetch from server
+        if(!S.homeLogo && prevHomeLogo && d.homeLogoTs === prevHomeLogoTs) S.homeLogo = prevHomeLogo;
+        if(!S.awayLogo && prevAwayLogo && d.awayLogoTs === prevAwayLogoTs) S.awayLogo = prevAwayLogo;
+        // If logoTs changed, a new logo was uploaded on another device — fetch it
+        if(d.homeLogoTs && d.homeLogoTs !== prevHomeLogoTs){
+          fetch('/logo/home').then(r=>r.json()).then(data=>{
+            if(data && data.logo){ S.homeLogo=data.logo; applyLogo('home',data.logo); try{localStorage.setItem('bball_v3',JSON.stringify(S));}catch(e){} }
+          }).catch(()=>{});
+        }
+        if(d.awayLogoTs && d.awayLogoTs !== prevAwayLogoTs){
+          fetch('/logo/away').then(r=>r.json()).then(data=>{
+            if(data && data.logo){ S.awayLogo=data.logo; applyLogo('away',data.logo); try{localStorage.setItem('bball_v3',JSON.stringify(S));}catch(e){} }
+          }).catch(()=>{});
+        }
         // Always resync local tick phases to prevent double-decrement drift
         stopLocalGameTick(); stopLocalShotTick();
         if(S.gameRunning) startLocalGameTick();
