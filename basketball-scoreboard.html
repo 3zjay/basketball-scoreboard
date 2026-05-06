@@ -836,7 +836,9 @@ function saveNow(){
 }
 // Push non-clock state to server. Clock state is server-owned — never sent here.
 function pushState(){
+  // Full logos stay local (too large for SSE). Thumbnails (~3-6KB) travel via state.
   const toSend = {...S, homeLogo: null, awayLogo: null};
+  // homeLogoThumb / awayLogoThumb remain in toSend — they flow to all devices via SSE
   delete toSend.gameRunning; delete toSend.shotRunning;
   delete toSend.gameSeconds; delete toSend.shotSeconds;
   fetch('/update', {
@@ -895,7 +897,9 @@ function renderAll(){
   syncInp('rp2VIn', S.rp2Value);
 
   if(S.homeLogo) applyLogo('home', S.homeLogo);
+  else if(S.homeLogoThumb) applyLogo('home', S.homeLogoThumb);
   if(S.awayLogo) applyLogo('away', S.awayLogo);
+  else if(S.awayLogoThumb) applyLogo('away', S.awayLogoThumb);
 
   // Sync color pickers — SSE can deliver new colors from another device
   const hcEl = document.getElementById('homeColorIn');
@@ -1064,19 +1068,27 @@ function getDominantColor(canvas){
   return '#' + [r,g,b].map(v => Math.min(255,v).toString(16).padStart(2,'0')).join('');
 }
 
-// Logos — resize to 200x200, auto-detect dominant color
+// Logos — resize to 200x200 for local display, 72x72 JPEG thumbnail for cross-device sync
 function setLogo(team, input){
   const f = input.files[0]; if(!f) return;
   const r = new FileReader();
   r.onload = e => {
     const img = new Image();
     img.onload = () => {
+      // Full-size copy — stored in localStorage for high-quality local display
       const canvas = document.createElement('canvas');
       canvas.width = 200; canvas.height = 200;
       canvas.getContext('2d').drawImage(img, 0, 0, 200, 200);
       const resized = canvas.toDataURL('image/png');
       S[team+'Logo'] = resized;
-      S[team+'LogoTs'] = Date.now(); // version stamp — lets other devices know to fetch the new logo
+
+      // Compressed thumbnail (~3-6 KB) — included in state so it syncs to all
+      // devices via the server's SSE broadcast without bloating the payload
+      const thumb = document.createElement('canvas');
+      thumb.width = 72; thumb.height = 72;
+      thumb.getContext('2d').drawImage(img, 0, 0, 72, 72);
+      S[team+'LogoThumb'] = thumb.toDataURL('image/jpeg', 0.65);
+
       applyLogo(team, resized);
 
       // Auto-detect and apply dominant color
@@ -1088,7 +1100,7 @@ function setLogo(team, input){
       }
 
       save();
-      renderAll(); // sync color display after logo upload
+      renderAll();
       fetch('/logo/' + team, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1494,28 +1506,17 @@ function connectSSE(){
           d.quarter    = S.quarter;
         }
 
-        // Save current logos and timestamps before overwriting S
+        // Save current logos before overwriting S
         const prevHomeLogo    = S.homeLogo;
         const prevAwayLogo    = S.awayLogo;
         const prevHomeLogoTs  = S.homeLogoTs;
         const prevAwayLogoTs  = S.awayLogoTs;
 
         S = {...DEF, ...d};
-        // Logos are never in SSE state (server strips them) — preserve what we already have
-        // unless a new logoTs signals a fresh upload, in which case fetch from server
-        if(!S.homeLogo && prevHomeLogo && d.homeLogoTs === prevHomeLogoTs) S.homeLogo = prevHomeLogo;
-        if(!S.awayLogo && prevAwayLogo && d.awayLogoTs === prevAwayLogoTs) S.awayLogo = prevAwayLogo;
-        // If logoTs changed, a new logo was uploaded on another device — fetch it
-        if(d.homeLogoTs && d.homeLogoTs !== prevHomeLogoTs){
-          fetch('/logo/home').then(r=>r.json()).then(data=>{
-            if(data && data.logo){ S.homeLogo=data.logo; applyLogo('home',data.logo); try{localStorage.setItem('bball_v3',JSON.stringify(S));}catch(e){} }
-          }).catch(()=>{});
-        }
-        if(d.awayLogoTs && d.awayLogoTs !== prevAwayLogoTs){
-          fetch('/logo/away').then(r=>r.json()).then(data=>{
-            if(data && data.logo){ S.awayLogo=data.logo; applyLogo('away',data.logo); try{localStorage.setItem('bball_v3',JSON.stringify(S));}catch(e){} }
-          }).catch(()=>{});
-        }
+        // Full logos are never in SSE state (too large) — preserve the local high-res copy.
+        // Thumbnails (homeLogoThumb/awayLogoThumb) travel via state and are already in d.
+        if(!S.homeLogo && prevHomeLogo) S.homeLogo = prevHomeLogo;
+        if(!S.awayLogo && prevAwayLogo) S.awayLogo = prevAwayLogo;
         // Always resync local tick phases to prevent double-decrement drift
         stopLocalGameTick(); stopLocalShotTick();
         if(S.gameRunning) startLocalGameTick();
