@@ -1028,24 +1028,27 @@ function getDominantColor(canvas){
   const colorMap = {};
   for(let i = 0; i < data.length; i += 4){
     const a = data[i+3];
-    if(a < 180) continue; // skip transparent/semi-transparent
+    if(a < 128) continue; // skip transparent/semi-transparent
     const r = data[i], g = data[i+1], b = data[i+2];
-    // Skip near-white
-    if(r > 210 && g > 210 && b > 210) continue;
+    // Skip near-white (backgrounds)
+    if(r > 220 && g > 220 && b > 220) continue;
     // Skip near-black
-    if(r < 25 && g < 25 && b < 25) continue;
-    // Skip very low-saturation (grey tones) — require meaningful color
+    if(r < 20 && g < 20 && b < 20) continue;
+    // Skip very low-saturation (grey tones)
     const max = Math.max(r,g,b), min = Math.min(r,g,b);
-    const saturation = max === 0 ? 0 : (max - min) / max;
-    if(saturation < 0.25) continue;
-    // Quantize to 24-step buckets for better grouping
-    const qr = Math.round(r / 24) * 24;
-    const qg = Math.round(g / 24) * 24;
-    const qb = Math.round(b / 24) * 24;
+    if(max === 0) continue;
+    const saturation = (max - min) / max;
+    if(saturation < 0.15) continue; // lowered threshold to catch muted brand colors
+    // Weight each pixel by saturation so vivid colors outrank muted ones
+    const weight = Math.round(saturation * 4) + 1; // 1-5 votes per pixel
+    // Quantize to 20-step buckets for better grouping
+    const qr = Math.round(r / 20) * 20;
+    const qg = Math.round(g / 20) * 20;
+    const qb = Math.round(b / 20) * 20;
     const key = `${qr},${qg},${qb}`;
-    colorMap[key] = (colorMap[key] || 0) + 1;
+    colorMap[key] = (colorMap[key] || 0) + weight;
   }
-  // Find most frequent color
+  // Find most frequent weighted color
   let maxCount = 0, dominant = null;
   for(const [key, count] of Object.entries(colorMap)){
     if(count > maxCount){ maxCount = count; dominant = key; }
@@ -1078,6 +1081,7 @@ function setLogo(team, input){
       }
 
       save();
+      renderAll(); // sync color display after logo upload
       fetch('/logo/' + team, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1421,11 +1425,31 @@ function resetAll(){
 loadCustomOptions();
 setLiveStatus('connecting');
 fetch('/state').then(r=>r.json()).then(data=>{
+  // Logos are never pushed to the server (too large) — always restore from localStorage
+  let localLogos = {};
+  try {
+    const localRaw = localStorage.getItem('bball_v3');
+    if(localRaw){
+      const local = JSON.parse(localRaw);
+      if(local.homeLogo) localLogos.homeLogo = local.homeLogo;
+      if(local.awayLogo) localLogos.awayLogo = local.awayLogo;
+    }
+  } catch(e){}
   if(Object.keys(data).length){ S={...DEF,...data}; }
+  // Merge logos back in — server always has null for logos
+  if(localLogos.homeLogo) S.homeLogo = localLogos.homeLogo;
+  if(localLogos.awayLogo) S.awayLogo = localLogos.awayLogo;
   if(S.gameRunning) startLocalGameTick();
   if(S.shotRunning) startLocalShotTick();
   renderAll();
-}).catch(()=>{ renderAll(); }).finally(()=>{ connectSSE(); });
+}).catch(()=>{
+  // No server — fall back to full localStorage state
+  try {
+    const localRaw = localStorage.getItem('bball_v3');
+    if(localRaw){ S={...DEF,...JSON.parse(localRaw)}; S.gameRunning=false; S.shotRunning=false; }
+  } catch(e){}
+  renderAll();
+}).finally(()=>{ connectSSE(); });
 
 // SSE — server pushes state every second while clocks run, instantly on any action
 function connectSSE(){
