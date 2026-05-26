@@ -824,11 +824,9 @@ body.light .reset-btn:hover { background:#fee2e2; }
 
 <script>
 const SERVER_URL = (
-  window.location.hostname === 'localhost' ||
-  window.location.hostname === '127.0.0.1' ||
-  window.location.hostname.startsWith('192.168.') ||
-  window.location.hostname.includes('onrender.com')
-) ? '' : 'https://basketball-scoreboard-o0c7.onrender.com';
+  window.location.hostname.includes('vercel.app') ||
+  window.location.hostname.includes('vercel.sh')
+) ? 'https://basketball-scoreboard-o0c7.onrender.com' : '';
 
 const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
