@@ -712,7 +712,7 @@
     <div class="hero-subtitle">Court-Side Live Production</div>
     <h1 class="hero-title">Hoop Culture <em>Scoreboard</em> System</h1>
     <p class="hero-desc">
-      A localized, high-performance web server that powers stadium venue scoreboards and overlays real-time broadcast graphics directly into OBS Studio. Runs entirely offline over a private court network.
+      A professional broadcast scoreboard powering stadium venues, OBS overlays, and live stream graphics — with <strong style="color:var(--white);">three deployment modes</strong>: fully offline local, OnRender full-stack cloud, and Vercel + Firebase serverless cloud.
     </p>
     <div class="hero-actions">
       <a href="/login" class="btn primary">Start Operator Console</a>
@@ -723,25 +723,36 @@
   <!-- Ecosystem / How it works Section -->
   <section id="ecosystem" class="diagram-container">
     <div class="section-header">
-      <div class="section-subtitle">Court Synchronization</div>
+      <div class="section-subtitle">Triple-Mode Architecture</div>
       <h2 class="section-title">Ecosystem Workflow</h2>
     </div>
-    
-    <div class="diagram-card">
-      
-      <!-- Column 1: Tablet -->
+
+    <!-- Mode Tabs -->
+    <div style="display:flex;justify-content:center;margin-bottom:2rem;">
+      <div style="display:flex;background:var(--bg2);border:1px solid var(--border);border-radius:50px;padding:5px;gap:6px;">
+        <button id="lnd-btn-local" onclick="lndSwitch('local')" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:8px 20px;border:none;border-radius:40px;cursor:pointer;background:linear-gradient(135deg,var(--fire1),var(--fire2));color:#fff;box-shadow:0 4px 15px rgba(232,67,10,0.4);" id="lnd-btn-local">
+          🔌 Offline Local
+        </button>
+        <button id="lnd-btn-vercel" onclick="lndSwitch('vercel')" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:8px 20px;border:none;border-radius:40px;cursor:pointer;background:transparent;color:var(--grey);">
+          ⚡ Vercel + Firebase
+        </button>
+        <button id="lnd-btn-onrender" onclick="lndSwitch('onrender')" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:8px 20px;border:none;border-radius:40px;cursor:pointer;background:transparent;color:var(--grey);">
+          ☁️ OnRender Cloud
+        </button>
+      </div>
+    </div>
+
+    <!-- LOCAL diagram -->
+    <div class="diagram-card" id="lnd-local" style="display:grid;">
       <div class="node-col">
-        <span class="node-badge badge-tablet">TABLET</span>
+        <span class="node-badge badge-tablet">LOCAL TABLET</span>
         <div class="mockup-frame tablet-frame">
           <div class="tablet-screen">
-            <div class="screen-header">
-              <span>● CONTROLLER</span>
-              <span>100%</span>
-            </div>
-            <div style="text-align: center;">
-              <span style="font-size: 7px; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase;">GAME CLOCK</span>
+            <div class="screen-header"><span>● CONTROLLER</span><span>100%</span></div>
+            <div style="text-align:center;">
+              <span style="font-size:7px;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;">GAME CLOCK</span>
               <div class="screen-clock">12:34</div>
-              <span style="font-size: 8px; color: #94a3b8; font-weight: bold; text-transform: uppercase;">Q4 - PERIOD 2</span>
+              <span style="font-size:8px;color:#94a3b8;font-weight:bold;text-transform:uppercase;">Q4 - PERIOD 2</span>
             </div>
             <div>
               <div class="screen-scores">
@@ -753,25 +764,18 @@
           </div>
         </div>
         <h3 class="node-title">Scoreboard Controller</h3>
-        <p class="node-subtitle">NON-TECHNICAL USER APP</p>
+        <p class="node-subtitle">TABLET / PHONE ON LOCAL WIFI</p>
       </div>
-
-      <!-- Connector 1 -->
       <div class="connector-col">
         <span class="connector-label-top">DATA SIGNAL</span>
         <div class="connector-arrow">
-          <svg class="connector-arrow-svg" viewBox="0 0 24 24">
-            <line x1="2" y1="12" x2="22" y2="12"></line>
-            <polyline points="14 6 22 12 14 18"></polyline>
-          </svg>
+          <svg class="connector-arrow-svg" viewBox="0 0 24 24"><line x1="2" y1="12" x2="22" y2="12"></line><polyline points="14 6 22 12 14 18"></polyline></svg>
         </div>
         <span class="connector-label-bottom">COMMANDS</span>
       </div>
-
-      <!-- Column 2: Laptop -->
       <div class="node-col">
-        <span class="node-badge badge-laptop">LAPTOP</span>
-        <div style="display: flex; flex-direction: column; align-items: center;">
+        <span class="node-badge badge-laptop">LOCAL SERVER</span>
+        <div style="display:flex;flex-direction:column;align-items:center;">
           <div class="mockup-frame laptop-frame">
             <div class="laptop-screen">
               <span class="log-green">&gt; LOCAL SERVER RUNNING</span><br>
@@ -783,49 +787,186 @@
           </div>
           <div class="laptop-base"></div>
         </div>
-        <h3 class="node-title">Local Server</h3>
+        <h3 class="node-title">Local Laptop Server</h3>
         <p class="node-subtitle">IP ADDRESS: 192.168.1.10</p>
       </div>
-
-      <!-- Connector 2 -->
       <div class="connector-col">
         <span class="connector-label-top">DATA FEED</span>
         <div class="connector-arrow">
-          <svg class="connector-arrow-svg" viewBox="0 0 24 24">
-            <line x1="2" y1="12" x2="22" y2="12"></line>
-            <polyline points="14 6 22 12 14 18"></polyline>
-          </svg>
+          <svg class="connector-arrow-svg" viewBox="0 0 24 24"><line x1="2" y1="12" x2="22" y2="12"></line><polyline points="14 6 22 12 14 18"></polyline></svg>
         </div>
         <span class="connector-label-bottom">UPDATES</span>
       </div>
-
-      <!-- Column 3: TV Display -->
       <div class="node-col">
         <span class="node-badge badge-tv">TV / BROADCAST</span>
-        <div style="display: flex; flex-direction: column; align-items: center;">
+        <div style="display:flex;flex-direction:column;align-items:center;">
           <div class="mockup-frame tv-frame">
             <div class="tv-screen">
               <div class="tv-overlay-title">🔴 LIVE SCOREBOARD FEED</div>
               <div class="tv-overlay-content">
-                <div class="tv-team">
-                  <span class="tv-team-name">BEARS</span>
-                  <span class="tv-team-score red">24</span>
-                </div>
+                <div class="tv-team"><span class="tv-team-name">BEARS</span><span class="tv-team-score red">24</span></div>
                 <div class="tv-clock">08:15</div>
-                <div class="tv-team">
-                  <span class="tv-team-name">LIONS</span>
-                  <span class="tv-team-score blue">17</span>
-                </div>
+                <div class="tv-team"><span class="tv-team-name">LIONS</span><span class="tv-team-score blue">17</span></div>
               </div>
             </div>
           </div>
           <div class="tv-base"></div>
         </div>
         <h3 class="node-title">Live Score Overlay</h3>
-        <p class="node-subtitle">HDMI TV & OBS LIVE STREAM</p>
+        <p class="node-subtitle">HDMI TV &amp; OBS LIVE STREAM</p>
       </div>
-
     </div>
+
+    <!-- VERCEL diagram -->
+    <div class="diagram-card" id="lnd-vercel" style="display:none;border-color:#2b1f3c;">
+      <div class="node-col">
+        <span class="node-badge" style="background:rgba(168,85,247,0.1);color:#a855f7;border:1px solid rgba(168,85,247,0.2);">VERCEL OPERATOR</span>
+        <div class="mockup-frame tablet-frame" style="border-color:#2b1f3c;">
+          <div class="tablet-screen" style="background:#090610;border-color:#2b1f4c;">
+            <div class="screen-header" style="border-color:#201332;color:#a855f7;"><span>● VERCEL HOST</span><span style="color:#4ade80;">☁️ ONLINE</span></div>
+            <div style="text-align:center;">
+              <span style="font-size:6px;color:#a855f7;letter-spacing:0.5px;text-transform:uppercase;">user: admin@hoopculture.ca</span>
+              <div class="screen-clock" style="color:#fff;text-shadow:0 0 10px rgba(168,85,247,0.4);">12:34</div>
+              <span style="font-size:8px;color:#a855f7;font-weight:bold;text-transform:uppercase;">Q4 - PERIOD 2</span>
+            </div>
+            <div>
+              <div class="screen-scores">
+                <div class="screen-btn" style="background:#a855f7;">HOME +</div>
+                <div class="screen-btn guest">GUEST -</div>
+              </div>
+              <div class="screen-footer-btn" style="background:#1c0e2a;color:#c084fc;">🔥 FIREBASE SYNCED</div>
+            </div>
+          </div>
+        </div>
+        <h3 class="node-title">Vercel Controller</h3>
+        <p class="node-subtitle">STATELESS EDGE — NO SERVER</p>
+      </div>
+      <div class="connector-col">
+        <span class="connector-label-top" style="color:#a855f7;">WRITES STATE</span>
+        <div class="connector-arrow">
+          <svg class="connector-arrow-svg" viewBox="0 0 24 24" style="stroke:#a855f7;filter:drop-shadow(0 0 6px rgba(168,85,247,0.5));"><line x1="2" y1="12" x2="22" y2="12"></line><polyline points="14 6 22 12 14 18"></polyline></svg>
+        </div>
+        <span class="connector-label-bottom" style="color:#a855f7;">RTDB PUSH</span>
+      </div>
+      <div class="node-col">
+        <span class="node-badge" style="background:rgba(255,160,0,0.1);color:#ffb300;border:1px solid rgba(255,160,0,0.25);">🔥 FIREBASE RTDB</span>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="mockup-frame laptop-frame" style="border-color:#2a1e00;">
+            <div class="laptop-screen" style="background:#0d0900;border-color:#2a1a00;">
+              <span style="color:#ffb300;">states/default/</span><br>
+              <span class="log-white">homeScore: 24 | awayScore: 17</span><br>
+              <span style="color:#a855f7;">gameSeconds: 495 | Q: 2</span><br>
+              <span class="log-orange">shotSeconds: 14 | running: true</span><br>
+              <span class="log-dim">&gt; Real-time push to all subscribers...</span>
+            </div>
+          </div>
+          <div class="laptop-base" style="background:#2a1e00;"></div>
+        </div>
+        <h3 class="node-title">Firebase Database</h3>
+        <p class="node-subtitle">GOOGLE CLOUD — REALTIME SYNC</p>
+      </div>
+      <div class="connector-col">
+        <span class="connector-label-top" style="color:#ffb300;">LIVE STREAM</span>
+        <div class="connector-arrow">
+          <svg class="connector-arrow-svg" viewBox="0 0 24 24" style="stroke:#ffb300;filter:drop-shadow(0 0 6px rgba(255,160,0,0.6));"><line x1="2" y1="12" x2="22" y2="12"></line><polyline points="14 6 22 12 14 18"></polyline></svg>
+        </div>
+        <span class="connector-label-bottom" style="color:#ffb300;">RTDB SUBSCRIBE</span>
+      </div>
+      <div class="node-col">
+        <span class="node-badge" style="background:rgba(168,85,247,0.1);color:#a855f7;border:1px solid rgba(168,85,247,0.2);">VERCEL OVERLAY</span>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="mockup-frame tv-frame" style="border-color:#2b1f3c;">
+            <div class="tv-screen" style="background:#090610;border-color:#2b1f4c;">
+              <div class="tv-overlay-title" style="color:#a855f7;">🔴 FIREBASE LIVE (?user=...)</div>
+              <div class="tv-overlay-content" style="background:#100820;border-color:#2b1f4c;">
+                <div class="tv-team"><span class="tv-team-name">BEARS</span><span class="tv-team-score" style="color:#a855f7;">24</span></div>
+                <div class="tv-clock" style="color:#fff;">08:15</div>
+                <div class="tv-team"><span class="tv-team-name">LIONS</span><span class="tv-team-score" style="color:#c084fc;">17</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="tv-base" style="background:#2b1f3c;"></div>
+        </div>
+        <h3 class="node-title">OBS Overlay / TV</h3>
+        <p class="node-subtitle">SYNCED VIA FIREBASE — GLOBAL</p>
+      </div>
+    </div>
+
+    <!-- ONRENDER diagram -->
+    <div class="diagram-card" id="lnd-onrender" style="display:none;border-color:#1a2c28;">
+      <div class="node-col">
+        <span class="node-badge" style="background:rgba(20,184,166,0.1);color:#14b8a6;border:1px solid rgba(20,184,166,0.2);">ONRENDER OPERATOR</span>
+        <div class="mockup-frame tablet-frame" style="border-color:#1a2c28;">
+          <div class="tablet-screen" style="background:#050b0a;border-color:#1a2c38;">
+            <div class="screen-header" style="border-color:#0c1815;color:#14b8a6;"><span>● ONRENDER HOST</span><span style="color:#22c55e;">● ONLINE</span></div>
+            <div style="text-align:center;">
+              <span style="font-size:6px;color:#14b8a6;letter-spacing:0.5px;text-transform:uppercase;">user: admin@hoopculture.ca</span>
+              <div class="screen-clock" style="color:#fff;text-shadow:0 0 10px rgba(20,184,166,0.4);">12:34</div>
+              <span style="font-size:8px;color:#14b8a6;font-weight:bold;text-transform:uppercase;">Q4 - PERIOD 2</span>
+            </div>
+            <div>
+              <div class="screen-scores">
+                <div class="screen-btn" style="background:#14b8a6;">HOME +</div>
+                <div class="screen-btn guest">GUEST -</div>
+              </div>
+              <div class="screen-footer-btn" style="background:#0f1e1a;color:#5eead4;">LOGOUT</div>
+            </div>
+          </div>
+        </div>
+        <h3 class="node-title">OnRender Controller</h3>
+        <p class="node-subtitle">ONRENDER.COM — FULL-STACK</p>
+      </div>
+      <div class="connector-col">
+        <span class="connector-label-top" style="color:#14b8a6;">RELATIVE PATH API</span>
+        <div class="connector-arrow">
+          <svg class="connector-arrow-svg" viewBox="0 0 24 24" style="stroke:#14b8a6;filter:drop-shadow(0 0 6px rgba(20,184,166,0.5));"><line x1="2" y1="12" x2="22" y2="12"></line><polyline points="14 6 22 12 14 18"></polyline></svg>
+        </div>
+        <span class="connector-label-bottom" style="color:#14b8a6;">INTERNAL REQUESTS</span>
+      </div>
+      <div class="node-col">
+        <span class="node-badge" style="background:rgba(20,184,166,0.1);color:#14b8a6;border:1px solid rgba(20,184,166,0.2);">ONRENDER SERVER</span>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="mockup-frame laptop-frame" style="border-color:#152c28;">
+            <div class="laptop-screen" style="background:#020617;border-color:#1e293b;">
+              <span style="color:#14b8a6;">$ node server.js</span><br>
+              <span class="log-white">Serving files &amp; API on port 443</span><br>
+              <span style="color:#22c55e;">[Static] Served /control page</span><br>
+              <span class="log-orange">&gt; Local state update partitioned</span><br>
+              <span class="log-dim">&gt; Streaming relative SSE channel...</span>
+            </div>
+          </div>
+          <div class="laptop-base" style="background:#132522;"></div>
+        </div>
+        <h3 class="node-title">OnRender Server</h3>
+        <p class="node-subtitle">SELF-CONTAINED — NODE.JS + SSE</p>
+      </div>
+      <div class="connector-col">
+        <span class="connector-label-top" style="color:#14b8a6;">RELATIVE FEED</span>
+        <div class="connector-arrow">
+          <svg class="connector-arrow-svg" viewBox="0 0 24 24" style="stroke:#14b8a6;filter:drop-shadow(0 0 6px rgba(20,184,166,0.5));"><line x1="2" y1="12" x2="22" y2="12"></line><polyline points="14 6 22 12 14 18"></polyline></svg>
+        </div>
+        <span class="connector-label-bottom" style="color:#14b8a6;">RELATIVE SSE STREAM</span>
+      </div>
+      <div class="node-col">
+        <span class="node-badge" style="background:rgba(20,184,166,0.1);color:#14b8a6;border:1px solid rgba(20,184,166,0.2);">ONRENDER OVERLAY</span>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="mockup-frame tv-frame" style="border-color:#1a2c28;">
+            <div class="tv-screen" style="background:#050b09;border-color:#182c23;">
+              <div class="tv-overlay-title" style="color:#14b8a6;">🔴 ONRENDER FEED (?user=...)</div>
+              <div class="tv-overlay-content" style="background:#0a1814;border-color:#1a3c30;">
+                <div class="tv-team"><span class="tv-team-name">BEARS</span><span class="tv-team-score" style="color:var(--orange);">24</span></div>
+                <div class="tv-clock" style="color:#fff;">08:15</div>
+                <div class="tv-team"><span class="tv-team-name">LIONS</span><span class="tv-team-score" style="color:#14b8a6;">17</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="tv-base" style="background:#142823;"></div>
+        </div>
+        <h3 class="node-title">OBS Overlay / TV</h3>
+        <p class="node-subtitle">DIRECT ONRENDER STREAM</p>
+      </div>
+    </div>
+
   </section>
 
   <!-- Screens Navigation Grid -->
@@ -931,13 +1072,26 @@
             <circle cx="12" cy="18" r="1"></circle>
           </svg>
         </div>
-        <h3 class="feature-box-title">100% Offline Court Wi-Fi</h3>
+        <h3 class="feature-box-title">100% Offline Capable</h3>
         <p class="feature-box-desc">
-          Operates over a local Wi-Fi hotspot network. No internet connection or cellular mobile data is required during active game play.
+          Operates over a local Wi-Fi hotspot network — no internet or cellular data required during active game play. Full scoreboard, overlays, and shot clock all work offline.
         </p>
       </div>
 
       <!-- Feature 2 -->
+      <div class="feature-box">
+        <div class="feature-box-icon" style="background:rgba(168,85,247,0.08);border-color:rgba(168,85,247,0.2);">
+          <svg class="feature-box-svg" viewBox="0 0 24 24" style="stroke:#a855f7;">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+        </div>
+        <h3 class="feature-box-title">Dual-Cloud Redundancy</h3>
+        <p class="feature-box-desc">
+          Two independent cloud deployments — <strong style="color:var(--white);">Vercel + Firebase</strong> (serverless) and <strong style="color:var(--white);">OnRender</strong> (full-stack). If one goes down, switch to the other without missing a beat.
+        </p>
+      </div>
+
+      <!-- Feature 3 -->
       <div class="feature-box">
         <div class="feature-box-icon">
           <svg class="feature-box-svg" viewBox="0 0 24 24">
@@ -947,11 +1101,26 @@
         </div>
         <h3 class="feature-box-title">Zero Clock Drift</h3>
         <p class="feature-box-desc">
-           Clocks are maintained authoritatively by the local server. Prevents clock drift between operator tables, OBS, and displays.
+          Clocks tick authoritatively — on the server in Node.js mode, and in the operator's browser in Vercel/Firebase mode — preventing drift across all connected displays.
         </p>
       </div>
 
-      <!-- Feature 3 -->
+      <!-- Feature 4 -->
+      <div class="feature-box">
+        <div class="feature-box-icon" style="background:rgba(255,160,0,0.08);border-color:rgba(255,160,0,0.2);">
+          <svg class="feature-box-svg" viewBox="0 0 24 24" style="stroke:#ffb300;">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <h3 class="feature-box-title">Firebase Realtime Sync</h3>
+        <p class="feature-box-desc">
+          In Vercel mode, all score changes, clock ticks, and buzzer events are synced instantly through Google Firebase — no backend server required.
+        </p>
+      </div>
+
+      <!-- Feature 5 -->
       <div class="feature-box">
         <div class="feature-box-icon">
           <svg class="feature-box-svg" viewBox="0 0 24 24">
@@ -962,7 +1131,7 @@
         </div>
         <h3 class="feature-box-title">Auto Brand Colors</h3>
         <p class="feature-box-desc">
-          Uploading any team logo automatically extracts its dominant color, updating scoreboard styling across all screens.
+          Uploading any team logo automatically extracts its dominant color, updating scoreboard styling across all screens instantly.
         </p>
       </div>
 
@@ -977,24 +1146,35 @@
   </footer>
 
   <script>
+    // Ecosystem tab switcher
+    function lndSwitch(mode) {
+      const diagrams = { local: 'lnd-local', vercel: 'lnd-vercel', onrender: 'lnd-onrender' };
+      const btns = { local: 'lnd-btn-local', vercel: 'lnd-btn-vercel', onrender: 'lnd-btn-onrender' };
+      const activeStyle = 'linear-gradient(135deg,var(--fire1),var(--fire2))';
+      Object.keys(diagrams).forEach(k => {
+        const d = document.getElementById(diagrams[k]);
+        const b = document.getElementById(btns[k]);
+        if (k === mode) {
+          d.style.display = 'grid';
+          b.style.background = activeStyle;
+          b.style.color = '#fff';
+          b.style.boxShadow = '0 4px 15px rgba(232,67,10,0.4)';
+        } else {
+          d.style.display = 'none';
+          b.style.background = 'transparent';
+          b.style.color = 'var(--grey)';
+          b.style.boxShadow = 'none';
+        }
+      });
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       const user = localStorage.getItem('hc_session_user');
       if (user) {
-        // Update nav button to go straight to control panel
         const navBtn = document.querySelector('nav .btn.primary');
-        if (navBtn) {
-          navBtn.textContent = 'Control Panel';
-          navBtn.href = '/control';
-        }
-        
-        // Update hero button to go straight to control panel
+        if (navBtn) { navBtn.textContent = 'Control Panel'; navBtn.href = '/control'; }
         const heroBtn = document.querySelector('.hero-actions .btn.primary');
-        if (heroBtn) {
-          heroBtn.textContent = 'Go to Console';
-          heroBtn.href = '/control';
-        }
-
-        // Add a Sign Out link in the navbar
+        if (heroBtn) { heroBtn.textContent = 'Go to Console'; heroBtn.href = '/control'; }
         const navLinks = document.querySelector('.nav-links');
         if (navLinks) {
           const logoutLi = document.createElement('li');
