@@ -7,6 +7,10 @@
     window.location.href = '/login?redirect=' + encodeURIComponent(currentPath);
   }
 </script>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script src="/firebase-config.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
@@ -822,6 +826,35 @@ const SERVER_URL = (
 const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
 
+// ── Firebase Environment Detection ──
+const useFirebase = window.location.hostname.includes('vercel.app');
+let db = null;
+if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+}
+
+// Warn if using Vercel but Firebase isn't configured
+window.addEventListener('DOMContentLoaded', () => {
+  if (useFirebase && !isFirebaseConfigured) {
+    const banner = document.createElement('div');
+    banner.style.position = 'fixed';
+    banner.style.top = '0';
+    banner.style.left = '0';
+    banner.style.right = '0';
+    banner.style.background = '#e53935';
+    banner.style.color = '#fff';
+    banner.style.textAlign = 'center';
+    banner.style.padding = '12px';
+    banner.style.zIndex = '10000';
+    banner.style.fontFamily = 'sans-serif';
+    banner.style.fontSize = '14px';
+    banner.style.fontWeight = 'bold';
+    banner.innerHTML = '⚠️ Firebase is not configured! Please set up your Firebase project credentials in <strong>firebase-config.js</strong> to enable Vercel Cloud Sync.';
+    document.body.appendChild(banner);
+  }
+});
+
 function logout() {
   localStorage.removeItem('hc_session_user');
   window.location.href = '/login';
@@ -864,6 +897,12 @@ function pushState(){
   // homeLogoThumb / awayLogoThumb remain in toSend — they flow to all devices via SSE
   delete toSend.gameRunning; delete toSend.shotRunning;
   delete toSend.gameSeconds; delete toSend.shotSeconds;
+
+  if (useFirebase && db) {
+    db.ref(`states/${currentUser}`).update(toSend).catch(e => console.error(e));
+    return;
+  }
+
   fetch(`${SERVER_URL}/update?user=${encodeURIComponent(currentUser)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -873,11 +912,64 @@ function pushState(){
 // Send a clock command to the server
 function cmd(command, seconds){
   const body = seconds != null ? {cmd: command, seconds} : {cmd: command};
+  if (useFirebase && db) {
+    handleLocalCommand(command, seconds);
+    return;
+  }
   fetch(`${SERVER_URL}/cmd?user=${encodeURIComponent(currentUser)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   }).catch(()=>{});
+}
+
+function handleLocalCommand(command, seconds) {
+  if (command === 'game_start') {
+    S.gameRunning = true;
+    startLocalGameTick();
+  } else if (command === 'game_stop') {
+    S.gameRunning = false;
+    stopLocalGameTick();
+  } else if (command === 'game_reset') {
+    S.gameRunning = false;
+    stopLocalGameTick();
+    S.gameSeconds = seconds || S.timerPresetSeconds || 600;
+  } else if (command === 'game_set') {
+    if (!S.gameRunning) {
+      S.gameSeconds = seconds != null ? seconds : (S.gameSeconds || 600);
+    }
+  } else if (command === 'shot_start') {
+    S.shotRunning = true;
+    startLocalShotTick();
+  } else if (command === 'shot_stop') {
+    S.shotRunning = false;
+    stopLocalShotTick();
+  } else if (command === 'shot_reset') {
+    S.shotRunning = false;
+    stopLocalShotTick();
+    S.shotSeconds = seconds || 24;
+    S.shotRunning = true;
+    startLocalShotTick();
+  } else if (command === 'reset_all') {
+    S.gameRunning = false;
+    S.shotRunning = false;
+    stopLocalGameTick();
+    stopLocalShotTick();
+    S.gameSeconds = S.timerPresetSeconds || 600;
+    S.shotSeconds = 24;
+    S.homeScore = 0;
+    S.awayScore = 0;
+    S.homeFouls = 0;
+    S.awayFouls = 0;
+  }
+  
+  renderGameClock();
+  renderShotClock();
+  renderAll();
+  
+  if (db) {
+    db.ref(`states/${currentUser}`).set(S).catch(e => console.error(e));
+  }
 }
 function load(){
   try{
@@ -1179,7 +1271,14 @@ function playShotBuzzer(){
 function triggerBuzz(kind) {
   // Play locally immediately
   if(kind === 'game') playGameBuzzer(); else playShotBuzzer();
-  // Broadcast to all other devices via server
+  // Broadcast to all other devices via server or Firebase
+  if (useFirebase && db) {
+    db.ref(`buzz/${currentUser}`).set({
+      kind: kind,
+      timestamp: Date.now()
+    }).catch(e => console.error(e));
+    return;
+  }
   fetch(`${SERVER_URL}/buzz?user=${encodeURIComponent(currentUser)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1193,16 +1292,42 @@ let _localShotTick = null;
 function startLocalGameTick(){
   if(_localGameTick) return;
   _localGameTick = setInterval(()=>{
-    if(S.gameRunning && S.gameSeconds > 0){ S.gameSeconds--; renderGameClock(); }
-    else { stopLocalGameTick(); }
+    if(S.gameRunning && S.gameSeconds > 0){ 
+      S.gameSeconds--; 
+      renderGameClock(); 
+      if (useFirebase && db) {
+        db.ref(`states/${currentUser}`).update({ gameSeconds: S.gameSeconds });
+      }
+    }
+    else { 
+      stopLocalGameTick(); 
+      if (useFirebase && S.gameSeconds === 0 && S.gameRunning) {
+        triggerBuzz('game');
+      }
+    }
   }, 1000);
 }
 function stopLocalGameTick(){ clearInterval(_localGameTick); _localGameTick = null; }
 function startLocalShotTick(){
   if(_localShotTick) return;
   _localShotTick = setInterval(()=>{
-    if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; renderShotClock(); }
-    else { stopLocalShotTick(); }
+    if(S.shotRunning && S.shotSeconds > 0){ 
+      S.shotSeconds--; 
+      renderShotClock(); 
+      if (useFirebase && db) {
+        db.ref(`states/${currentUser}`).update({ shotSeconds: S.shotSeconds });
+      }
+    }
+    else { 
+      stopLocalShotTick(); 
+      if (useFirebase && S.shotSeconds === 0 && S.shotRunning) {
+        triggerBuzz('shot');
+        setTimeout(() => {
+          S.shotSeconds = 24;
+          cmd('shot_start');
+        }, 500);
+      }
+    }
   }, 1000);
 }
 function stopLocalShotTick(){ clearInterval(_localShotTick); _localShotTick = null; }
@@ -1423,11 +1548,18 @@ let _lastLocalBuzz = 0;
 function refBuzzer(){
   _lastLocalBuzz = Date.now();
   playGameBuzzer(); // play locally immediately
-  fetch(`${SERVER_URL}/buzz?user=${encodeURIComponent(currentUser)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ kind: 'game' })
-  }).catch(()=>{});
+  if (useFirebase && db) {
+    db.ref(`buzz/${currentUser}`).set({
+      kind: 'game',
+      timestamp: Date.now()
+    }).catch(e => console.error(e));
+  } else {
+    fetch(`${SERVER_URL}/buzz?user=${encodeURIComponent(currentUser)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'game' })
+    }).catch(()=>{});
+  }
   const btn = document.getElementById('refBuzzerBtn2');
   if(btn){
     btn.style.background = '#6a1515';
@@ -1467,36 +1599,122 @@ function resetAll(){
 
 // Load from server first (so tablet gets live state, not stale localStorage)
 loadCustomOptions();
-setLiveStatus('connecting');
-fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`).then(r=>r.json()).then(data=>{
-  // Logos are never pushed to the server (too large) — always restore from localStorage
-  let localLogos = {};
-  try {
-    const localRaw = localStorage.getItem('bball_v3');
-    if(localRaw){
-      const local = JSON.parse(localRaw);
-      if(local.homeLogo) localLogos.homeLogo = local.homeLogo;
-      if(local.awayLogo) localLogos.awayLogo = local.awayLogo;
+if (useFirebase && db) {
+  setLiveStatus('connecting');
+  db.ref(`states/${currentUser}`).once('value').then(snapshot => {
+    const data = snapshot.val();
+    let localLogos = {};
+    try {
+      const localRaw = localStorage.getItem('bball_v3');
+      if(localRaw){
+        const local = JSON.parse(localRaw);
+        if(local.homeLogo) localLogos.homeLogo = local.homeLogo;
+        if(local.awayLogo) localLogos.awayLogo = local.awayLogo;
+      }
+    } catch(e){}
+    if (data) {
+      S = {...DEF, ...data};
+    } else {
+      db.ref(`states/${currentUser}`).set(S);
     }
-  } catch(e){}
-  if(Object.keys(data).length){ S={...DEF,...data}; }
-  // Merge logos back in — server always has null for logos
-  if(localLogos.homeLogo) S.homeLogo = localLogos.homeLogo;
-  if(localLogos.awayLogo) S.awayLogo = localLogos.awayLogo;
-  if(S.gameRunning) startLocalGameTick();
-  if(S.shotRunning) startLocalShotTick();
-  renderAll();
-}).catch(()=>{
-  // No server — fall back to full localStorage state
-  try {
-    const localRaw = localStorage.getItem('bball_v3');
-    if(localRaw){ S={...DEF,...JSON.parse(localRaw)}; S.gameRunning=false; S.shotRunning=false; }
-  } catch(e){}
-  renderAll();
-}).finally(()=>{ connectSSE(); });
+    if(localLogos.homeLogo) S.homeLogo = localLogos.homeLogo;
+    if(localLogos.awayLogo) S.awayLogo = localLogos.awayLogo;
+    if(S.gameRunning) startLocalGameTick();
+    if(S.shotRunning) startLocalShotTick();
+    renderAll();
+    setLiveStatus('connected');
+  }).catch((err)=>{
+    console.error("Firebase load failed:", err);
+    try {
+      const localRaw = localStorage.getItem('bball_v3');
+      if(localRaw){ S={...DEF,...JSON.parse(localRaw)}; S.gameRunning=false; S.shotRunning=false; }
+    } catch(e){}
+    renderAll();
+    setLiveStatus('offline');
+  }).finally(()=>{ connectSSE(); });
+} else {
+  setLiveStatus('connecting');
+  fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`).then(r=>r.json()).then(data=>{
+    let localLogos = {};
+    try {
+      const localRaw = localStorage.getItem('bball_v3');
+      if(localRaw){
+        const local = JSON.parse(localRaw);
+        if(local.homeLogo) localLogos.homeLogo = local.homeLogo;
+        if(local.awayLogo) localLogos.awayLogo = local.awayLogo;
+      }
+    } catch(e){}
+    if(Object.keys(data).length){ S={...DEF,...data}; }
+    if(localLogos.homeLogo) S.homeLogo = localLogos.homeLogo;
+    if(localLogos.awayLogo) S.awayLogo = localLogos.awayLogo;
+    if(S.gameRunning) startLocalGameTick();
+    if(S.shotRunning) startLocalShotTick();
+    renderAll();
+  }).catch(()=>{
+    try {
+      const localRaw = localStorage.getItem('bball_v3');
+      if(localRaw){ S={...DEF,...JSON.parse(localRaw)}; S.gameRunning=false; S.shotRunning=false; }
+    } catch(e){}
+    renderAll();
+  }).finally(()=>{ connectSSE(); });
+}
 
 // SSE — server pushes state every second while clocks run, instantly on any action
 function connectSSE(){
+  if (useFirebase && db) {
+    db.ref(`states/${currentUser}`).on('value', snapshot => {
+      const d = snapshot.val();
+      if (!d) return;
+      
+      const now = Date.now();
+      const sinceClockCmd = now - _lastClockCmd;
+      const sinceStateCmd = now - _lastStateCmd;
+
+      if(sinceClockCmd < 1500){
+        d.gameRunning = S.gameRunning;
+        d.shotRunning = S.shotRunning;
+      }
+
+      if(!d.gameRunning) stopLocalGameTick();
+      if(!d.shotRunning) stopLocalShotTick();
+
+      if(sinceStateCmd < 1200){
+        d.homeScore  = S.homeScore;
+        d.awayScore  = S.awayScore;
+        d.homeFouls  = S.homeFouls;
+        d.awayFouls  = S.awayFouls;
+        d.possession = S.possession;
+        d.quarter    = S.quarter;
+        d.homeColor  = S.homeColor;
+        d.awayColor  = S.awayColor;
+      }
+
+      const prevHomeLogo    = S.homeLogo;
+      const prevAwayLogo    = S.awayLogo;
+
+      S = {...DEF, ...d};
+      if(!S.homeLogo && prevHomeLogo) S.homeLogo = prevHomeLogo;
+      if(!S.awayLogo && prevAwayLogo) S.awayLogo = prevAwayLogo;
+      
+      stopLocalGameTick(); stopLocalShotTick();
+      if(S.gameRunning) startLocalGameTick();
+      if(S.shotRunning) startLocalShotTick();
+      renderAll();
+    });
+
+    db.ref(`buzz/${currentUser}`).on('value', snapshot => {
+      const msg = snapshot.val();
+      if (!msg) return;
+      const sinceLocal = Date.now() - _lastLocalBuzz;
+      if(sinceLocal > 600 && msg.timestamp > (window.lastBuzzTime || 0)) {
+        window.lastBuzzTime = msg.timestamp;
+        if(msg.kind === 'game') playGameBuzzer();
+        else playShotBuzzer();
+      }
+    });
+    return;
+  }
+
   setLiveStatus('connecting');
   const es = new EventSource(`${SERVER_URL}/events?user=${encodeURIComponent(currentUser)}`);
   es.onopen = () => setLiveStatus('connected');
@@ -1509,19 +1727,14 @@ function connectSSE(){
         const sinceClockCmd = now - _lastClockCmd;
         const sinceStateCmd = now - _lastStateCmd;
 
-        // Within 1500ms of a clock command, protect only the running flags
-        // so buttons don't flicker — but always accept server's time values
         if(sinceClockCmd < 1500){
           d.gameRunning = S.gameRunning;
           d.shotRunning = S.shotRunning;
         }
 
-        // Stop local ticks before snapping to server values to prevent double-decrement
         if(!d.gameRunning) stopLocalGameTick();
         if(!d.shotRunning) stopLocalShotTick();
 
-        // Within 1200ms of a score/foul/state change, keep our local non-clock values
-        // so the 1-second SSE tick can't roll back a score press
         if(sinceStateCmd < 1200){
           d.homeScore  = S.homeScore;
           d.awayScore  = S.awayScore;
@@ -1533,26 +1746,19 @@ function connectSSE(){
           d.awayColor  = S.awayColor;
         }
 
-        // Save current logos before overwriting S
         const prevHomeLogo    = S.homeLogo;
         const prevAwayLogo    = S.awayLogo;
-        const prevHomeLogoTs  = S.homeLogoTs;
-        const prevAwayLogoTs  = S.awayLogoTs;
 
         S = {...DEF, ...d};
-        // Full logos are never in SSE state (too large) — preserve the local high-res copy.
-        // Thumbnails (homeLogoThumb/awayLogoThumb) travel via state and are already in d.
         if(!S.homeLogo && prevHomeLogo) S.homeLogo = prevHomeLogo;
         if(!S.awayLogo && prevAwayLogo) S.awayLogo = prevAwayLogo;
-        // Always resync local tick phases to prevent double-decrement drift
         stopLocalGameTick(); stopLocalShotTick();
         if(S.gameRunning) startLocalGameTick();
         if(S.shotRunning) startLocalShotTick();
         renderAll();
       } else if(msg.type === 'buzz') {
-        // Play audio directly — never call triggerBuzz() here or it re-broadcasts and loops
         const sinceLocal = Date.now() - _lastLocalBuzz;
-        if(sinceLocal > 600){ // skip echo of our own ref-buzzer click
+        if(sinceLocal > 600){
           if(msg.kind === 'game') playGameBuzzer();
           else playShotBuzzer();
         }

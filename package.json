@@ -1,7 +1,7 @@
 {
   "name": "basketball-scoreboard",
-  "version": "1.0.0",
-  "description": "Live basketball scoreboard sync server",
+  "version": "2.0.0",
+  "description": "Hoop Culture live basketball scoreboard — tri-mode: offline local, Vercel + Firebase serverless, OnRender full-stack cloud",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

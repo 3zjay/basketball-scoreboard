@@ -7,6 +7,10 @@
     window.location.href = '/login?redirect=' + encodeURIComponent(currentPath);
   }
 </script>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script src="/firebase-config.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Shot Clock Operator</title>
@@ -296,6 +300,35 @@ const SERVER_URL = (
 const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
 
+// ── Firebase Environment Detection ──
+const useFirebase = window.location.hostname.includes('vercel.app');
+let db = null;
+if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+}
+
+// Warn if using Vercel but Firebase isn't configured
+window.addEventListener('DOMContentLoaded', () => {
+  if (useFirebase && !isFirebaseConfigured) {
+    const banner = document.createElement('div');
+    banner.style.position = 'fixed';
+    banner.style.top = '0';
+    banner.style.left = '0';
+    banner.style.right = '0';
+    banner.style.background = '#e53935';
+    banner.style.color = '#fff';
+    banner.style.textAlign = 'center';
+    banner.style.padding = '12px';
+    banner.style.zIndex = '10000';
+    banner.style.fontFamily = 'sans-serif';
+    banner.style.fontSize = '14px';
+    banner.style.fontWeight = 'bold';
+    banner.innerHTML = '⚠️ Firebase is not configured! Please set up your Firebase project credentials in <strong>firebase-config.js</strong> to enable Vercel Cloud Sync.';
+    document.body.appendChild(banner);
+  }
+});
+
 function logout() {
   localStorage.removeItem('hc_session_user');
   window.location.href = '/login';
@@ -350,8 +383,22 @@ function renderClock() {
 function startLocalTick() {
   if (_localTick) return;
   _localTick = setInterval(() => {
-    if (shotRunning && shotSeconds > 0) { shotSeconds--; renderClock(); }
-    else { stopLocalTick(); }
+    if (shotRunning && shotSeconds > 0) { 
+      shotSeconds--; 
+      renderClock(); 
+      if (useFirebase && db) {
+        db.ref(`states/${currentUser}`).update({ shotSeconds: shotSeconds });
+      }
+    }
+    else { 
+      stopLocalTick(); 
+      if (useFirebase && shotSeconds === 0 && shotRunning) {
+        soundBuzzer();
+        setTimeout(() => {
+          resetShot(24);
+        }, 500);
+      }
+    }
   }, 1000);
 }
 function stopLocalTick() {
@@ -362,11 +409,40 @@ function stopLocalTick() {
 function cmd(command, seconds) {
   _lastCmd = Date.now();
   const body = seconds != null ? { cmd: command, seconds } : { cmd: command };
+  if (useFirebase && db) {
+    handleLocalCommand(command, seconds);
+    return;
+  }
   fetch(`${SERVER_URL}/cmd?user=${encodeURIComponent(currentUser)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   }).catch(() => {});
+}
+
+function handleLocalCommand(command, seconds) {
+  if (command === 'shot_start') {
+    shotRunning = true;
+    startLocalTick();
+  } else if (command === 'shot_stop') {
+    shotRunning = false;
+    stopLocalTick();
+  } else if (command === 'shot_reset') {
+    shotRunning = false;
+    stopLocalTick();
+    shotSeconds = seconds || 24;
+    shotRunning = true;
+    startLocalTick();
+  }
+  
+  renderClock();
+  
+  if (db) {
+    db.ref(`states/${currentUser}`).update({
+      shotSeconds: shotSeconds,
+      shotRunning: shotRunning
+    }).catch(e => console.error(e));
+  }
 }
 
 // ── Button actions ──
@@ -394,8 +470,15 @@ function resetShotCustom(e) {
 }
 
 function soundBuzzer(e) {
-  ripple(e, document.getElementById('buzzerBtn'));
+  if (e) ripple(e, document.getElementById('buzzerBtn'));
   playBuzz();
+  if (useFirebase && db) {
+    db.ref(`buzz/${currentUser}`).set({
+      kind: 'shot',
+      timestamp: Date.now()
+    }).catch(e => console.error(e));
+    return;
+  }
   fetch(`${SERVER_URL}/buzz?user=${encodeURIComponent(currentUser)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -431,6 +514,32 @@ function playBuzz() { const a = new Audio('/buzzer.mp3'); a.volume = 1; a.play()
 
 // ── SSE ──
 function connectSSE() {
+  if (useFirebase && db) {
+    setConnected(true);
+    db.ref(`states/${currentUser}`).on('value', snapshot => {
+      const d = snapshot.val();
+      if (!d) return;
+      const since = Date.now() - _lastCmd;
+      shotSeconds = d.shotSeconds != null ? d.shotSeconds : shotSeconds;
+      if (since > 500) {
+        shotRunning = !!d.shotRunning;
+      }
+      stopLocalTick();
+      if (shotRunning) startLocalTick();
+      renderClock();
+    });
+    
+    db.ref(`buzz/${currentUser}`).on('value', snapshot => {
+      const msg = snapshot.val();
+      if (!msg) return;
+      if (msg.kind === 'shot' && msg.timestamp > (window.lastBuzzTime || 0)) {
+        window.lastBuzzTime = msg.timestamp;
+        playBuzz();
+      }
+    });
+    return;
+  }
+
   setConnected(false);
   const es = new EventSource(`${SERVER_URL}/events?user=${encodeURIComponent(currentUser)}`);
   es.onopen = () => setConnected(true);
@@ -440,12 +549,10 @@ function connectSSE() {
       if (msg.type === 'state') {
         const d = msg.data;
         const since = Date.now() - _lastCmd;
-        // Always update time; only suppress running flag briefly after a tap
         shotSeconds = d.shotSeconds != null ? d.shotSeconds : shotSeconds;
         if (since > 500) {
           shotRunning = !!d.shotRunning;
         }
-        // Always resync local tick phase to server to prevent double-decrement drift
         stopLocalTick();
         if (shotRunning) startLocalTick();
         renderClock();
@@ -461,12 +568,27 @@ function connectSSE() {
 }
 
 // ── Init ──
-fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`).then(r => r.json()).then(d => {
-  if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
-  shotRunning = !!d.shotRunning;
-  if (shotRunning) startLocalTick();
-  renderClock();
-}).catch(() => {}).finally(() => connectSSE());
+if (useFirebase && db) {
+  setConnected(true);
+  db.ref(`states/${currentUser}`).once('value').then(snapshot => {
+    const d = snapshot.val();
+    if (d) {
+      if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
+      shotRunning = !!d.shotRunning;
+    }
+    if (shotRunning) startLocalTick();
+    renderClock();
+  }).catch(() => {
+    renderClock();
+  }).finally(() => connectSSE());
+} else {
+  fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`).then(r => r.json()).then(d => {
+    if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
+    shotRunning = !!d.shotRunning;
+    if (shotRunning) startLocalTick();
+    renderClock();
+  }).catch(() => {}).finally(() => connectSSE());
+}
 </script>
 </body>
 </html>
