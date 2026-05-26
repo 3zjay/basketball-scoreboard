@@ -1,5 +1,8 @@
 {
   "cleanUrls": false,
+  "builds": [
+    { "src": "**", "use": "@vercel/static" }
+  ],
   "rewrites": [
     { "source": "/", "destination": "/landing.html" },
     { "source": "/landing", "destination": "/landing.html" },
