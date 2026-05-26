@@ -1,4 +1,4 @@
-﻿Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 
@@ -533,7 +533,8 @@ $pages = @(
     @{ Label="🎥 OBS Bar Overlay";    Path="overlay";        HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) }, # purple
     @{ Label="🎥 OBS Fullscreen";     Path="fullscreen";     HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) },
     @{ Label="🏀 NBA Scorebug";       Path="nbaoverlay";     HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) },
-    @{ Label="🏀 NBA Scorebug 2";     Path="nbaoverlay2";    HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) }
+    @{ Label="🏀 NBA Scorebug 2";     Path="nbaoverlay2";    HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) },
+    @{ Label="📺 NBA – NBC Overlay";  Path="nbc";            HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) }
 )
 
 $BH  = 44   # button height
