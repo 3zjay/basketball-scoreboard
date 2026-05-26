@@ -704,7 +704,7 @@
         
         <!-- Column 1: Vercel Web Controller -->
         <div class="node-col">
-          <span class="node-badge badge-vercel">VERCEL FRONTEND</span>
+          <span class="node-badge badge-vercel">VERCEL OPERATOR</span>
           <div class="mockup-frame tablet-frame" style="border-color: #2b1f3c;">
             <div class="tablet-screen" style="background: #090610; border-color: #2b1f4c;">
               <div class="screen-header" style="border-color: #201332; color: var(--purple);">
@@ -714,94 +714,94 @@
               <div style="text-align: center;">
                 <span style="font-size: 6px; color: #a855f7; letter-spacing: 0.5px; text-transform: uppercase;">user: admin@hoopculture.ca</span>
                 <div class="screen-clock" style="color: #fff; text-shadow: 0 0 10px rgba(168, 85, 247, 0.4);">12:34</div>
-                <span style="font-size: 8px; color: #a855f7; font-weight: bold; text-transform: uppercase;">Q4 - PERIOD 2</span>
+                <span style="font-size: 8px; color: #a855f7; font-weight: bold; text-transform: uppercase;">Q4 — PERIOD 2</span>
               </div>
               <div>
                 <div class="screen-scores">
                   <div class="screen-btn" style="background: var(--purple);">HOME +</div>
                   <div class="screen-btn guest" style="background: var(--blue);">GUEST -</div>
                 </div>
-                <div class="screen-footer-btn" style="background: #1c0e2a; color: #c084fc;">LOGOUT</div>
+                <div class="screen-footer-btn" style="background: #1c0e2a; color: #c084fc;">🔥 FIREBASE SYNCED</div>
               </div>
             </div>
           </div>
           <h3 class="node-title">Vercel Controller</h3>
-          <p class="node-subtitle">VERCEL.APP (CROSS-ORIGIN)</p>
+          <p class="node-subtitle">VERCEL.APP — STATELESS EDGE</p>
         </div>
 
         <!-- Connector 1 -->
         <div class="connector-col">
-          <span class="connector-label-top" style="color: var(--purple);">CROSS-ORIGIN API</span>
+          <span class="connector-label-top" style="color: var(--purple);">WRITES STATE</span>
           <div class="connector-arrow">
             <svg class="connector-arrow-svg cloud-purple" viewBox="0 0 24 24">
               <line x1="2" y1="12" x2="22" y2="12"></line>
               <polyline points="14 6 22 12 14 18"></polyline>
             </svg>
           </div>
-          <span class="connector-label-bottom" style="color: var(--purple);">ONRENDER REQUESTS</span>
+          <span class="connector-label-bottom" style="color: var(--purple);">RTDB PUSH</span>
         </div>
 
-        <!-- Column 2: OnRender Server Brain -->
+        <!-- Column 2: Firebase Realtime Database -->
         <div class="node-col">
-          <span class="node-badge badge-onrender">ONRENDER BACKEND</span>
+          <span class="node-badge" style="background:rgba(255,160,0,0.1);color:#ffb300;border:1px solid rgba(255,160,0,0.25);">🔥 FIREBASE RTDB</span>
           <div style="display: flex; flex-direction: column; align-items: center;">
-            <div class="mockup-frame laptop-frame" style="width: 240px; height: 150px; padding: 12px 16px; border-color: #152c28;">
-              <div class="laptop-screen" style="background: #020617; border-color: #1e293b; padding: 8px; display: flex; flex-direction: column; justify-content: space-between;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 4px; margin-bottom: 4px;">
-                  <span style="color: var(--teal); font-size: 8px; font-weight: bold; letter-spacing: 0.5px;">☁️ ONRENDER SYSTEM</span>
-                  <span style="color: #22c55e; font-size: 7px; animation: pulse 1.5s infinite;">● ONLINE</span>
+            <div class="mockup-frame laptop-frame" style="width: 240px; height: 150px; padding: 12px 16px; border-color: #2a1e00;">
+              <div class="laptop-screen" style="background: #0d0900; border-color: #2a1a00; padding: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a1a00; padding-bottom: 4px; margin-bottom: 4px;">
+                  <span style="color: #ffb300; font-size: 8px; font-weight: bold; letter-spacing: 0.5px;">🔥 FIREBASE CLOUD</span>
+                  <span style="color: #22c55e; font-size: 7px; animation: pulse 1.5s infinite;">● LIVE SYNC</span>
                 </div>
                 <div style="flex: 1; font-family: monospace; font-size: 7px; color: #94a3b8; line-height: 1.35;">
-                  <span style="color: var(--teal);">$ node server.js</span><br>
-                  <span class="log-white">Server ready: port 443 (CORS: *)</span><br>
-                  <span style="color: #c084fc;">[API] Command from Vercel</span><br>
-                  <span class="log-orange">&gt; [admin@hoopculture.ca] state update</span><br>
-                  <span class="log-dim">&gt; Broadcasting to SSE channels...</span>
+                  <span style="color: #ffb300;">states/default/</span><br>
+                  <span class="log-white">homeScore: 24 | awayScore: 17</span><br>
+                  <span style="color: #a855f7;">gameSeconds: 495 | Q: 2</span><br>
+                  <span class="log-orange;">shotSeconds: 14 | running: true</span><br>
+                  <span class="log-dim">&gt; Real-time push to subscribers...</span>
                 </div>
               </div>
             </div>
-            <div style="width: 270px; height: 12px; background: #132522; border-radius: 0 0 6px 6px; box-shadow: 0 8px 16px rgba(0,0,0,0.6); margin-bottom: 1rem;"></div>
+            <div style="width: 270px; height: 12px; background: #1a1000; border-radius: 0 0 6px 6px; box-shadow: 0 8px 16px rgba(0,0,0,0.6); margin-bottom: 1rem;"></div>
           </div>
-          <h3 class="node-title">OnRender Cloud Brain</h3>
-          <p class="node-subtitle">ONRENDER.COM (SSE HOST)</p>
+          <h3 class="node-title">Firebase Database</h3>
+          <p class="node-subtitle">GOOGLE CLOUD — REALTIME SYNC</p>
         </div>
 
         <!-- Connector 2 -->
         <div class="connector-col">
-          <span class="connector-label-top" style="color: var(--pink);">CROSS-ORIGIN FEED</span>
+          <span class="connector-label-top" style="color: #ffb300;">LIVE STREAM</span>
           <div class="connector-arrow">
-            <svg class="connector-arrow-svg cloud-purple" viewBox="0 0 24 24" style="stroke: var(--pink); filter: drop-shadow(0 0 6px rgba(236, 72, 153, 0.5));">
+            <svg class="connector-arrow-svg" viewBox="0 0 24 24" style="stroke: #ffb300; filter: drop-shadow(0 0 6px rgba(255,160,0,0.6));">
               <line x1="2" y1="12" x2="22" y2="12"></line>
               <polyline points="14 6 22 12 14 18"></polyline>
             </svg>
           </div>
-          <span class="connector-label-bottom" style="color: var(--pink);">SSE EVENTS</span>
+          <span class="connector-label-bottom" style="color: #ffb300;">RTDB SUBSCRIBE</span>
         </div>
 
-        <!-- Column 3: Remote OBS Display -->
+        <!-- Column 3: Remote OBS Display —Firebase powered -->
         <div class="node-col">
-          <span class="node-badge badge-remote">REMOTE DISPLAY</span>
+          <span class="node-badge badge-vercel">VERCEL OVERLAY</span>
           <div style="display: flex; flex-direction: column; align-items: center;">
-            <div class="mockup-frame tv-frame" style="border-color: #38202d;">
-              <div class="tv-screen" style="background: #0d050a; border-color: #3b1c2d;">
-                <div class="tv-overlay-title" style="color: var(--pink);">🔴 REMOTE OVERLAY (?user=...)</div>
-                <div class="tv-overlay-content" style="background: #180914; border-color: #3c1a2d;">
+            <div class="mockup-frame tv-frame" style="border-color: #2b1f3c;">
+              <div class="tv-screen" style="background: #090610; border-color: #2b1f4c;">
+                <div class="tv-overlay-title" style="color: var(--purple);">🔴 FIREBASE LIVE (?user=...)</div>
+                <div class="tv-overlay-content" style="background: #100820; border-color: #2b1f4c;">
                   <div class="tv-team">
                     <span class="tv-team-name">BEARS</span>
-                    <span class="tv-team-score red" style="color: var(--pink);">24</span>
+                    <span class="tv-team-score red" style="color: #a855f7;">24</span>
                   </div>
-                  <div class="tv-clock" style="color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.4);">08:15</div>
+                  <div class="tv-clock" style="color: #fff; text-shadow: 0 0 8px rgba(168,85,247,0.5);">08:15</div>
                   <div class="tv-team">
                     <span class="tv-team-name">LIONS</span>
-                    <span class="tv-team-score blue" style="color: var(--purple);">17</span>
+                    <span class="tv-team-score blue" style="color: #c084fc;">17</span>
                   </div>
                 </div>
               </div>
             </div>
-            <div class="tv-base" style="background: #391a2a;"></div>
+            <div class="tv-base" style="background: #2b1f3c;"></div>
           </div>
           <h3 class="node-title">OBS Overlay / TV</h3>
-          <p class="node-subtitle">GLOBAL LIVE EVENT STREAM</p>
+          <p class="node-subtitle">SYNCED VIA FIREBASE — GLOBAL</p>
         </div>
 
         <!-- Vercel Footer Benefits -->
@@ -811,12 +811,12 @@
             Vercel Global CDN Edge
           </div>
           <div class="feature-item">
-            <span class="feature-dot purple"></span>
-            Cross-Origin API Syncing
+            <span class="feature-dot" style="background:#ffb300;box-shadow:0 0 8px #ffb300;"></span>
+            Firebase Realtime Database Sync
           </div>
           <div class="feature-item">
             <span class="feature-dot purple"></span>
-            Multi-User State Isolation
+            No Server — Fully Serverless
           </div>
         </footer>
 
