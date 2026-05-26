@@ -788,9 +788,9 @@ body.light .reset-btn:hover { background:#fee2e2; }
 </div>
 
 <div class="footer">
-  OBS Bar → <a href="https://basketball-scoreboard-o0c7.onrender.com/overlay" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/overlay</a> → 1920 × 160
+  OBS Bar → <a id="obsBarLink" href="https://basketball-scoreboard-o0c7.onrender.com/overlay" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/overlay</a> → 1920 × 160
   &nbsp;·&nbsp;
-  Venue Display → <a href="https://basketball-scoreboard-o0c7.onrender.com/display" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/display</a>
+  Venue Display → <a id="venueDisplayLink" href="https://basketball-scoreboard-o0c7.onrender.com/display" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/display</a>
   <br style="margin-top:8px;">
   <span style="color:var(--text2);font-size:10px;letter-spacing:1px;">
     ⌨️ &nbsp;HOME: <span style="color:var(--accent)">Q</span>+1 &nbsp;<span style="color:var(--accent)">W</span>+2 &nbsp;<span style="color:var(--accent)">E</span>+3 &nbsp;<span style="color:var(--accent)">A</span>−1 &nbsp;<span style="color:var(--accent)">S</span>−2 &nbsp;&nbsp;
@@ -839,6 +839,23 @@ if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
 
 // Warn if using Vercel but Firebase isn't configured
 window.addEventListener('DOMContentLoaded', () => {
+  // Update footer links dynamically to match current environment and user parameter
+  const origin = window.location.origin;
+  const suffix = `?user=${encodeURIComponent(currentUser)}`;
+  
+  const obsLink = document.getElementById('obsBarLink');
+  if (obsLink) {
+    const url = `${origin}/overlay${suffix}`;
+    obsLink.href = url;
+    obsLink.textContent = url;
+  }
+  const venueLink = document.getElementById('venueDisplayLink');
+  if (venueLink) {
+    const url = `${origin}/display${suffix}`;
+    venueLink.href = url;
+    venueLink.textContent = url;
+  }
+
   if (useFirebase && !isFirebaseConfigured) {
     const banner = document.createElement('div');
     banner.style.position = 'fixed';
