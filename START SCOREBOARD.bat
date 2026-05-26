@@ -28,11 +28,10 @@ if %errorlevel% neq 0 (
     exit /b
 )
 
-:: Check if the repo folder exists
-if not exist "C:\basketball-scoreboard\server.js" (
-    echo ERROR: C:\basketball-scoreboard\server.js not found.
-    echo Make sure you cloned the repo to C:\basketball-scoreboard
-    echo Run: git clone https://github.com/3zjay/basketball-scoreboard.git C:\basketball-scoreboard
+:: Check if server.js exists next to this bat file
+if not exist "%~dp0server.js" (
+    echo ERROR: server.js not found in %~dp0
+    echo Make sure all scoreboard files are in the same folder.
     pause
     exit /b
 )
