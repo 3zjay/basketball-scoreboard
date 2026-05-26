@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Shot Clock Display</title>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script src="/firebase-config.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Teko:wght@700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
@@ -149,6 +153,16 @@ const SERVER_URL = (
   window.location.hostname.includes('onrender.com')
 ) ? '' : 'https://basketball-scoreboard-o0c7.onrender.com';
 
+const useFirebase = window.location.hostname.includes('vercel.app') ||
+                    window.location.hostname.includes('vercel.sh');
+let db = null;
+if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+  } catch(e) { console.warn('Firebase init failed:', e); }
+}
+
 const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || 'default';
 
@@ -205,7 +219,26 @@ function render() {
 }
 
 // ── SSE ── Server pushes every second — no local tick needed ──
+let _lastBuzzTime = 0;
 function connectSSE() {
+  if (useFirebase && db) {
+    const ns = document.getElementById('noSignal');
+    ns.classList.remove('show');
+    db.ref(`states/${currentUser}`).on('value', snapshot => {
+      const d = snapshot.val();
+      if (!d) return;
+      if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
+      shotRunning = !!d.shotRunning;
+      render();
+    });
+    db.ref(`buzz/${currentUser}`).on('value', snapshot => {
+      const msg = snapshot.val();
+      if (!msg || msg.timestamp <= _lastBuzzTime) return;
+      _lastBuzzTime = msg.timestamp;
+      if (msg.kind === 'shot') playBuzz();
+    });
+    return;
+  }
   const ns = document.getElementById('noSignal');
   ns.classList.add('show');
 
@@ -251,15 +284,26 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 // ── Init ──
-fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`)
-  .then(r => r.json())
-  .then(d => {
-    if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
-    shotRunning = !!d.shotRunning;
-    render();
-  })
-  .catch(() => {})
-  .finally(() => connectSSE());
+if (useFirebase && db) {
+  db.ref(`states/${currentUser}`).once('value').then(d => {
+    const data = d.val();
+    if (data) {
+      if (data.shotSeconds != null) shotSeconds = data.shotSeconds;
+      shotRunning = !!data.shotRunning;
+      render();
+    }
+  }).catch(() => {}).finally(() => connectSSE());
+} else {
+  fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`)
+    .then(r => r.json())
+    .then(d => {
+      if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
+      shotRunning = !!d.shotRunning;
+      render();
+    })
+    .catch(() => {})
+    .finally(() => connectSSE());
+}
 </script>
 </body>
 </html>

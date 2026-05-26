@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <title>Live Scoreboard Overlay – Fullscreen</title>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script src="/firebase-config.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
@@ -211,6 +215,16 @@ const SERVER_URL = (
   window.location.hostname.includes('onrender.com')
 ) ? '' : 'https://basketball-scoreboard-o0c7.onrender.com';
 
+const useFirebase = window.location.hostname.includes('vercel.app') ||
+                    window.location.hostname.includes('vercel.sh');
+let db = null;
+if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+  } catch(e) { console.warn('Firebase init failed:', e); }
+}
+
 const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || 'default';
 
@@ -290,7 +304,23 @@ window.addEventListener('load', () => {
 function playGameBuzzer(){ const a=new Audio('/buzzer.mp3'); a.volume=1.0; a.play().catch(()=>{}); }
 function playShotBuzzer(){ const a=new Audio('/buzzer.mp3'); a.volume=1.0; a.play().catch(()=>{}); }
 
+let _lastBuzzTime = 0;
+
 function connectSSE(){
+  if (useFirebase && db) {
+    db.ref(`states/${currentUser}`).on('value', snapshot => {
+      const d = snapshot.val();
+      if (!d) return;
+      stopLocalTick(); S={...DEF,...d}; render(); syncLocalTick();
+    });
+    db.ref(`buzz/${currentUser}`).on('value', snapshot => {
+      const msg = snapshot.val();
+      if (!msg || msg.timestamp <= _lastBuzzTime) return;
+      _lastBuzzTime = msg.timestamp;
+      if(msg.kind==='game') playGameBuzzer(); else playShotBuzzer();
+    });
+    return;
+  }
   const es=new EventSource(`${SERVER_URL}/events?user=${encodeURIComponent(currentUser)}`);
   es.onmessage=(e)=>{
     try {
@@ -302,9 +332,16 @@ function connectSSE(){
   es.onerror=()=>{ es.close(); setTimeout(connectSSE,2000); };
 }
 
-fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`).then(r=>r.json()).then(data=>{
-  if(Object.keys(data).length){ S={...DEF,...data}; render(); syncLocalTick(); }
-}).catch(()=>{}).finally(()=>{ connectSSE(); });
+if (useFirebase && db) {
+  db.ref(`states/${currentUser}`).once('value').then(snapshot => {
+    const data = snapshot.val();
+    if (data) { S={...DEF,...data}; render(); syncLocalTick(); }
+  }).catch(()=>{}).finally(()=>{ connectSSE(); });
+} else {
+  fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`).then(r=>r.json()).then(data=>{
+    if(Object.keys(data).length){ S={...DEF,...data}; render(); syncLocalTick(); }
+  }).catch(()=>{}).finally(()=>{ connectSSE(); });
+}
 </script>
 </body>
 </html>
