@@ -167,6 +167,24 @@ const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
 const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 
+let _lastLocalMsgTime = 0;
+const bc = new BroadcastChannel('hc_scoreboard_sync');
+bc.onmessage = (e) => {
+  const msg = e.data;
+  if (!msg || msg.user !== fbUser) return;
+  _lastLocalMsgTime = Date.now();
+  if (msg.type === 'state') {
+    if (msg.data.shotSeconds != null) shotSeconds = msg.data.shotSeconds;
+    shotRunning = !!msg.data.shotRunning;
+    render();
+  } else if (msg.type === 'buzz') {
+    if (msg.kind === 'shot' && msg.timestamp > _lastBuzzTime) {
+      _lastBuzzTime = msg.timestamp;
+      playBuzz();
+    }
+  }
+};
+
 let shotSeconds = 24;
 let shotRunning = false;
 
@@ -226,6 +244,7 @@ function connectSSE() {
     const ns = document.getElementById('noSignal');
     ns.classList.remove('show');
     db.ref(`states/${fbUser}`).on('value', snapshot => {
+      if (Date.now() - _lastLocalMsgTime < 2000) return;
       const d = snapshot.val();
       if (!d) return;
       if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
@@ -233,6 +252,7 @@ function connectSSE() {
       render();
     });
     db.ref(`buzz/${fbUser}`).on('value', snapshot => {
+      if (Date.now() - _lastLocalMsgTime < 2000) return;
       const msg = snapshot.val();
       if (!msg || msg.timestamp <= _lastBuzzTime) return;
       _lastBuzzTime = msg.timestamp;
@@ -251,11 +271,13 @@ function connectSSE() {
     try {
       const msg = JSON.parse(e.data);
       if (msg.type === 'state') {
+        if (Date.now() - _lastLocalMsgTime < 2000) return;
         const d = msg.data;
         shotSeconds = d.shotSeconds != null ? d.shotSeconds : shotSeconds;
         shotRunning = !!d.shotRunning;
         render();
       } else if (msg.type === 'buzz' && msg.kind === 'shot') {
+        if (Date.now() - _lastLocalMsgTime < 2000) return;
         playBuzz();
       }
     } catch (_) {}

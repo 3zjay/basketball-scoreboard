@@ -251,6 +251,25 @@ const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
 const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 
+let _lastLocalMsgTime = 0;
+const bc = new BroadcastChannel('hc_scoreboard_sync');
+bc.onmessage = (e) => {
+  const msg = e.data;
+  if (!msg || msg.user !== fbUser) return;
+  _lastLocalMsgTime = Date.now();
+  if (msg.type === 'state') {
+    stopLocalTick();
+    S = { ...S, ...msg.data };
+    render();
+    syncLocalTick();
+  } else if (msg.type === 'buzz') {
+    if (msg.timestamp > _lastBuzzTime) {
+      _lastBuzzTime = msg.timestamp;
+      if (msg.kind === 'game') playGameBuzzer(); else playShotBuzzer();
+    }
+  }
+};
+
 const DEF = {
   homeScore:0, awayScore:0,
   homeAbbr:'HOME', homeRecord:'0-0', homeColor:'#f5c842', homeLogo:null,
@@ -349,11 +368,13 @@ let _lastBuzzTime = 0;
 function connectSSE() {
   if (useFirebase && db) {
     db.ref(`states/${fbUser}`).on('value', snapshot => {
+      if (Date.now() - _lastLocalMsgTime < 2000) return;
       const d = snapshot.val();
       if (!d) return;
       stopLocalTick(); S={...DEF,...d}; render(); syncLocalTick();
     });
     db.ref(`buzz/${fbUser}`).on('value', snapshot => {
+      if (Date.now() - _lastLocalMsgTime < 2000) return;
       const msg = snapshot.val();
       if (!msg || msg.timestamp <= _lastBuzzTime) return;
       _lastBuzzTime = msg.timestamp;
@@ -365,8 +386,14 @@ function connectSSE() {
   es.onmessage = (e) => {
     try {
       const msg = JSON.parse(e.data);
-      if(msg.type === 'buzz'){ if(msg.kind==='game') playGameBuzzer(); else playShotBuzzer(); }
-      else if(msg.type === 'state'){ stopLocalTick(); S={...DEF,...msg.data}; render(); syncLocalTick(); }
+      if(msg.type === 'buzz'){
+        if (Date.now() - _lastLocalMsgTime < 2000) return;
+        if(msg.kind==='game') playGameBuzzer(); else playShotBuzzer();
+      }
+      else if(msg.type === 'state'){
+        if (Date.now() - _lastLocalMsgTime < 2000) return;
+        stopLocalTick(); S={...DEF,...msg.data}; render(); syncLocalTick();
+      }
     } catch(err) {}
   };
   es.onerror = () => { es.close(); setTimeout(connectSSE, 2000); };

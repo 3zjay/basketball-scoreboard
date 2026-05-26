@@ -828,6 +828,11 @@ const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_us
 // Firebase-safe key (Firebase paths cannot contain ".", "#", "$", "[", or "]")
 const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 
+const bc = new BroadcastChannel('hc_scoreboard_sync');
+function broadcastState() {
+  bc.postMessage({ type: 'state', user: fbUser, data: S });
+}
+
 // ── Firebase Environment Detection ──
 const useFirebase = window.location.hostname.includes('vercel.app') ||
                     window.location.hostname.includes('vercel.sh');
@@ -918,6 +923,9 @@ function pushState(){
   delete toSend.gameRunning; delete toSend.shotRunning;
   delete toSend.gameSeconds; delete toSend.shotSeconds;
 
+  // Local sync
+  broadcastState();
+
   if (useFirebase && db) {
     db.ref(`states/${fbUser}`).update(toSend).catch(e => console.error(e));
     return;
@@ -987,6 +995,9 @@ function handleLocalCommand(command, seconds) {
   renderShotClock();
   renderAll();
   
+  // Local sync
+  broadcastState();
+
   if (db) {
     db.ref(`states/${fbUser}`).set(S).catch(e => console.error(e));
   }
@@ -1291,11 +1302,13 @@ function playShotBuzzer(){
 function triggerBuzz(kind) {
   // Play locally immediately
   if(kind === 'game') playGameBuzzer(); else playShotBuzzer();
+  const timestamp = Date.now();
+  bc.postMessage({ type: 'buzz', user: fbUser, kind, timestamp });
   // Broadcast to all other devices via server or Firebase
   if (useFirebase && db) {
     db.ref(`buzz/${fbUser}`).set({
       kind: kind,
-      timestamp: Date.now()
+      timestamp: timestamp
     }).catch(e => console.error(e));
     return;
   }
@@ -1318,6 +1331,7 @@ function startLocalGameTick(){
       if (useFirebase && db) {
         db.ref(`states/${fbUser}`).update({ gameSeconds: S.gameSeconds });
       }
+      broadcastState();
     }
     else { 
       stopLocalGameTick(); 
@@ -1337,6 +1351,7 @@ function startLocalShotTick(){
       if (useFirebase && db) {
         db.ref(`states/${fbUser}`).update({ shotSeconds: S.shotSeconds });
       }
+      broadcastState();
     }
     else { 
       stopLocalShotTick(); 

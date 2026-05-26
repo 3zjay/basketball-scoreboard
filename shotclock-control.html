@@ -302,6 +302,18 @@ const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_us
 // Firebase-safe key (Firebase paths cannot contain ".", "#", "$", "[", or "]")
 const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 
+const bc = new BroadcastChannel('hc_scoreboard_sync');
+function broadcastShotclock() {
+  bc.postMessage({
+    type: 'state',
+    user: fbUser,
+    data: {
+      shotSeconds: shotSeconds,
+      shotRunning: shotRunning
+    }
+  });
+}
+
 // ── Firebase Environment Detection ──
 const useFirebase = window.location.hostname.includes('vercel.app') ||
                     window.location.hostname.includes('vercel.sh');
@@ -392,6 +404,7 @@ function startLocalTick() {
       if (useFirebase && db) {
         db.ref(`states/${fbUser}`).update({ shotSeconds: shotSeconds });
       }
+      broadcastShotclock();
     }
     else { 
       stopLocalTick(); 
@@ -440,6 +453,9 @@ function handleLocalCommand(command, seconds) {
   
   renderClock();
   
+  // Local sync
+  broadcastShotclock();
+
   if (db) {
     db.ref(`states/${fbUser}`).update({
       shotSeconds: shotSeconds,
@@ -475,10 +491,12 @@ function resetShotCustom(e) {
 function soundBuzzer(e) {
   if (e) ripple(e, document.getElementById('buzzerBtn'));
   playBuzz();
+  const timestamp = Date.now();
+  bc.postMessage({ type: 'buzz', user: fbUser, kind: 'shot', timestamp });
   if (useFirebase && db) {
     db.ref(`buzz/${fbUser}`).set({
       kind: 'shot',
-      timestamp: Date.now()
+      timestamp: timestamp
     }).catch(e => console.error(e));
     return;
   }
