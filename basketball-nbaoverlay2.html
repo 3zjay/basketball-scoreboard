@@ -180,7 +180,7 @@ if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
 }
 
 const urlParams = new URLSearchParams(window.location.search);
-const currentUser = urlParams.get('user') || 'default';
+const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
 
 const DEF={homeScore:0,awayScore:0,homeFouls:0,awayFouls:0,homeAbbr:'HOME',homeColor:'#1a4fa0',homeLogo:null,awayAbbr:'AWAY',awayColor:'#c8102e',awayLogo:null,quarter:1,gameSeconds:600,shotSeconds:24,gameRunning:false,shotRunning:false,possession:null};
 const PERIODS=['1ST','2ND','3RD','4TH','OT','2OT'];

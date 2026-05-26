@@ -323,7 +323,7 @@ if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
 }
 
 const urlParams = new URLSearchParams(window.location.search);
-const currentUser = urlParams.get('user') || 'default';
+const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
 
 const DEF = {
   homeScore:0, awayScore:0,

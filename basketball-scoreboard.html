@@ -756,30 +756,30 @@ body.light .reset-btn:hover { background:#fee2e2; }
       <div class="card-title">🚀 Quick Launch</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;">
-      <button class="btn primary" onclick="window.open('/display','_blank')" style="padding:14px 10px;font-size:13px;letter-spacing:1px;">
+      <button class="btn primary" onclick="window.open('/display?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:14px 10px;font-size:13px;letter-spacing:1px;">
         🖥️ Venue Display
       </button>
-      <button class="btn primary" onclick="window.open('/display2','_blank')" style="padding:14px 10px;font-size:13px;letter-spacing:1px;">
+      <button class="btn primary" onclick="window.open('/display2?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:14px 10px;font-size:13px;letter-spacing:1px;">
         🖥️ Venue Display 2
       </button>
-      <button class="btn primary" onclick="window.open('/shotclock-display','_blank')" style="padding:14px 10px;font-size:13px;letter-spacing:1px;background:rgba(255,170,0,0.1);border-color:rgba(255,170,0,0.4);color:#ffaa00;">
+      <button class="btn primary" onclick="window.open('/shotclock-display?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:14px 10px;font-size:13px;letter-spacing:1px;background:rgba(255,170,0,0.1);border-color:rgba(255,170,0,0.4);color:#ffaa00;">
         ⏱ Shot Clock Display
       </button>
-      <button class="btn primary" onclick="window.open('/shotclock','_blank')" style="padding:14px 10px;font-size:13px;letter-spacing:1px;background:rgba(255,170,0,0.07);border-color:rgba(255,170,0,0.3);color:#ff9900;">
+      <button class="btn primary" onclick="window.open('/shotclock?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:14px 10px;font-size:13px;letter-spacing:1px;background:rgba(255,170,0,0.07);border-color:rgba(255,170,0,0.3);color:#ff9900;">
         📱 Shot Clock Ctrl
       </button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px;">
-      <button class="btn" onclick="window.open('/overlay','_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
+      <button class="btn" onclick="window.open('/overlay?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
         📡 OBS Bar Overlay
       </button>
-      <button class="btn" onclick="window.open('/fullscreen','_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
+      <button class="btn" onclick="window.open('/fullscreen?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
         📡 OBS Fullscreen
       </button>
-      <button class="btn" onclick="window.open('/nbaoverlay','_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
+      <button class="btn" onclick="window.open('/nbaoverlay?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
         📡 NBA Scorebug
       </button>
-      <button class="btn" onclick="window.open('/nbaoverlay2','_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
+      <button class="btn" onclick="window.open('/nbaoverlay2?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
         📡 NBA Scorebug 2
       </button>
     </div>
