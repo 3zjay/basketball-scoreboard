@@ -1,54 +1,67 @@
 # 🏀 Hoop Culture Scoreboard & Live Stream System
 
-Welcome to the **Hoop Culture Scoreboard**, a premium local web server and broadcast graphics system designed for the Hoop Culture Network. This system runs completely locally on a Windows PC—**no internet connection required** during games. 
+Welcome to the **Hoop Culture Scoreboard**, a premium, production-grade scoreboard and broadcast graphics system designed for the Hoop Culture Network. 
 
-It provides real-time scoring, synchronized server-owned game and shot clocks, tablet-based remote controls, and professional stream graphics (lower-thirds and floating score bugs) for OBS Studio.
+Featuring a modern **Tri-Mode Architecture**, this system offers triple redundancy to adapt to any environment—from completely offline gymnasiums with poor cellular reception to fully connected internet broadcasts.
 
 ---
 
 ## 🚀 Key Features
 
-* **Desktop Launcher GUI (`ScoreboardLauncher.ps1`)**: A beautiful, dark-mode desktop console app built on native Windows Forms.
+* **Tri-Mode Redundancy (`v2.0.0`)**: 
+  * 🔌 **Offline Local Mode**: Runs a local Node.js WebSocket server on any Windows laptop—perfect for zero-internet gym environments.
+  * ⚡ **Vercel + Firebase Serverless Cloud**: Host statically on Vercel at zero cost, syncing scores and clocks in real time across the globe using **Firebase Realtime Database**.
+  * ☁️ **OnRender Full-Stack Cloud**: Full Node.js deployment for permanent cloud environments with standard client-server syncing.
+* **Desktop Launcher GUI (`ScoreboardLauncher.ps1`)**: A beautiful, dark-mode native Windows Forms app to launch servers, check logs, and control network interfaces.
 * **Integrated Mobile Hotspot Controls**: One-click native control of your PC's Mobile Hotspot using Windows tethering APIs—perfect for setting up a court-side private tablet network instantly.
-* **Authoritative Server Clocks**: The game clock and shot clock calculation are handled by the Node.js server to prevent clock drift between connected tablets, venue displays, and broadcast graphics.
-* **Live SSE Log Panel**: Real-time console logs from the scoreboard server are captured and rendered directly inside the desktop app.
-* **PWA & Mobile Ready**: Built-in Progressive Web App (PWA) configurations (`manifest.json` and service worker `sw.js`) so officials can install and control the scoreboard from iOS/Android tables as a fullscreen app.
+* **Authoritative Server / DB Clocks**: Game clock and shot clock calculations are synchronized server-side (or database-side in Firebase) to prevent clock drift between connected tablets, venue displays, and broadcast graphics.
 * **Dominant Color Extraction**: Uploading a PNG/JPEG logo for either team automatically extracts and applies the team's dominant brand color across all scoreboards and overlays in real time.
+* **OBS & Stream Ready**: Tailored HTML overlay pages designed specifically for OBS Studio integration with modern layouts and smooth CSS animations.
+* **PWA & Mobile Ready**: Built-in Progressive Web App (PWA) configuration (`manifest.json` and service worker `sw.js`) allowing operators to install the controller as a fullscreen app on iOS or Android tablets.
 
 ---
 
-## 📦 Startup & Installation
+## 🔌 Tri-Mode Architecture & Setup
 
-Before starting, ensure you have [Node.js (LTS Version)](https://nodejs.org) installed on your Windows PC. The project has **zero external package dependencies** (no `npm install` required).
-
-### Option 1 — Scoreboard Desktop App (Recommended)
-Launch the fully-featured desktop console GUI:
+### 🔌 Mode 1: Offline Local (No Internet Required)
+Designed for local venues and gymnasiums. The laptop acts as the "brain," hosting a Node.js WebSocket server.
 1. Right-click **`ScoreboardLauncher.ps1`** and choose **Run with PowerShell**.
-2. Click the green **`START SERVER`** button.
-3. Your server log will stream in real-time, and you can instantly launch any display page with the labeled buttons!
-
-### Option 2 — Console Startup Scripts
-If you prefer standard console windows:
-* **PowerShell Console**: Right-click **`start.ps1`** and select **Run with PowerShell**.
-* **Standard Batch**: Double-click **`start.bat`**.
-
-> [!TIP]
-> All startup scripts are fully portable! They use dynamic path resolutions (`$PSScriptRoot` and `%~dp0`) so you can run them from any folder where your project is stored without needing to modify path variables.
+2. Click **`ENABLE HOTSPOT`** to spin up a private court-side Wi-Fi network.
+3. Click the green **`START SERVER`** button to launch the local Node.js server.
+4. Connect iPad/tablets to the hotspot, open the network URL shown in the log (e.g., `http://192.168.137.1:3000`), and start operating!
 
 ---
 
-## 📶 Offline Mode & Tablet Setup
+### ⚡ Mode 2: Vercel + Firebase (Zero-Cost Serverless Cloud)
+Perfect for distributed production teams. Host the pages on Vercel (static) and sync state across the globe using Firebase's low-latency Realtime Database.
+1. **Configure Firebase**: Open `firebase-config.js` in the project root and add your Firebase project web app configuration:
+   ```javascript
+   const firebaseConfig = {
+     apiKey: "YOUR_API_KEY",
+     authDomain: "your-app.firebaseapp.com",
+     databaseURL: "https://your-app-rtdb.firebaseio.com",
+     projectId: "your-app",
+     storageBucket: "your-app.firebasestorage.app",
+     messagingSenderId: "YOUR_SENDER_ID",
+     appId: "YOUR_APP_ID"
+   };
+   ```
+2. **Deploy to Vercel**: Connect your GitHub repository to Vercel. Vercel will host the HTML/CSS/JS files statically.
+3. **Automatic Detection**: The app automatically detects if it is running on a Vercel domain (`*.vercel.app` or `*.vercel.sh`) and switches from WebSocket mode to **Firebase Realtime Database mode** instantly. Operators write state changes directly to the database, and display pages subscribe to those changes in real time.
 
-This system is built to run entirely offline on a dedicated local network. Your tablet operator must be connected to the **same network** as the laptop.
+---
 
-1. **Turn on Mobile Hotspot**: Click **`ENABLE HOTSPOT`** directly inside the **Scoreboard Launcher GUI** (or toggle it in Windows Network Settings).
-2. **Connect Tablet**: Connect your iPad or tablet to the laptop's Wi-Fi hotspot network.
-3. **Open Operator URL**: Look at the **Network Addresses** panel in the Launcher—it will print your local network URL (e.g. `http://192.168.137.1:3000`). Enter this address in your tablet browser.
-4. **Install App (Optional)**: In Safari on iOS, tap **Share** (□↑) and select **Add to Home Screen** to install the scoreboard as a fullscreen app.
+### ☁️ Mode 3: OnRender Cloud (Full-Stack Cloud)
+For standard internet-based operations backed by a persistent Node.js instance.
+1. Connect your repository to **OnRender** (or any Node.js hosting provider).
+2. Set the build command to `npm install` (none needed by default) and the start command to `node server.js`.
+3. The display pages will automatically connect to the OnRender backend address using persistent, bidirectional WebSockets.
 
 ---
 
 ## 📺 Screens & Links
+
+The ecosystem contains **9 fully-functional web pages** communicating in real time:
 
 | Page | URL Path | Recommended Device / Usage |
 | :--- | :--- | :--- |
@@ -68,7 +81,7 @@ This system is built to run entirely offline on a dedicated local network. Your 
 
 To use the live scoreboard graphics on your stream:
 1. In OBS under **Sources**, click **`+`** and choose **`Browser`**.
-2. Set the **URL** to your local scoreboard link (e.g., `http://localhost:3000/overlay` or `http://localhost:3000/nbaoverlay`).
+2. Set the **URL** to your deployment link (e.g. `http://localhost:3000/overlay` for local, or `https://your-app.vercel.app/overlay` for Vercel mode).
 3. Set the **Width** to `1920` and **Height** to `1080` (or matching your canvas resolution).
 4. Click **OK**.
 
