@@ -150,6 +150,7 @@ function Append-Log($msg) {
     $logBox.SelectionColor  = [System.Drawing.Color]::FromArgb(60, 210, 110)
     $logBox.AppendText("[$ts]  $msg`r`n")
     $logBox.ScrollToCaret()
+    $logBox.Update()
 }
 
 # ── Server Control ────────────────────────────────────────────────────────────
@@ -513,12 +514,19 @@ $form.Add_FormClosing({ if ($script:running) { Stop-Server } })
 # Startup messages go in Form.Shown — RichTextBox requires a window handle before
 # AppendText works. Calling it before ShowDialog() silently drops every message.
 $form.Add_Shown({
+    $form.PerformLayout()
+    $rightTable.PerformLayout()
     Refresh-IPs
     Append-Log "Launcher ready.  Repo : $REPO_PATH"
     Append-Log "Server file      : $REPO_PATH\$SERVER_FILE"
     Append-Log "Local URL        : http://localhost:$PORT"
     Append-Log "-----------------------------------------"
     Append-Log "Click START SERVER to launch the scoreboard."
+})
+
+$form.Add_Resize({
+    $form.PerformLayout()
+    $rightTable.PerformLayout()
 })
 
 # Drain the thread-safe log queue on the UI thread every 100ms — safe, no cross-thread deadlock
