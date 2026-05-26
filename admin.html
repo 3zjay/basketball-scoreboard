@@ -353,7 +353,7 @@
         // Stored format is sanitized (dots/etc replaced with '_').
         // We retrieve the original email values or render them nicely.
         Object.keys(data).forEach((key) => {
-          if (data[key] === true) {
+          if (data[key] === true || typeof data[key] === 'string') {
             // Restore email format (approximated, or just display the db key which has underscores instead of dots)
             // To be accurate, we can store the actual email string in the value rather than just 'true'!
             // Let's support both formats: if the value is a string, display it; otherwise, display key.
