@@ -21,43 +21,62 @@ Featuring a modern **Tri-Mode Architecture**, this system offers triple redundan
 
 ---
 
-## 🔌 Tri-Mode Architecture & Setup
+## 🔌 Tri-Mode Architecture & Setup Guide
 
-### 🔌 Mode 1: Offline Local (No Internet Required)
-Designed for local venues and gymnasiums. The laptop acts as the "brain," hosting a Node.js WebSocket server.
-1. Right-click **`ScoreboardLauncher.ps1`** and choose **Run with PowerShell**.
-2. Click **`ENABLE HOTSPOT`** to spin up a private court-side Wi-Fi network.
-3. Click the green **`START SERVER`** button to launch the local Node.js server.
-4. Connect iPad/tablets to the hotspot, open the network URL shown in the log (e.g., `http://192.168.137.1:3000`), and start operating!
+The system supports three different environments (ecosystems) for running and using the controlboard. To prevent overlapping control board actions from different users, all environments use the **`?user=YOUR_SESSION_NAME`** query parameter to create isolated sessions.
 
 ---
 
-### ⚡ Mode 2: Vercel + Firebase (Zero-Cost Serverless Cloud)
-Perfect for distributed production teams. Host the pages on Vercel (static) and sync state across the globe using Firebase's low-latency Realtime Database.
-1. **Configure Firebase**: Open `firebase-config.js` in the project root and add your Firebase project web app configuration:
-   ```javascript
-   const firebaseConfig = {
-     apiKey: "YOUR_API_KEY",
-     authDomain: "your-app.firebaseapp.com",
-     databaseURL: "https://your-app-rtdb.firebaseio.com",
-     projectId: "your-app",
-     storageBucket: "your-app.firebasestorage.app",
-     messagingSenderId: "YOUR_SENDER_ID",
-     appId: "YOUR_APP_ID"
-   };
-   ```
-2. **Deploy to Vercel**: Connect your GitHub repository to Vercel. Vercel will host the HTML/CSS/JS files statically.
-3. **Automatic Detection**: The app automatically detects if it is running on a Vercel domain (`*.vercel.app` or `*.vercel.sh`) and switches from WebSocket mode to **Firebase Realtime Database mode** instantly. Operators write state changes directly to the database, and display pages subscribe to those changes in real time.
+### 🔌 Mode 1: Offline Local Mode (No Internet Required)
+Best for local gymnasiums with poor internet. The host laptop acts as the server and local network access point.
+* **How to Launch**:
+  1. Right-click **`ScoreboardLauncher.ps1`** and choose **Run with PowerShell** (or run `start.bat`).
+  2. Click **`ENABLE HOTSPOT`** in the Launcher GUI to spin up a private court-side network.
+  3. Click **`START SERVER`** to launch the local Node.js server.
+* **Controlboard URL**:
+  * Local host: `http://localhost:3000/?user=my_court_name`
+  * Connected tablets: `http://[IP_OF_LAPTOP]:3000/?user=my_court_name` (e.g. `http://192.168.137.1:3000/?user=court_1`)
+* **How it Syncs**: Clocks tick on the local Node.js server, which streams updates to overlay pages via low-latency Server-Sent Events (SSE). 
 
 ---
 
-### ☁️ Mode 3: OnRender Cloud (Full-Stack Cloud)
-For standard internet-based operations backed by a persistent Node.js instance.
-1. Connect your repository to **OnRender** (or any Node.js hosting provider).
-2. Set the build command to `npm install` (none needed by default) and the start command to `node server.js`.
-3. The display pages will automatically connect to the OnRender backend address using persistent, bidirectional WebSockets.
+### ⚡ Mode 2: Vercel + Firebase Mode (Zero-Cost Serverless Cloud)
+Best for cloud streaming setups or remote production workflows where no persistent Node.js cloud server is running.
+* **How to Setup & Launch**:
+  1. Open `firebase-config.js` and paste your Firebase Web App credentials and Realtime Database URL:
+     ```javascript
+     const firebaseConfig = {
+       apiKey: "YOUR_API_KEY",
+       authDomain: "your-app.firebaseapp.com",
+       databaseURL: "https://your-app-rtdb.firebaseio.com",
+       projectId: "your-app",
+       storageBucket: "your-app.firebasestorage.app",
+       messagingSenderId: "YOUR_SENDER_ID",
+       appId: "YOUR_APP_ID"
+     };
+     ```
+  2. Connect your repository to Vercel and deploy.
+* **Controlboard URL**:
+  * `https://your-app.vercel.app/?user=my_session_name` (e.g. `https://hoop-culture.vercel.app/?user=court_3`)
+  * *Note: Usernames or emails containing dots (e.g. `first.last@domain.com`) are automatically sanitized to `first_last` for Firebase paths.*
+* **How it Syncs**: 
+  * **Remote spectator tabs**: Sync via WebSockets directly to the Firebase Realtime Database.
+  * **Same-device overlay tabs (OBS & display tabs on the operator's PC)**: Sync instantly in **0–1ms** via the built-in browser **`BroadcastChannel` API**, bypassing internet routing entirely.
+  * Clocks tick locally in the operator's browser and push delta updates to Firebase Realtime Database, which streams them to connected display clients.
 
 ---
+
+### ☁️ Mode 3: OnRender Cloud Mode (Full-Stack Cloud)
+Best for permanent cloud deployments with a dedicated server backend.
+* **How to Launch**:
+  1. Link your repository to OnRender (or any Node.js hosting platform).
+  2. Set the build command to `npm install` and the start command to `node server.js`.
+* **Controlboard URL**:
+  * `https://your-app.onrender.com/?user=my_session_name` (e.g., `https://hoop-culture-api.onrender.com/?user=tournament_1`)
+* **How it Syncs**: Clocks tick on the remote Node.js cloud server. The controlboard posts changes via HTTP endpoints, and the server broadcasts state updates to connected clients using persistent Server-Sent Events (SSE).
+
+---
+
 
 ## 📺 Screens & Links
 
