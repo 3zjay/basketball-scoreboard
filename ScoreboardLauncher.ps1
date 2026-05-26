@@ -39,7 +39,21 @@ $script:asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() |
 function Invoke-WinRTAsync($task, $type) {
     $t = $script:asTaskGeneric.MakeGenericMethod($type)
     $n = $t.Invoke($null, @($task))
-    $n.Wait(-1) | Out-Null
+    
+    $timeoutMs = 5000
+    $elapsedMs = 0
+    $intervalMs = 50
+    
+    while (-not $n.IsCompleted -and $elapsedMs -lt $timeoutMs) {
+        [System.Windows.Forms.Application]::DoEvents()
+        Start-Sleep -Milliseconds $intervalMs
+        $elapsedMs += $intervalMs
+    }
+    
+    if (-not $n.IsCompleted) {
+        throw "WinRT operation timed out"
+    }
+    
     return $n.Result
 }
 
