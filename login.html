@@ -340,6 +340,19 @@
   </div>
 
   <script>
+    // Auto-bypass login in local offline mode
+    const isLocalHost = window.location.hostname === 'localhost' ||
+                        window.location.hostname === '127.0.0.1' ||
+                        window.location.hostname.startsWith('192.168.') ||
+                        window.location.hostname.startsWith('10.') ||
+                        window.location.hostname.startsWith('172.') ||
+                        window.location.hostname.endsWith('.local');
+    if (isLocalHost) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectUrl = urlParams.get('redirect') || '/control';
+      window.location.href = redirectUrl;
+    }
+
     // Initialize Firebase
     let db = null;
     let auth = null;
