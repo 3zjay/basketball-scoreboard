@@ -165,6 +165,7 @@ if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
 
 const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
+const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 
 let shotSeconds = 24;
 let shotRunning = false;
@@ -224,14 +225,14 @@ function connectSSE() {
   if (useFirebase && db) {
     const ns = document.getElementById('noSignal');
     ns.classList.remove('show');
-    db.ref(`states/${currentUser}`).on('value', snapshot => {
+    db.ref(`states/${fbUser}`).on('value', snapshot => {
       const d = snapshot.val();
       if (!d) return;
       if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
       shotRunning = !!d.shotRunning;
       render();
     });
-    db.ref(`buzz/${currentUser}`).on('value', snapshot => {
+    db.ref(`buzz/${fbUser}`).on('value', snapshot => {
       const msg = snapshot.val();
       if (!msg || msg.timestamp <= _lastBuzzTime) return;
       _lastBuzzTime = msg.timestamp;
@@ -285,7 +286,7 @@ document.addEventListener('fullscreenchange', () => {
 
 // ── Init ──
 if (useFirebase && db) {
-  db.ref(`states/${currentUser}`).once('value').then(d => {
+  db.ref(`states/${fbUser}`).once('value').then(d => {
     const data = d.val();
     if (data) {
       if (data.shotSeconds != null) shotSeconds = data.shotSeconds;

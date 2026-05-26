@@ -299,6 +299,8 @@ const SERVER_URL = (
 
 const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
+// Firebase-safe key (Firebase paths cannot contain ".", "#", "$", "[", or "]")
+const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 
 // ── Firebase Environment Detection ──
 const useFirebase = window.location.hostname.includes('vercel.app') ||
@@ -388,7 +390,7 @@ function startLocalTick() {
       shotSeconds--; 
       renderClock(); 
       if (useFirebase && db) {
-        db.ref(`states/${currentUser}`).update({ shotSeconds: shotSeconds });
+        db.ref(`states/${fbUser}`).update({ shotSeconds: shotSeconds });
       }
     }
     else { 
@@ -439,7 +441,7 @@ function handleLocalCommand(command, seconds) {
   renderClock();
   
   if (db) {
-    db.ref(`states/${currentUser}`).update({
+    db.ref(`states/${fbUser}`).update({
       shotSeconds: shotSeconds,
       shotRunning: shotRunning
     }).catch(e => console.error(e));
@@ -474,7 +476,7 @@ function soundBuzzer(e) {
   if (e) ripple(e, document.getElementById('buzzerBtn'));
   playBuzz();
   if (useFirebase && db) {
-    db.ref(`buzz/${currentUser}`).set({
+    db.ref(`buzz/${fbUser}`).set({
       kind: 'shot',
       timestamp: Date.now()
     }).catch(e => console.error(e));
@@ -516,8 +518,11 @@ function playBuzz() { const a = new Audio('/buzzer.mp3'); a.volume = 1; a.play()
 // ── SSE ──
 function connectSSE() {
   if (useFirebase && db) {
-    setConnected(true);
-    db.ref(`states/${currentUser}`).on('value', snapshot => {
+    // Real-time connection status
+    db.ref('.info/connected').on('value', snapshot => {
+      setConnected(snapshot.val() === true);
+    });
+    db.ref(`states/${fbUser}`).on('value', snapshot => {
       const d = snapshot.val();
       if (!d) return;
       const since = Date.now() - _lastCmd;
@@ -530,7 +535,7 @@ function connectSSE() {
       renderClock();
     });
     
-    db.ref(`buzz/${currentUser}`).on('value', snapshot => {
+    db.ref(`buzz/${fbUser}`).on('value', snapshot => {
       const msg = snapshot.val();
       if (!msg) return;
       if (msg.kind === 'shot' && msg.timestamp > (window.lastBuzzTime || 0)) {
@@ -570,8 +575,7 @@ function connectSSE() {
 
 // ── Init ──
 if (useFirebase && db) {
-  setConnected(true);
-  db.ref(`states/${currentUser}`).once('value').then(snapshot => {
+  db.ref(`states/${fbUser}`).once('value').then(snapshot => {
     const d = snapshot.val();
     if (d) {
       if (d.shotSeconds != null) shotSeconds = d.shotSeconds;

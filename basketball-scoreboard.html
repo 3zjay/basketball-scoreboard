@@ -825,6 +825,8 @@ const SERVER_URL = (
 
 const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
+// Firebase-safe key (Firebase paths cannot contain ".", "#", "$", "[", or "]")
+const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 
 // ── Firebase Environment Detection ──
 const useFirebase = window.location.hostname.includes('vercel.app') ||
@@ -900,7 +902,7 @@ function pushState(){
   delete toSend.gameSeconds; delete toSend.shotSeconds;
 
   if (useFirebase && db) {
-    db.ref(`states/${currentUser}`).update(toSend).catch(e => console.error(e));
+    db.ref(`states/${fbUser}`).update(toSend).catch(e => console.error(e));
     return;
   }
 
@@ -969,7 +971,7 @@ function handleLocalCommand(command, seconds) {
   renderAll();
   
   if (db) {
-    db.ref(`states/${currentUser}`).set(S).catch(e => console.error(e));
+    db.ref(`states/${fbUser}`).set(S).catch(e => console.error(e));
   }
 }
 function load(){
@@ -1274,7 +1276,7 @@ function triggerBuzz(kind) {
   if(kind === 'game') playGameBuzzer(); else playShotBuzzer();
   // Broadcast to all other devices via server or Firebase
   if (useFirebase && db) {
-    db.ref(`buzz/${currentUser}`).set({
+    db.ref(`buzz/${fbUser}`).set({
       kind: kind,
       timestamp: Date.now()
     }).catch(e => console.error(e));
@@ -1297,7 +1299,7 @@ function startLocalGameTick(){
       S.gameSeconds--; 
       renderGameClock(); 
       if (useFirebase && db) {
-        db.ref(`states/${currentUser}`).update({ gameSeconds: S.gameSeconds });
+        db.ref(`states/${fbUser}`).update({ gameSeconds: S.gameSeconds });
       }
     }
     else { 
@@ -1316,7 +1318,7 @@ function startLocalShotTick(){
       S.shotSeconds--; 
       renderShotClock(); 
       if (useFirebase && db) {
-        db.ref(`states/${currentUser}`).update({ shotSeconds: S.shotSeconds });
+        db.ref(`states/${fbUser}`).update({ shotSeconds: S.shotSeconds });
       }
     }
     else { 
@@ -1550,7 +1552,7 @@ function refBuzzer(){
   _lastLocalBuzz = Date.now();
   playGameBuzzer(); // play locally immediately
   if (useFirebase && db) {
-    db.ref(`buzz/${currentUser}`).set({
+    db.ref(`buzz/${fbUser}`).set({
       kind: 'game',
       timestamp: Date.now()
     }).catch(e => console.error(e));
@@ -1602,7 +1604,17 @@ function resetAll(){
 loadCustomOptions();
 if (useFirebase && db) {
   setLiveStatus('connecting');
-  db.ref(`states/${currentUser}`).once('value').then(snapshot => {
+  
+  // Real-time connection listener
+  db.ref('.info/connected').on('value', snapshot => {
+    if (snapshot.val() === true) {
+      setLiveStatus('connected');
+    } else {
+      setLiveStatus('connecting');
+    }
+  });
+
+  db.ref(`states/${fbUser}`).once('value').then(snapshot => {
     const data = snapshot.val();
     let localLogos = {};
     try {
@@ -1616,14 +1628,13 @@ if (useFirebase && db) {
     if (data) {
       S = {...DEF, ...data};
     } else {
-      db.ref(`states/${currentUser}`).set(S);
+      db.ref(`states/${fbUser}`).set(S);
     }
     if(localLogos.homeLogo) S.homeLogo = localLogos.homeLogo;
     if(localLogos.awayLogo) S.awayLogo = localLogos.awayLogo;
     if(S.gameRunning) startLocalGameTick();
     if(S.shotRunning) startLocalShotTick();
     renderAll();
-    setLiveStatus('connected');
   }).catch((err)=>{
     console.error("Firebase load failed:", err);
     try {
@@ -1631,7 +1642,6 @@ if (useFirebase && db) {
       if(localRaw){ S={...DEF,...JSON.parse(localRaw)}; S.gameRunning=false; S.shotRunning=false; }
     } catch(e){}
     renderAll();
-    setLiveStatus('offline');
   }).finally(()=>{ connectSSE(); });
 } else {
   setLiveStatus('connecting');
@@ -1663,7 +1673,7 @@ if (useFirebase && db) {
 // SSE — server pushes state every second while clocks run, instantly on any action
 function connectSSE(){
   if (useFirebase && db) {
-    db.ref(`states/${currentUser}`).on('value', snapshot => {
+    db.ref(`states/${fbUser}`).on('value', snapshot => {
       const d = snapshot.val();
       if (!d) return;
       
@@ -1703,7 +1713,7 @@ function connectSSE(){
       renderAll();
     });
 
-    db.ref(`buzz/${currentUser}`).on('value', snapshot => {
+    db.ref(`buzz/${fbUser}`).on('value', snapshot => {
       const msg = snapshot.val();
       if (!msg) return;
       const sinceLocal = Date.now() - _lastLocalBuzz;

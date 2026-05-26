@@ -249,6 +249,7 @@ if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
 
 const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
+const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 
 const DEF = {
   homeScore:0, awayScore:0,
@@ -347,12 +348,12 @@ let _lastBuzzTime = 0;
 // SSE
 function connectSSE() {
   if (useFirebase && db) {
-    db.ref(`states/${currentUser}`).on('value', snapshot => {
+    db.ref(`states/${fbUser}`).on('value', snapshot => {
       const d = snapshot.val();
       if (!d) return;
       stopLocalTick(); S={...DEF,...d}; render(); syncLocalTick();
     });
-    db.ref(`buzz/${currentUser}`).on('value', snapshot => {
+    db.ref(`buzz/${fbUser}`).on('value', snapshot => {
       const msg = snapshot.val();
       if (!msg || msg.timestamp <= _lastBuzzTime) return;
       _lastBuzzTime = msg.timestamp;
@@ -372,7 +373,7 @@ function connectSSE() {
 }
 
 if (useFirebase && db) {
-  db.ref(`states/${currentUser}`).once('value').then(snapshot => {
+  db.ref(`states/${fbUser}`).once('value').then(snapshot => {
     const data = snapshot.val();
     if (data) { S={...DEF,...data}; render(); syncLocalTick(); }
   }).catch(()=>{}).finally(()=>{ connectSSE(); });

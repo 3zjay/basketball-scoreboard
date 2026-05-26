@@ -181,6 +181,7 @@ if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
 
 const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
+const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 
 const DEF={homeScore:0,awayScore:0,homeFouls:0,awayFouls:0,homeAbbr:'HOME',homeColor:'#1a4fa0',homeLogo:null,awayAbbr:'AWAY',awayColor:'#c8102e',awayLogo:null,quarter:1,gameSeconds:600,shotSeconds:24,gameRunning:false,shotRunning:false,possession:null};
 const PERIODS=['1ST','2ND','3RD','4TH','OT','2OT'];
@@ -260,12 +261,12 @@ function playShotBuzzer(){const a=new Audio('/buzzer.mp3');a.volume=1;a.play().c
 let _lastBuzzTime = 0;
 function connectSSE(){
   if (useFirebase && db) {
-    db.ref(`states/${currentUser}`).on('value', snapshot => {
+    db.ref(`states/${fbUser}`).on('value', snapshot => {
       const d = snapshot.val();
       if (!d) return;
       stopLocalTick(); S={...DEF,...d}; render(); syncLocalTick();
     });
-    db.ref(`buzz/${currentUser}`).on('value', snapshot => {
+    db.ref(`buzz/${fbUser}`).on('value', snapshot => {
       const msg = snapshot.val();
       if (!msg || msg.timestamp <= _lastBuzzTime) return;
       _lastBuzzTime = msg.timestamp;
@@ -278,7 +279,7 @@ function connectSSE(){
   es.onerror=()=>{es.close();setTimeout(connectSSE,2000);};
 }
 if (useFirebase && db) {
-  db.ref(`states/${currentUser}`).once('value').then(snapshot => {
+  db.ref(`states/${fbUser}`).once('value').then(snapshot => {
     const data = snapshot.val();
     if (data) { S={...DEF,...data}; render(); syncLocalTick(); }
   }).catch(()=>{}).finally(()=>connectSSE());
