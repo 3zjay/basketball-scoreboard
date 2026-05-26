@@ -127,7 +127,9 @@ const ROUTES = {
   '/icon-512.png':       'icon-512.png',
   '/buzzer.mp3':         'buzzer.mp3',
   '/hoop-culture-logo.png': 'hoop-culture-logo.png',
+  '/hoop-culture-logo.jpg': 'hoop-culture-logo.jpg',
   '/marketing-workflow-dark.png': 'marketing-workflow-dark.png',
+  '/firebase-config.js': 'firebase-config.js',
 };
 
 function pushToAll(u, payload) {
@@ -303,13 +305,13 @@ http.createServer((req, res) => {
     return;
   }
 
-  // Serve static files
-  const fileName = ROUTES[req.url];
+  // Serve static files — match on pathname only, so ?user= query params don't break routing
+  const fileName = ROUTES[pathname];
   if (fileName) {
     const filePath = path.join(__dirname, fileName);
     if (fs.existsSync(filePath)) {
       const ext = path.extname(fileName);
-      const types = { '.html':'text/html', '.json':'application/json', '.js':'application/javascript', '.png':'image/png', '.mp3':'audio/mpeg' };
+      const types = { '.html':'text/html', '.json':'application/json', '.js':'application/javascript', '.png':'image/png', '.jpg':'image/jpeg', '.mp3':'audio/mpeg' };
       res.writeHead(200, { 'Content-Type': types[ext] || 'text/plain' });
       res.end(fs.readFileSync(filePath));
       return;

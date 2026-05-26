@@ -301,7 +301,8 @@ const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
 
 // ── Firebase Environment Detection ──
-const useFirebase = window.location.hostname.includes('vercel.app');
+const useFirebase = window.location.hostname.includes('vercel.app') ||
+                    window.location.hostname.includes('vercel.sh');
 let db = null;
 if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
   firebase.initializeApp(firebaseConfig);
