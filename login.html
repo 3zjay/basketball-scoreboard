@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hoop Culture — Admin Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #080605;
+      --bg2: #100d0a;
+      --bg3: #1a1410;
+      --orange: #e8430a;
+      --orange2: #ff6b1a;
+      --fire1: #ff4500;
+      --fire2: #ff6a00;
+      --fire3: #ffa500;
+      --white: #f2ede8;
+      --grey: #a09080;
+      --border: #2a1e14;
+      --border2: #3a2818;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Ambient background glows matching website design */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(232, 67, 10, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .login-container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 2.5rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      text-align: center;
+    }
+
+    .login-container::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--fire1), var(--fire3));
+      border-radius: 16px 16px 0 0;
+    }
+
+    /* Logo */
+    .brand-logo {
+      height: 110px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 0 15px rgba(255, 100, 0, 0.7));
+      margin-bottom: 1.5rem;
+      transition: filter 0.2s;
+    }
+
+    .brand-logo:hover {
+      filter: drop-shadow(0 0 20px rgba(255, 150, 0, 0.8));
+    }
+
+    .login-title {
+      font-family: 'Anton', sans-serif;
+      font-size: 2.2rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+      color: var(--white);
+    }
+
+    .login-subtitle {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--grey);
+      margin-bottom: 2.5rem;
+    }
+
+    /* Form Fields */
+    .input-group {
+      text-align: left;
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    .input-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--grey);
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .input-field {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-family: 'Barlow', sans-serif;
+      font-size: 14px;
+      color: var(--white);
+      transition: all 0.2s;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--orange2);
+      box-shadow: 0 0 8px rgba(255, 107, 26, 0.25);
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    /* Checkbox & Forgot Password */
+    .form-options {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      font-size: 12px;
+    }
+
+    .remember-me {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--grey);
+      cursor: pointer;
+    }
+
+    .remember-me input {
+      accent-color: var(--orange2);
+      cursor: pointer;
+    }
+
+    .forgot-link {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--orange2);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .forgot-link:hover {
+      color: var(--white);
+    }
+
+    /* Submit Button */
+    .btn-submit {
+      width: 100%;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 14px;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--fire1), var(--fire2), var(--ember), var(--fire2), var(--fire1));
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(232, 67, 10, 0.3);
+      transition: all 0.2s;
+    }
+
+    .btn-submit:hover {
+      background: var(--orange2);
+      box-shadow: 0 6px 20px rgba(232, 67, 10, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .btn-submit:active {
+      transform: translateY(0);
+    }
+
+    /* Helper message */
+    .login-footer {
+      margin-top: 2rem;
+      font-size: 11px;
+      color: var(--mid);
+      font-family: 'Barlow Condensed', sans-serif;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    
+    <!-- Hoop Culture Logo -->
+    <img src="hoop-culture-logo.png" alt="Hoop Culture Logo" class="brand-logo">
+    
+    <h1 class="login-title">League Login</h1>
+    <div class="login-subtitle">Scoreboard Administration</div>
+
+    <!-- Login Form -->
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      
+      <!-- Email Field -->
+      <div class="input-group">
+        <label class="input-label" for="email">League Email</label>
+        <input class="input-field" type="email" id="email" required placeholder="admin@league.com">
+      </div>
+
+      <!-- Password Field -->
+      <div class="input-group">
+        <label class="input-label" for="password">Password</label>
+        <input class="input-field" type="password" id="password" required placeholder="••••••••">
+      </div>
+
+      <!-- Form Options -->
+      <div class="form-options">
+        <label class="remember-me">
+          <input type="checkbox" id="remember"> Keep me signed in
+        </label>
+        <a href="#" class="forgot-link">Forgot?</a>
+      </div>
+
+      <!-- Submit Button -->
+      <button class="btn-submit" type="submit">Sign In</button>
+
+    </form>
+
+    <div class="login-footer">
+      Hoop Culture Network • GTA Basketball
+    </div>
+
+  </div>
+
+  <script>
+    // Demo authentication handler redirecting to control panel
+    function handleLogin(event) {
+      event.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      // Save email session locally to mock login state
+      localStorage.setItem('hc_session_user', email);
+      
+      // Redirect to the main operator control page
+      window.location.href = '/control';
+    }
+  </script>
+
+</body>
+</html>

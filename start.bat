@@ -1,6 +1,6 @@
 @echo off
 title 🏀 Hoop Culture Scoreboard
-cd /d C:\basketball-scoreboard
+cd /d "%~dp0"
 
 echo.
 echo  ============================================
@@ -19,8 +19,8 @@ if %errorlevel% neq 0 (
 )
 
 :: Check if server.js exists
-if not exist "C:\basketball-scoreboard\server.js" (
-    echo  [ERROR] server.js not found in C:\basketball-scoreboard
+if not exist "%~dp0server.js" (
+    echo  [ERROR] server.js not found in %~dp0
     echo  Make sure the scoreboard files are in the correct folder.
     echo.
     pause

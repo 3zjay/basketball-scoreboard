@@ -1,4 +1,4 @@
-﻿Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 
@@ -14,7 +14,7 @@ try {
 } catch {}
 
 # ── Config ────────────────────────────────────────────────────────────────────
-$REPO_PATH   = "C:\basketball-scoreboard"
+$REPO_PATH   = $PSScriptRoot
 $SERVER_FILE = "server.js"
 $PORT        = 3000
 

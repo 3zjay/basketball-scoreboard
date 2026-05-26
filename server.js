@@ -92,8 +92,10 @@ function stopShotClock() {
 // ──────────────────────────────────────────────────────────────────────────
 
 const ROUTES = {
-  '/':                   'basketball-scoreboard.html',
+  '/':                   'landing.html',
   '/control':            'basketball-scoreboard.html',
+  '/landing':            'landing.html',
+  '/login':              'login.html',
   '/overlay':            'basketball-overlay.html',
   '/fullscreen':         'basketball-fullscreen.html',
   '/nbaoverlay':         'basketball-nbaoverlay.html',
@@ -108,6 +110,8 @@ const ROUTES = {
   '/icon-192.png':       'icon-192.png',
   '/icon-512.png':       'icon-512.png',
   '/buzzer.mp3':         'buzzer.mp3',
+  '/hoop-culture-logo.png': 'hoop-culture-logo.png',
+  '/marketing-workflow-dark.png': 'marketing-workflow-dark.png',
 };
 
 function pushToAll(payload) {

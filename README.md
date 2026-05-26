@@ -1,186 +1,111 @@
-# 🏀 Running the Scoreboard Locally (Windows)
+# 🏀 Hoop Culture Scoreboard & Live Stream System
 
-This guide walks you through setting up the Hoop Culture Scoreboard on a Windows PC so it runs entirely on your local network — no internet required during games.
+Welcome to the **Hoop Culture Scoreboard**, a premium local web server and broadcast graphics system designed for the Hoop Culture Network. This system runs completely locally on a Windows PC—**no internet connection required** during games. 
 
----
-
-## Prerequisites
-
-Before starting, you'll need two things installed on your PC:
-
-### 1. Node.js
-The scoreboard server runs on Node.js.
-
-- Go to **https://nodejs.org**
-- Download the **LTS** version
-- Run the installer — all default options are fine
-- To verify it worked, open Command Prompt and type:
-  ```
-  node -v
-  ```
-  You should see a version number like `v20.x.x`
-
-### 2. Git
-Used to clone the repository to your PC.
-
-- Go to **https://git-scm.com**
-- Download and install — all default options are fine
-- To verify it worked, open Command Prompt and type:
-  ```
-  git --version
-  ```
-
-> **No Git?** You can skip installing Git and instead go to the GitHub repo, click **Code → Download ZIP**, and extract the folder to `C:\basketball-scoreboard`.
+It provides real-time scoring, synchronized server-owned game and shot clocks, tablet-based remote controls, and professional stream graphics (lower-thirds and floating score bugs) for OBS Studio.
 
 ---
 
-## Installation
+## 🚀 Key Features
 
-### Step 1 — Clone the Repository
-
-Open **Command Prompt** (search `cmd` in the Start menu) and run:
-
-```bash
-git clone https://github.com/3zjay/basketball-scoreboard.git C:\basketball-scoreboard
-```
-
-This downloads all the scoreboard files into `C:\basketball-scoreboard`.
-
-### Step 2 — Verify the Files
-
-Open File Explorer and navigate to `C:\basketball-scoreboard`. You should see:
-
-```
-C:\basketball-scoreboard\
-├── server.js
-├── package.json
-├── basketball-scoreboard.html
-├── buzzer.mp3
-├── start.bat
-└── ... (other files)
-```
-
-> This project has **no external dependencies**, so there is no need to run `npm install`.
+* **Desktop Launcher GUI (`ScoreboardLauncher.ps1`)**: A beautiful, dark-mode desktop console app built on native Windows Forms.
+* **Integrated Mobile Hotspot Controls**: One-click native control of your PC's Mobile Hotspot using Windows tethering APIs—perfect for setting up a court-side private tablet network instantly.
+* **Authoritative Server Clocks**: The game clock and shot clock calculation are handled by the Node.js server to prevent clock drift between connected tablets, venue displays, and broadcast graphics.
+* **Live SSE Log Panel**: Real-time console logs from the scoreboard server are captured and rendered directly inside the desktop app.
+* **PWA & Mobile Ready**: Built-in Progressive Web App (PWA) configurations (`manifest.json` and service worker `sw.js`) so officials can install and control the scoreboard from iOS/Android tables as a fullscreen app.
+* **Dominant Color Extraction**: Uploading a PNG/JPEG logo for either team automatically extracts and applies the team's dominant brand color across all scoreboards and overlays in real time.
 
 ---
 
-## Starting the Server
+## 📦 Startup & Installation
 
-Double-click **`start.bat`** in the `C:\basketball-scoreboard` folder.
+Before starting, ensure you have [Node.js (LTS Version)](https://nodejs.org) installed on your Windows PC. The project has **zero external package dependencies** (no `npm install` required).
 
-A terminal window will open and display something like this:
+### Option 1 — Scoreboard Desktop App (Recommended)
+Launch the fully-featured desktop console GUI:
+1. Right-click **`ScoreboardLauncher.ps1`** and choose **Run with PowerShell**.
+2. Click the green **`START SERVER`** button.
+3. Your server log will stream in real-time, and you can instantly launch any display page with the labeled buttons!
 
-```
-============================================
- HOOP CULTURE SCOREBOARD - Starting Server
-============================================
+### Option 2 — Console Startup Scripts
+If you prefer standard console windows:
+* **PowerShell Console**: Right-click **`start.ps1`** and select **Run with PowerShell**.
+* **Standard Batch**: Double-click **`start.bat`**.
 
- Your local IP addresses (for tablet access):
-   http://192.168.1.45:3000
-
- Scoreboard Control  ->  http://localhost:3000
- Venue Display       ->  http://localhost:3000/display
- Shot Clock Display  ->  http://localhost:3000/shotclock-display
- OBS Overlay         ->  http://localhost:3000/overlay
-
- Press Ctrl+C to stop the server.
-============================================
-```
-
-**Keep this window open** for as long as you need the scoreboard running. Closing it stops the server.
+> [!TIP]
+> All startup scripts are fully portable! They use dynamic path resolutions (`$PSScriptRoot` and `%~dp0`) so you can run them from any folder where your project is stored without needing to modify path variables.
 
 ---
 
-## Accessing the Scoreboard
+## 📶 Offline Mode & Tablet Setup
 
-Once the server is running, open these URLs in your browser:
+This system is built to run entirely offline on a dedicated local network. Your tablet operator must be connected to the **same network** as the laptop.
 
-| Page | URL | Device |
-|---|---|---|
-| Scoreboard Control | `http://localhost:3000` | Laptop |
-| Venue Display | `http://localhost:3000/display` | Laptop (second window/screen) |
-| Shot Clock | `http://localhost:3000/shotclock-display` | Laptop (third window/screen) |
-| OBS Overlay | `http://localhost:3000/overlay` | OBS Browser Source |
-| Tablet Control | `http://192.168.1.XX:3000` | Tablet (see note below) |
-
-### Connecting Your Tablet
-
-Your tablet must be on the **same WiFi network** as the laptop.
-
-1. Look at the terminal window after starting the server — it will print your laptop's local IP address (e.g. `http://192.168.1.45:3000`)
-2. Type that address into the browser on your tablet
-3. You now have full scoreboard control from the tablet
-
-> If you don't see the IP in the terminal, open Command Prompt and type `ipconfig`. Look for **IPv4 Address** under your WiFi adapter.
+1. **Turn on Mobile Hotspot**: Click **`ENABLE HOTSPOT`** directly inside the **Scoreboard Launcher GUI** (or toggle it in Windows Network Settings).
+2. **Connect Tablet**: Connect your iPad or tablet to the laptop's Wi-Fi hotspot network.
+3. **Open Operator URL**: Look at the **Network Addresses** panel in the Launcher—it will print your local network URL (e.g. `http://192.168.137.1:3000`). Enter this address in your tablet browser.
+4. **Install App (Optional)**: In Safari on iOS, tap **Share** (□↑) and select **Add to Home Screen** to install the scoreboard as a fullscreen app.
 
 ---
 
-## OBS Setup
+## 📺 Screens & Links
 
-To use the scoreboard as a stream overlay in OBS:
-
-1. In OBS, click the **+** button under **Sources**
-2. Select **Browser**
-3. Set the URL to `http://localhost:3000/overlay`
-4. Set width and height to match your stream resolution (e.g. 1920 × 1080)
-5. Click **OK**
-
-### Recommended OBS Encoder Setting
-
-The Dell Latitude 5440 (i5-1345U) supports **Intel Quick Sync (QSV)** hardware encoding. This offloads video encoding to the GPU and keeps CPU usage low, allowing OBS and the scoreboard to run comfortably side by side.
-
-To enable it:
-
-1. Go to **OBS → Settings → Output**
-2. Set **Encoder** to `Intel QSV H.264`
-3. Click **Apply**
-
-> ⚠️ Avoid using `x264` (software encoding) — it will significantly increase CPU load during streaming.
+| Page | URL Path | Recommended Device / Usage |
+| :--- | :--- | :--- |
+| **Scoreboard Control** | `/` or `/control` | Laptop or Tablet Operator Console |
+| **Venue Display** | `/display` | Secondary Monitor / Gym Projector (Primary Theme) |
+| **Venue Display 2** | `/display2` | Secondary Monitor / Gym Projector (Alternate Theme) |
+| **Shot Clock Display** | `/shotclock-display` | Primary court-side Shot Clock display monitor |
+| **Shot Clock Control** | `/shotclock` | Dedicated tablet or phone for the shot clock operator |
+| **OBS Bar Overlay** | `/overlay` | Lower-third scoreboard overlay for OBS Studio (1920 × 160) |
+| **OBS Fullscreen** | `/fullscreen` | Full-screen broadcast scoreboard graphic |
+| **NBA Scorebug** | `/nbaoverlay` | ESPN/NBA floating scoreboard bug (Bottom-right) |
+| **NBA Scorebug 2** | `/nbaoverlay2` | Alternate ESPN/NBA style floating scoreboard bug |
 
 ---
 
-## Stopping the Server
+## 📺 OBS Studio Integration
 
-In the terminal window, press **Ctrl + C** to stop the server. You can then close the window.
+To use the live scoreboard graphics on your stream:
+1. In OBS under **Sources**, click **`+`** and choose **`Browser`**.
+2. Set the **URL** to your local scoreboard link (e.g., `http://localhost:3000/overlay` or `http://localhost:3000/nbaoverlay`).
+3. Set the **Width** to `1920` and **Height** to `1080` (or matching your canvas resolution).
+4. Click **OK**.
 
----
-
-## Troubleshooting
-
-**The terminal says "Node.js is not installed"**
-Node.js either isn't installed or wasn't added to PATH during installation. Reinstall it from https://nodejs.org and make sure to check the option to add Node to PATH during setup.
-
-**The terminal says "server.js not found"**
-The files aren't in `C:\basketball-scoreboard`. Make sure the clone or ZIP extraction landed in the right folder.
-
-**The tablet can't connect**
-- Make sure the tablet is on the same WiFi as the laptop
-- Double-check the IP address shown in the terminal
-- Make sure Windows Firewall isn't blocking port 3000. If it is, Windows will prompt you to allow access the first time — click **Allow**
-
-**The buzzer sound is delayed**
-This is a known issue with the hosted (Render.com) version. The local version eliminates most of this delay since everything runs on the same machine and network.
-
-**The server stops when I close the laptop lid**
-Go to **Control Panel → Power Options → Choose what closing the lid does** and set it to **Do nothing** when plugged in.
+> [!IMPORTANT]
+> **Recommended Hardware Encoder Settings**: 
+> Go to **OBS Settings → Output** and set the **Video Encoder** to **`Intel QSV H.264`** (Quick Sync Video). This offloads video encoding to your Intel GPU, keeping your CPU load extremely low so the Node.js server and OBS can comfortably run side-by-side.
 
 ---
 
-## Updating the Scoreboard
+## ⌨️ Operator Keyboard Shortcuts
 
-To pull the latest changes from GitHub:
+For fast, mouse-free tabletop operations, you can use the following keyboard keys (deactivated when typing inside text boxes):
 
-1. Open Command Prompt
-2. Navigate to the folder:
-   ```
-   cd C:\basketball-scoreboard
-   ```
-3. Pull the latest code:
-   ```
-   git pull
-   ```
-4. Restart the server by double-clicking `start.bat`
+| Key | Left Side (Home) | Right Side (Away) |
+| :--- | :--- | :--- |
+| **Score +1** | <kbd>Q</kbd> | <kbd>U</kbd> |
+| **Score +2** | <kbd>W</kbd> | <kbd>I</kbd> |
+| **Score +3** | <kbd>E</kbd> | <kbd>O</kbd> |
+| **Score -1** | <kbd>A</kbd> | <kbd>J</kbd> |
+| **Score -2** | <kbd>S</kbd> | <kbd>K</kbd> |
+| **Buzzer** | <kbd>B</kbd> *(Manual Trigger)* | — |
+
+| Clock Controls | Action |
+| :--- | :--- |
+| <kbd>Spacebar</kbd> | Start / Pause Game Clock |
+| <kbd>Enter</kbd> | Start / Pause Shot Clock |
+| <kbd>R</kbd> | Reset Shot Clock to **24** Seconds |
+| <kbd>T</kbd> | Reset Shot Clock to **14** Seconds |
 
 ---
 
-*Built for the Hoop Culture Network — Greater Toronto Area 🏀*
+## 🛠️ Troubleshooting & Tips
+
+* **Delay in Buzzer Sound**: The local version minimizes browser audio latency. For the absolute lowest audio lag, ensure the operator and OBS laptops are connected directly or run on the same device.
+* **Firewall Blocks Connection**: The first time you start the server on a network, Windows might ask for Firewall permissions. Click **Allow Access** for private networks so your tablets can connect.
+* **Prevent Laptop Sleeping**: Go to **Windows Control Panel → Power Options → Choose what closing the lid does** and select **Do nothing** when plugged in. This ensures your server stays running even if you close the laptop lid on the table.
+
+---
+
+*Built with passion for the Hoop Culture Network — Greater Toronto Area 🏀*

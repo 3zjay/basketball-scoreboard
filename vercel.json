@@ -1,0 +1,17 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/", "destination": "/landing.html" },
+    { "source": "/landing", "destination": "/landing.html" },
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/control", "destination": "/basketball-scoreboard.html" },
+    { "source": "/display", "destination": "/scoreboard-display.html" },
+    { "source": "/display2", "destination": "/scoreboard-display2.html" },
+    { "source": "/shotclock", "destination": "/shotclock-control.html" },
+    { "source": "/shotclock-display", "destination": "/shotclock-display.html" },
+    { "source": "/overlay", "destination": "/basketball-overlay.html" },
+    { "source": "/fullscreen", "destination": "/basketball-fullscreen.html" },
+    { "source": "/nbaoverlay", "destination": "/basketball-nbaoverlay.html" },
+    { "source": "/nbaoverlay2", "destination": "/basketball-nbaoverlay2.html" }
+  ]
+}

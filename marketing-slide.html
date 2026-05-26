@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hoop Culture Scoreboard Ecosystem</title>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #080605;
+      --bg2: #100d0a;
+      --bg3: #1a1410;
+      --bg4: #241c15;
+      --orange: #e8430a;
+      --orange2: #ff6b1a;
+      --gold: #c8841a;
+      --ember: #ff8c00;
+      --fire1: #ff4500;
+      --fire2: #ff6a00;
+      --fire3: #ffa500;
+      --white: #f2ede8;
+      --grey: #a09080;
+      --mid: #604838;
+      --dim: #3a2820;
+      --green: #16c784;
+      --red: #e53935;
+      --blue: #2d5fa6;
+      --border: #2a1e14;
+      --border2: #3a2818;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 1.5rem;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Site Background Glow */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(232, 67, 10, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      max-width: 1200px;
+      width: 100%;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Branded Header styling matching website */
+    .brand-header {
+      margin-bottom: 3rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .logo-container {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+
+    .brand-logo {
+      height: 160px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 0 20px rgba(255, 102, 0, 0.7));
+      transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+
+    .brand-logo:hover {
+      filter: drop-shadow(0 0 35px rgba(255, 102, 0, 0.95));
+      transform: scale(1.05) translateY(-5px);
+    }
+
+    .subtitle {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: var(--orange2);
+      margin-top: 1rem;
+      text-shadow: 0 0 8px rgba(255, 106, 0, 0.4);
+    }
+
+    .main-title {
+      font-family: 'Anton', sans-serif;
+      font-size: 3.2rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--white);
+      margin-top: 0.5rem;
+      text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+    }
+
+    /* Visual Diagram Layout CSS */
+    .diagram-section {
+      width: 100%;
+      max-width: 1100px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3rem 2rem;
+      margin-bottom: 4rem;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      display: grid;
+      grid-template-columns: 1fr 100px 1.1fr 100px 1fr;
+      align-items: center;
+      position: relative;
+    }
+
+    @media (max-width: 960px) {
+      .diagram-section {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+        padding: 3rem 1.5rem;
+      }
+      .connector-arrow {
+        transform: rotate(90deg);
+        margin: 1rem auto;
+      }
+    }
+
+    /* Column Styles */
+    .node-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .node-badge {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 1.5rem;
+      display: inline-block;
+    }
+
+    .badge-tablet { background: rgba(22, 199, 132, 0.1); color: var(--green); border: 1px solid rgba(22, 199, 132, 0.2); }
+    .badge-laptop { background: rgba(255, 106, 0, 0.1); color: var(--orange2); border: 1px solid rgba(255, 106, 0, 0.2); }
+    .badge-tv { background: rgba(229, 57, 53, 0.1); color: var(--red); border: 1px solid rgba(229, 57, 53, 0.2); }
+
+    /* Mockups */
+    .mockup-frame {
+      width: 100%;
+      background: #151515;
+      border: 6px solid #222;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    /* iPad Mockup */
+    .tablet-frame {
+      width: 180px;
+      height: 240px;
+      border-radius: 18px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    .tablet-screen {
+      flex: 1;
+      background: #0f172a;
+      border-radius: 4px;
+      border: 1px solid #333;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-family: 'Barlow Condensed', sans-serif;
+    }
+    .screen-header {
+      font-size: 9px;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 3px;
+    }
+    .screen-clock {
+      font-family: 'Anton', sans-serif;
+      font-size: 26px;
+      color: var(--orange2);
+      margin: 12px 0;
+      text-shadow: 0 0 10px rgba(255, 106, 0, 0.3);
+    }
+    .screen-scores {
+      display: flex;
+      justify-content: space-between;
+      gap: 5px;
+    }
+    .screen-btn {
+      flex: 1;
+      background: var(--orange);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 4px 0;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+    .screen-btn.guest { background: var(--blue); }
+    .screen-footer-btn {
+      background: #1e293b;
+      color: #94a3b8;
+      font-size: 8px;
+      padding: 3px 0;
+      border-radius: 2px;
+      margin-top: 6px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    /* Laptop Mockup */
+    .laptop-frame {
+      width: 240px;
+      height: 150px;
+      border-radius: 10px 10px 0 0;
+      border-width: 8px 8px 0 8px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+    }
+    .laptop-base {
+      width: 270px;
+      height: 10px;
+      background: #333;
+      border-radius: 0 0 10px 10px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+      margin-bottom: 1rem;
+    }
+    .laptop-screen {
+      flex: 1;
+      background: #05070a;
+      border: 1px solid #111;
+      border-radius: 2px;
+      padding: 8px;
+      text-align: left;
+      font-family: monospace;
+      font-size: 8px;
+      line-height: 1.4;
+    }
+    .log-green { color: var(--green); font-weight: bold; }
+    .log-white { color: #fff; }
+    .log-orange { color: var(--orange2); }
+    .log-dim { color: #475569; }
+
+    /* TV Mockup */
+    .tv-frame {
+      width: 230px;
+      height: 140px;
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .tv-base {
+      width: 60px;
+      height: 15px;
+      background: #222;
+      margin: 0 auto 1rem auto;
+      clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%);
+    }
+    .tv-screen {
+      flex: 1;
+      background: #020617;
+      border-radius: 4px;
+      border: 1px solid #333;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+    }
+    .tv-overlay-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 9px;
+      font-weight: 800;
+      color: #64748b;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .tv-overlay-content {
+      background: #0f172a;
+      border-radius: 4px;
+      border: 1px solid #1e293b;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      font-family: 'Barlow Condensed', sans-serif;
+    }
+    .tv-team {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .tv-team-name { font-size: 9px; font-weight: 800; color: #94a3b8; }
+    .tv-team-score { font-family: 'Anton', sans-serif; font-size: 20px; color: #fff; }
+    .tv-team-score.red { color: #ef4444; }
+    .tv-team-score.blue { color: #3b82f6; }
+    .tv-clock {
+      font-family: 'Anton', sans-serif;
+      font-size: 16px;
+      color: var(--orange2);
+      text-shadow: 0 0 8px rgba(255, 106, 0, 0.4);
+    }
+
+    /* Labels below Mockups */
+    .node-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      color: var(--white);
+      margin-top: 1rem;
+      letter-spacing: 0.5px;
+    }
+    .node-subtitle {
+      font-size: 0.85rem;
+      color: var(--grey);
+      font-weight: 500;
+      margin-top: 2px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Connecting Arrows with dynamic labels */
+    .connector-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+    .connector-label-top {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--orange2);
+      margin-bottom: 6px;
+    }
+    .connector-label-bottom {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--grey);
+      margin-top: 6px;
+    }
+    .connector-arrow {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .connector-arrow-svg {
+      width: 48px;
+      height: 24px;
+      stroke: var(--orange);
+      stroke-width: 4;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 6px rgba(232, 67, 10, 0.5));
+      animation: slideArrow 2s infinite ease-in-out;
+    }
+
+    @keyframes slideArrow {
+      0%, 100% { transform: translateX(-4px); opacity: 0.6; }
+      50% { transform: translateX(4px); opacity: 1; }
+    }
+
+    /* Bottom Features Ticker Bar */
+    .feature-bar {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+      padding: 1.2rem 3rem;
+      background: var(--bg2);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    @media (max-width: 600px) {
+      .feature-bar {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1.2rem;
+      }
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--grey);
+    }
+
+    .feature-dot {
+      width: 6px;
+      height: 6px;
+      background-color: var(--fire2);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--fire2);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Branded Header with Transparent Logo -->
+    <header class="brand-header">
+      <div class="logo-container">
+        <img src="hoop-culture-logo.png" alt="Hoop Culture Logo" class="brand-logo">
+      </div>
+      <div class="subtitle">Broadcast Scoreboard System</div>
+      <h1 class="main-title">Ecosystem Workflow</h1>
+    </header>
+
+    <!-- Detailed CSS Reconstruction of Infographic -->
+    <section class="diagram-section">
+      
+      <!-- Column 1: Tablet -->
+      <div class="node-col">
+        <span class="node-badge badge-tablet">TABLET</span>
+        <div class="mockup-frame tablet-frame">
+          <div class="tablet-screen">
+            <div class="screen-header">
+              <span>● CONTROLLER</span>
+              <span>100%</span>
+            </div>
+            <div style="text-align: center;">
+              <span style="font-size: 7px; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase;">GAME CLOCK</span>
+              <div class="screen-clock">12:34</div>
+              <span style="font-size: 8px; color: #94a3b8; font-weight: bold; text-transform: uppercase;">Q4 - PERIOD 2</span>
+            </div>
+            <div>
+              <div class="screen-scores">
+                <div class="screen-btn">HOME +</div>
+                <div class="screen-btn guest">GUEST -</div>
+              </div>
+              <div class="screen-footer-btn">TIMEOUT</div>
+            </div>
+          </div>
+        </div>
+        <h3 class="node-title">Scoreboard Controller</h3>
+        <p class="node-subtitle">NON-TECHNICAL USER APP</p>
+      </div>
+
+      <!-- Connector 1 -->
+      <div class="connector-col">
+        <span class="connector-label-top">DATA SIGNAL</span>
+        <div class="connector-arrow">
+          <svg class="connector-arrow-svg" viewBox="0 0 24 24">
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <polyline points="14 6 22 12 14 18"></polyline>
+          </svg>
+        </div>
+        <span class="connector-label-bottom">COMMANDS</span>
+      </div>
+
+      <!-- Column 2: Laptop -->
+      <div class="node-col">
+        <span class="node-badge badge-laptop">LAPTOP</span>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <div class="mockup-frame laptop-frame">
+            <div class="laptop-screen">
+              <span class="log-green">&gt; LOCAL SERVER RUNNING</span><br>
+              <span class="log-white">IP ADDRESS: 192.168.1.10</span><br>
+              <span class="log-orange">STATUS: CONNECTED</span><br>
+              <span class="log-green">SCOREBOARD ACTIVE</span><br>
+              <span class="log-dim">&gt; waiting for commands...</span>
+            </div>
+          </div>
+          <div class="laptop-base"></div>
+        </div>
+        <h3 class="node-title">Local Server</h3>
+        <p class="node-subtitle">IP ADDRESS: 192.168.1.10</p>
+      </div>
+
+      <!-- Connector 2 -->
+      <div class="connector-col">
+        <span class="connector-label-top">DATA FEED</span>
+        <div class="connector-arrow">
+          <svg class="connector-arrow-svg" viewBox="0 0 24 24">
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <polyline points="14 6 22 12 14 18"></polyline>
+          </svg>
+        </div>
+        <span class="connector-label-bottom">UPDATES</span>
+      </div>
+
+      <!-- Column 3: TV Display -->
+      <div class="node-col">
+        <span class="node-badge badge-tv">TV / BROADCAST</span>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <div class="mockup-frame tv-frame">
+            <div class="tv-screen">
+              <div class="tv-overlay-title">🔴 LIVE SCOREBOARD FEED</div>
+              <div class="tv-overlay-content">
+                <div class="tv-team">
+                  <span class="tv-team-name">BEARS</span>
+                  <span class="tv-team-score red">24</span>
+                </div>
+                <div class="tv-clock">08:15</div>
+                <div class="tv-team">
+                  <span class="tv-team-name">LIONS</span>
+                  <span class="tv-team-score blue">17</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tv-base"></div>
+        </div>
+        <h3 class="node-title">Live Score Overlay</h3>
+        <p class="node-subtitle">HDMI TV & OBS LIVE STREAM</p>
+      </div>
+
+    </section>
+
+    <!-- Bottom Features Ticker Bar -->
+    <footer class="feature-bar">
+      <div class="feature-item">
+        <span class="feature-dot"></span>
+        100% Offline Court Wi-Fi
+      </div>
+      <div class="feature-item">
+        <span class="feature-dot"></span>
+        Zero Clock Delay
+      </div>
+      <div class="feature-item">
+        <span class="feature-dot"></span>
+        Auto Team Color Matching
+      </div>
+    </footer>
+
+  </div>
+
+</body>
+</html>
