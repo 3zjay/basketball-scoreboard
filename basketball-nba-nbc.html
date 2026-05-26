@@ -7,7 +7,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script src="/firebase-config.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800&family=Teko:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Teko:wght@700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 html, body {
@@ -17,160 +17,174 @@ html, body {
   font-family: 'Barlow Condensed', sans-serif;
 }
 
-/* ══════════════════════════════════════════════════════
-   ROOT SCOREBUG — anchored bottom-center, 2-row strip
-   ══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   SCOREBUG ROOT — fixed bottom-center
+   ═══════════════════════════════════════════════ */
 #scorebug {
   position: fixed;
-  bottom: 1.5vw;
+  bottom: 1.8vw;
   left: 50%;
   transform: translateX(-50%);
   display: inline-flex;
   flex-direction: column;
-  min-width: 52vw;
-  box-shadow: 0 0.5vw 3vw rgba(0,0,0,0.85);
-  border-radius: 0.25vw;
+  box-shadow: 0 0.4vw 2.5vw rgba(0,0,0,0.9);
+  /* clip everything inside to border radius */
+  border-radius: 0.22vw;
   overflow: hidden;
 }
 
-/* ══════════════════════════════════════════════════════
-   TOP MAIN ROW
-   ══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   MAIN ROW
+   ═══════════════════════════════════════════════ */
 .main-row {
   display: flex;
   align-items: stretch;
-  height: 6.2vw;
+  height: 5.1vw;
 }
 
-/* ── HOME ABBR TAB ── */
-.home-abbr-tab {
+/* ─── TEAM ABBR TABS ─── */
+.team-tab {
+  width: 3.0vw;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 0.7vw;
-  min-width: 4vw;
-  background: #3a3a3a;
   flex-shrink: 0;
+  background: #3a3a3a; /* JS overrides this */
 }
-.abbr-text {
-  font-size: 1.55vw;
+.tab-abbr {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.3vw;
   font-weight: 900;
   color: #fff;
-  letter-spacing: 0.04vw;
   text-transform: uppercase;
+  letter-spacing: 0.08vw;
   line-height: 1;
-  writing-mode: vertical-rl;
+  /* Both sides read top → bottom */
+  writing-mode: vertical-lr;
   text-orientation: mixed;
-  transform: rotate(180deg);
 }
 
-/* ── LOGO CELL (home + away) ── */
-.logo-cell {
+/* ─── LOGO CELLS ─── */
+.logo-seg {
+  width: 5.1vw;         /* square = row height */
+  flex-shrink: 0;
   position: relative;
-  width: 6.2vw;
-  height: 6.2vw;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  background: #222;
-  overflow: visible;
+  background: #1e1e1e; /* JS overrides with darkened team color */
 }
-.logo-cell img {
-  width: 5.2vw;
-  height: 5.2vw;
+.logo-inner {
+  width: 4.4vw;
+  height: 4.4vw;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111;
+}
+.logo-inner img {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  position: relative;
-  z-index: 1;
 }
 .logo-ph {
-  font-size: 0.5vw;
+  font-size: 0.38vw;
   font-weight: 700;
-  color: rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.2);
   text-transform: uppercase;
-  text-align: center;
 }
-/* Timeout / foul badge on logo corner */
+
+/* Foul/timeout badge */
 .logo-badge {
   position: absolute;
-  top: 0.25vw;
-  right: 0.25vw;
-  z-index: 10;
-  font-size: 0.75vw;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.85vw;
   font-weight: 900;
   color: #fff;
   background: rgba(0,0,0,0.72);
-  border-radius: 0.2vw;
-  padding: 0.05vw 0.28vw;
+  padding: 0.06vw 0.28vw;
+  border-radius: 0.18vw;
   line-height: 1.2;
-  font-family: 'Barlow Condensed', sans-serif;
   display: none; /* shown when value > 0 */
+  z-index: 5;
+}
+.home-badge { top: 0.22vw; right: 0.22vw; }
+.away-badge { top: 0.22vw; left:  0.22vw; }
+
+/* ─── THIN DIVIDERS between logo and score ─── */
+.score-divider {
+  width: 2px;
+  background: rgba(255,255,255,0.22);
+  flex-shrink: 0;
+  align-self: stretch;
 }
 
-/* ── HOME SCORE BLOCK ── */
-.home-score-seg {
+/* ─── SCORE BLOCKS ─── */
+.score-seg {
+  min-width: 5.0vw;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 1.3vw;
-  min-width: 6.5vw;
+  padding: 0 0.8vw;
   flex-shrink: 0;
-  background: #2a2a2a;
+  background: #252525; /* home default: dark neutral | away: JS sets team color */
 }
 .score-num {
   font-family: 'Teko', sans-serif;
-  font-size: 4.3vw;
+  font-size: 3.7vw;
   font-weight: 700;
   color: #fff;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 @keyframes scoreBump {
-  0%   { transform:scale(1); color:#fff; }
-  40%  { transform:scale(1.22); color:#ffe066; }
-  100% { transform:scale(1); color:#fff; }
+  0%   { transform: scale(1);    color: #fff; }
+  40%  { transform: scale(1.22); color: #ffe066; }
+  100% { transform: scale(1);    color: #fff; }
 }
 .bump { animation: scoreBump 0.38s ease; }
 
-/* ── CENTER BLOCK ── */
+/* ─── CENTER BLOCK ─── */
 .center-seg {
+  min-width: 9.2vw;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #1c1c1c;
-  padding: 0 1.4vw;
+  background: #141414;
+  padding: 0 1.1vw;
   flex-shrink: 0;
-  min-width: 10vw;
+  border-left:  1px solid rgba(255,255,255,0.07);
+  border-right: 1px solid rgba(255,255,255,0.07);
   gap: 0;
-  border-left: 1px solid rgba(255,255,255,0.08);
-  border-right: 1px solid rgba(255,255,255,0.08);
 }
-/* NBC peacock SVG logo */
+/* NBC Peacock SVG */
 .nbc-logo {
-  width: 2.6vw;
-  height: 2.6vw;
+  width: 2.3vw;
+  height: 2.3vw;
   margin-bottom: 0.1vw;
   flex-shrink: 0;
 }
 .clock-val {
   font-family: 'Teko', sans-serif;
-  font-size: 2.7vw;
+  font-size: 2.5vw;
   font-weight: 700;
   color: #fff;
-  line-height: 1;
+  line-height: 0.95;
   font-variant-numeric: tabular-nums;
   transition: color 0.3s;
 }
-.clock-val.warn { color: #ff5050; }
+.clock-val.warn { color: #ff4040; }
 .period-row {
   display: flex;
   align-items: center;
-  gap: 0.5vw;
-  margin-top: 0.05vw;
+  gap: 0.45vw;
+  margin-top: 0.08vw;
 }
 .period-val {
-  font-size: 1.05vw;
+  font-size: 0.9vw;
   font-weight: 900;
   color: #fff;
   letter-spacing: 0.06vw;
@@ -178,102 +192,66 @@ html, body {
   line-height: 1;
 }
 .quarter-fouls {
-  font-size: 1.05vw;
+  font-size: 0.9vw;
   font-weight: 900;
   color: #e82828;
-  line-height: 1;
-  min-width: 1vw;
+  min-width: 0.8vw;
   text-align: center;
+  line-height: 1;
 }
 
-/* ── AWAY SCORE BLOCK ── */
-.away-score-seg {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 1.3vw;
-  min-width: 6.5vw;
-  flex-shrink: 0;
-  background: #2a2a2a;
-}
-
-/* ── AWAY LOGO cell (reuses .logo-cell) ── */
-
-/* ── AWAY ABBR TAB ── */
-.away-abbr-tab {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 0.7vw;
-  min-width: 4vw;
-  background: #c8102e;
-  flex-shrink: 0;
-}
-
-/* Possession indicator — thin glowing strip on the inner edge of logo cell */
-.poss-strip {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  height: 0.28vw;
-  background: #fff;
-  box-shadow: 0 0 0.5vw #fff, 0 0 1.2vw #ffe066;
-  opacity: 0;
-  transition: opacity 0.3s;
-  z-index: 5;
-}
-.poss-strip.on { opacity: 1; }
-
-/* ══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════
    BOTTOM STRIP
-   ══════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════ */
 .bottom-strip {
   display: flex;
   align-items: center;
-  height: 1.55vw;
-  background: #111;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  height: 1.35vw;
+  background: #0d0d0d;
+  border-top: 1px solid rgba(255,255,255,0.05);
 }
 .bonus-lbl {
-  font-size: 0.6vw;
+  font-size: 0.52vw;
   font-weight: 800;
-  letter-spacing: 0.14vw;
-  color: rgba(255,255,255,0.6);
+  letter-spacing: 0.16vw;
+  color: rgba(255,255,255,0.3);
   text-transform: uppercase;
-  white-space: nowrap;
-  padding: 0 1.2vw;
+  padding: 0 1.0vw;
   flex-shrink: 0;
+  white-space: nowrap;
+  transition: color 0.3s;
 }
-.bonus-lbl.active {
-  color: #ffe066;
+.bonus-lbl.active { color: #ffe066; }
+.strip-divider {
+  width: 1px;
+  height: 55%;
+  background: rgba(255,255,255,0.12);
+  flex-shrink: 0;
 }
 .ticker-center {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 0.38vw;
   overflow: hidden;
+  padding: 0 0.5vw;
+}
+.ticker-ball {
+  width: 0.6vw;
+  height: 0.6vw;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f85c0a, #b03e00);
+  flex-shrink: 0;
 }
 .ticker-text {
-  font-size: 0.65vw;
+  font-size: 0.58vw;
   font-weight: 800;
   letter-spacing: 0.18vw;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255,255,255,0.42);
   text-transform: uppercase;
   white-space: nowrap;
-}
-/* NBA ball icon in center ticker */
-.nba-ball {
-  display: inline-block;
-  width: 0.7vw;
-  height: 0.7vw;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #f85c0a, #c84800);
-  border: 1px solid rgba(0,0,0,0.4);
-  vertical-align: middle;
-  margin-right: 0.35vw;
-  position: relative;
-  top: -0.05vw;
+  font-style: italic;
 }
 </style>
 </head>
@@ -281,87 +259,94 @@ html, body {
 
 <div id="scorebug">
 
-  <!-- ── MAIN ROW ── -->
+  <!-- ══ MAIN ROW ══ -->
   <div class="main-row">
 
-    <!-- HOME ABBR TAB -->
-    <div class="home-abbr-tab" id="homeAbbrTab">
-      <div class="abbr-text" id="homeAbbrNBC">HOME</div>
+    <!-- HOME ABBR TAB (left edge) -->
+    <div class="team-tab" id="homeTab">
+      <span class="tab-abbr" id="homeAbbrNBC">HOME</span>
     </div>
 
-    <!-- HOME LOGO -->
-    <div class="logo-cell" id="homeLogoCell">
-      <div id="homeLogoNBC" class="logo-ph">LOGO</div>
-      <div class="logo-badge" id="homeBadge">0</div>
-      <div class="poss-strip" id="possHome"></div>
+    <!-- HOME LOGO CIRCLE -->
+    <div class="logo-seg" id="homeLogoSeg">
+      <div class="logo-inner" id="homeLogoInner">
+        <div class="logo-ph" id="homeLogoNBC">LOGO</div>
+      </div>
+      <div class="logo-badge home-badge" id="homeBadge"></div>
     </div>
 
-    <!-- HOME SCORE -->
-    <div class="home-score-seg" id="homeScoreSeg">
+    <!-- DIVIDER -->
+    <div class="score-divider"></div>
+
+    <!-- HOME SCORE (dark neutral bg) -->
+    <div class="score-seg" id="homeScoreSeg">
       <div class="score-num" id="homeScoreNBC">0</div>
     </div>
 
-    <!-- CENTER: NBC logo + clock + period -->
+    <!-- CENTER: NBC logo · clock · period/fouls -->
     <div class="center-seg">
-      <!-- NBC Peacock SVG -->
-      <svg class="nbc-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <!-- Peacock feathers -->
-        <ellipse cx="50" cy="52" rx="5" ry="5" fill="#fff"/>
-        <!-- 6 feathers radiating outward -->
-        <ellipse cx="50" cy="30" rx="5" ry="16" fill="#e8262b" transform="rotate(0 50 52)"/>
-        <ellipse cx="50" cy="30" rx="5" ry="16" fill="#f5a623" transform="rotate(60 50 52)"/>
-        <ellipse cx="50" cy="30" rx="5" ry="16" fill="#f5e623" transform="rotate(120 50 52)"/>
-        <ellipse cx="50" cy="30" rx="5" ry="16" fill="#2bba49" transform="rotate(180 50 52)"/>
-        <ellipse cx="50" cy="30" rx="5" ry="16" fill="#2b6dba" transform="rotate(240 50 52)"/>
-        <ellipse cx="50" cy="30" rx="5" ry="16" fill="#9f2bba" transform="rotate(300 50 52)"/>
-        <!-- white center disc -->
-        <circle cx="50" cy="52" r="7" fill="#fff"/>
+      <!-- NBC Peacock -->
+      <svg class="nbc-logo" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <!-- 6 feather petals radiating from center -->
+        <ellipse cx="60" cy="38" rx="7" ry="20" fill="#e8262b"/>
+        <ellipse cx="60" cy="38" rx="7" ry="20" fill="#f5a623" transform="rotate(60 60 60)"/>
+        <ellipse cx="60" cy="38" rx="7" ry="20" fill="#f0d000" transform="rotate(120 60 60)"/>
+        <ellipse cx="60" cy="38" rx="7" ry="20" fill="#2bba49" transform="rotate(180 60 60)"/>
+        <ellipse cx="60" cy="38" rx="7" ry="20" fill="#2b6dba" transform="rotate(240 60 60)"/>
+        <ellipse cx="60" cy="38" rx="7" ry="20" fill="#9b2bba" transform="rotate(300 60 60)"/>
+        <!-- white center circle -->
+        <circle cx="60" cy="60" r="10" fill="#fff"/>
       </svg>
+
       <div class="clock-val" id="gameClkNBC">10:00</div>
       <div class="period-row">
-        <div class="period-val" id="periodNBC">1ST</div>
-        <div class="quarter-fouls" id="quarterFoulsNBC"></div>
+        <span class="period-val" id="periodNBC">1ST</span>
+        <span class="quarter-fouls" id="quarterFoulsNBC"></span>
       </div>
     </div>
 
-    <!-- AWAY SCORE -->
-    <div class="away-score-seg" id="awayScoreSeg">
+    <!-- AWAY SCORE (bright team color bg) -->
+    <div class="score-seg" id="awayScoreSeg">
       <div class="score-num" id="awayScoreNBC">0</div>
     </div>
 
-    <!-- AWAY LOGO -->
-    <div class="logo-cell" id="awayLogoCell">
-      <div id="awayLogoNBC" class="logo-ph">LOGO</div>
-      <div class="logo-badge" id="awayBadge">0</div>
-      <div class="poss-strip" id="possAway"></div>
+    <!-- DIVIDER -->
+    <div class="score-divider"></div>
+
+    <!-- AWAY LOGO CIRCLE -->
+    <div class="logo-seg" id="awayLogoSeg">
+      <div class="logo-inner" id="awayLogoInner">
+        <div class="logo-ph" id="awayLogoNBC">LOGO</div>
+      </div>
+      <div class="logo-badge away-badge" id="awayBadge"></div>
     </div>
 
-    <!-- AWAY ABBR TAB -->
-    <div class="away-abbr-tab" id="awayAbbrTab">
-      <div class="abbr-text" id="awayAbbrNBC">AWAY</div>
+    <!-- AWAY ABBR TAB (right edge) -->
+    <div class="team-tab" id="awayTab">
+      <span class="tab-abbr" id="awayAbbrNBC">AWAY</span>
     </div>
 
   </div><!-- /main-row -->
 
-  <!-- ── BOTTOM STRIP ── -->
+  <!-- ══ BOTTOM STRIP ══ -->
   <div class="bottom-strip">
-    <div class="bonus-lbl" id="homeBonusLbl">BONUS</div>
+    <span class="bonus-lbl" id="homeBonusLbl">BONUS</span>
+    <div class="strip-divider"></div>
     <div class="ticker-center">
-      <div class="ticker-text">
-        <span class="nba-ball"></span>
-        <span id="tickerTextNBC">NBA BASKETBALL</span>
-      </div>
+      <div class="ticker-ball"></div>
+      <div class="ticker-text" id="tickerTextNBC">NBA BASKETBALL</div>
     </div>
-    <div class="bonus-lbl" id="awayBonusLbl">BONUS</div>
+    <div class="strip-divider"></div>
+    <span class="bonus-lbl" id="awayBonusLbl">BONUS</span>
   </div>
 
 </div><!-- /scorebug -->
 
 <script>
-/* ══════════════════════════════════════════════════════════
-   DATA LAYER — identical Firebase / SSE / BroadcastChannel
-   pattern used by all other overlays in this project
-   ══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   DATA LAYER — same Firebase/SSE/BroadcastChannel
+   pattern as all other overlays in this project
+   ═══════════════════════════════════════════════════ */
 const SERVER_URL = (
   window.location.hostname.includes('vercel.app') ||
   window.location.hostname.includes('vercel.sh')
@@ -400,22 +385,24 @@ bc.onmessage = (e) => {
   }
 };
 
-/* Default state */
+/* ─── Default state ─── */
 const DEF = {
   homeScore: 0, awayScore: 0,
   homeFouls: 0, awayFouls: 0,
   homeBonus: false, awayBonus: false,
-  homeAbbr: 'HOME', homeColor: '#3a3a3a', homeLogo: null,
+  homeAbbr: 'HOME', homeColor: '#4a4a4a', homeLogo: null,
   awayAbbr: 'AWAY', awayColor: '#c8102e', awayLogo: null,
   quarter: 1, gameSeconds: 600, shotSeconds: 24,
   gameRunning: false, shotRunning: false,
   possession: null,
-  rp1Title: '', rp1Value: '',   // used for game title / venue
+  rp1Title: '', rp1Value: '',
 };
 const PERIODS = ['1ST','2ND','3RD','4TH','OT','2OT'];
 let S = { ...DEF };
+let _lastBuzzTime = 0;
+let lastHome = -1, lastAway = -1;
 
-/* Local clock tick */
+/* ─── Local clock tick ─── */
 let localTick = null;
 function startLocalTick() {
   if (localTick) return;
@@ -427,55 +414,52 @@ function startLocalTick() {
 function stopLocalTick()  { clearInterval(localTick); localTick = null; }
 function syncLocalTick()  { if (S.gameRunning || S.shotRunning) startLocalTick(); else stopLocalTick(); }
 
-/* Helpers */
-function s(id, val) { const e = document.getElementById(id); if (e) e.textContent = val; }
+/* ─── Helpers ─── */
+function el(id) { return document.getElementById(id); }
+function txt(id, v) { const e = el(id); if (e) e.textContent = v; }
 
-function lighten(hex, pct = 0.35) {
-  let r = parseInt(hex.slice(1,3),16),
-      g = parseInt(hex.slice(3,5),16),
-      b = parseInt(hex.slice(5,7),16);
-  r = Math.min(255, Math.round(r + (255-r)*pct));
-  g = Math.min(255, Math.round(g + (255-g)*pct));
-  b = Math.min(255, Math.round(b + (255-b)*pct));
-  return `rgb(${r},${g},${b})`;
-}
-function darken(hex, pct = 0.45) {
+function darken(hex, pct) {
+  // pct 0–1: 0=black, 1=original
+  if (!hex || !hex.startsWith('#') || hex.length < 7) return '#1e1e1e';
   let r = parseInt(hex.slice(1,3),16),
       g = parseInt(hex.slice(3,5),16),
       b = parseInt(hex.slice(5,7),16);
   return `rgb(${Math.round(r*pct)},${Math.round(g*pct)},${Math.round(b*pct)})`;
 }
+function isValidHex(h) {
+  return h && typeof h === 'string' && h.startsWith('#') && h.length >= 7;
+}
 
-/* ── RENDER CLOCKS ── */
+/* ─── Clock rendering ─── */
 function renderClocks() {
-  const m   = Math.floor(S.gameSeconds / 60);
-  const sec = S.gameSeconds % 60;
-  // NBC style: show tenths in last minute
-  let txt;
-  if (S.gameSeconds < 60) {
-    txt = `${S.gameSeconds}.0`;
+  const gs  = S.gameSeconds;
+  const m   = Math.floor(gs / 60);
+  const sec = gs % 60;
+  const txt_val = gs < 60 ? `${gs}.0` : `${m}:${sec.toString().padStart(2,'0')}`;
+  const clk = el('gameClkNBC');
+  if (clk) { clk.textContent = txt_val; clk.className = 'clock-val' + (gs <= 30 ? ' warn' : ''); }
+}
+
+/* ─── Logo setter (avoids outerHTML ID loss) ─── */
+function setLogo(innerId, logoUrl) {
+  const inner = el(innerId);
+  if (!inner) return;
+  if (logoUrl) {
+    inner.innerHTML = `<img src="${logoUrl}" alt="" style="width:100%;height:100%;object-fit:contain;">`;
   } else {
-    txt = `${m}:${sec.toString().padStart(2,'0')}`;
-  }
-  const clk = document.getElementById('gameClkNBC');
-  if (clk) {
-    clk.textContent = txt;
-    clk.className   = 'clock-val' + (S.gameSeconds <= 30 ? ' warn' : '');
+    inner.innerHTML = `<div class="logo-ph">LOGO</div>`;
   }
 }
 
-/* ── RENDER FULL STATE ── */
-let lastHome = -1, lastAway = -1;
-let _lastBuzzTime = 0;
-
+/* ─── Full render ─── */
 function render() {
   const qL = typeof S.quarter === 'number' ? (PERIODS[S.quarter-1] || `Q${S.quarter}`) : S.quarter;
-  s('periodNBC', qL);
+  txt('periodNBC', qL);
   renderClocks();
 
-  /* Scores with bump */
-  const hEl = document.getElementById('homeScoreNBC');
-  const aEl = document.getElementById('awayScoreNBC');
+  // Scores with bump animation
+  const hEl = el('homeScoreNBC');
+  const aEl = el('awayScoreNBC');
   if (hEl && parseInt(hEl.textContent) !== S.homeScore) {
     hEl.textContent = S.homeScore;
     if (lastHome >= 0) { hEl.classList.remove('bump'); void hEl.offsetWidth; hEl.classList.add('bump'); }
@@ -486,92 +470,62 @@ function render() {
   }
   lastHome = S.homeScore; lastAway = S.awayScore;
 
-  /* Abbreviations */
-  s('homeAbbrNBC', (S.homeAbbr || 'HOME').toUpperCase());
-  s('awayAbbrNBC', (S.awayAbbr || 'AWAY').toUpperCase());
+  // Abbreviations
+  txt('homeAbbrNBC', (S.homeAbbr || 'HOME').toUpperCase().slice(0, 4));
+  txt('awayAbbrNBC', (S.awayAbbr || 'AWAY').toUpperCase().slice(0, 4));
 
-  /* Fouls / timeout badges */
-  const hFouls = S.homeFouls || 0;
-  const aFouls = S.awayFouls || 0;
-  const hBadge = document.getElementById('homeBadge');
-  const aBadge = document.getElementById('awayBadge');
-  if (hBadge) { hBadge.textContent = hFouls; hBadge.style.display = hFouls > 0 ? 'block' : 'none'; }
-  if (aBadge) { aBadge.textContent = aFouls; aBadge.style.display = aFouls > 0 ? 'block' : 'none'; }
+  // Foul badges
+  const hf = S.homeFouls || 0;
+  const af = S.awayFouls || 0;
+  const hBadge = el('homeBadge');
+  const aBadge = el('awayBadge');
+  if (hBadge) { hBadge.textContent = hf; hBadge.style.display = hf > 0 ? 'block' : 'none'; }
+  if (aBadge) { aBadge.textContent = af; aBadge.style.display = af > 0 ? 'block' : 'none'; }
 
-  /* Quarter fouls (uses rp1Value as a hook — shows only if numeric) */
+  // Quarter fouls (rp1Value hook)
   const qfRaw = S.rp1Value || '';
   const qfNum = parseInt(qfRaw);
-  const qfEl  = document.getElementById('quarterFoulsNBC');
-  if (qfEl) qfEl.textContent = (!isNaN(qfNum) && qfNum > 0) ? qfNum : '';
+  txt('quarterFoulsNBC', (!isNaN(qfNum) && qfNum > 0) ? qfNum : '');
 
-  /* Bonus indicators */
-  const hBonusEl = document.getElementById('homeBonusLbl');
-  const aBonusEl = document.getElementById('awayBonusLbl');
-  if (hBonusEl) hBonusEl.className = 'bonus-lbl' + (S.homeBonus ? ' active' : '');
-  if (aBonusEl) aBonusEl.className = 'bonus-lbl' + (S.awayBonus ? ' active' : '');
+  // Bonus indicators
+  const hBl = el('homeBonusLbl');
+  const aBl = el('awayBonusLbl');
+  if (hBl) hBl.className = 'bonus-lbl' + (S.homeBonus ? ' active' : '');
+  if (aBl) aBl.className = 'bonus-lbl' + (S.awayBonus ? ' active' : '');
 
-  /* Ticker text — uses rp1Title if set, otherwise generic */
-  const tickerEl = document.getElementById('tickerTextNBC');
-  if (tickerEl) tickerEl.textContent = (S.rp1Title && S.rp1Title.trim()) ? S.rp1Title.trim().toUpperCase() : 'NBA BASKETBALL';
-
-  /* Team colors */
-  const hc = (S.homeColor && S.homeColor.startsWith('#') && S.homeColor.length >= 7) ? S.homeColor : '#3a3a3a';
-  const ac = (S.awayColor && S.awayColor.startsWith('#') && S.awayColor.length >= 7) ? S.awayColor : '#c8102e';
-
-  /* Abbr tab backgrounds */
-  const hTab = document.getElementById('homeAbbrTab');
-  const aTab = document.getElementById('awayAbbrTab');
-  if (hTab) hTab.style.background = hc;
-  if (aTab) aTab.style.background = ac;
-
-  /* Score seg — slightly darkened team color */
-  const hSeg = document.getElementById('homeScoreSeg');
-  const aSeg = document.getElementById('awayScoreSeg');
-  if (hSeg) hSeg.style.background = darken(hc, 0.6);
-  if (aSeg) aSeg.style.background = darken(ac, 0.6);
-
-  /* Home logo */
-  const hLC = document.getElementById('homeLogoCell');
-  const hLogoEl = document.getElementById('homeLogoNBC');
-  if (hLC) {
-    hLC.style.background = darken(hc, 0.3);
-    hLC.style.boxShadow  = `inset 0 0 1.5vw ${hc}55`;
-  }
-  if (hLogoEl) {
-    if (S.homeLogo) {
-      hLogoEl.outerHTML = `<img id="homeLogoNBC" src="${S.homeLogo}" alt="">`;
-    } else {
-      const existing = document.getElementById('homeLogoNBC');
-      if (existing && existing.tagName === 'IMG') {
-        existing.outerHTML = `<div id="homeLogoNBC" class="logo-ph">LOGO</div>`;
-      }
-    }
+  // Ticker text
+  const tickerEl = el('tickerTextNBC');
+  if (tickerEl) {
+    const t = (S.rp1Title && S.rp1Title.trim()) ? S.rp1Title.trim().toUpperCase() : 'NBA BASKETBALL';
+    tickerEl.textContent = t;
   }
 
-  /* Away logo */
-  const aLC = document.getElementById('awayLogoCell');
-  const aLogoEl = document.getElementById('awayLogoNBC');
-  if (aLC) {
-    aLC.style.background = darken(ac, 0.3);
-    aLC.style.boxShadow  = `inset 0 0 1.5vw ${ac}55`;
-  }
-  if (aLogoEl) {
-    if (S.awayLogo) {
-      aLogoEl.outerHTML = `<img id="awayLogoNBC" src="${S.awayLogo}" alt="">`;
-    } else {
-      const existing = document.getElementById('awayLogoNBC');
-      if (existing && existing.tagName === 'IMG') {
-        existing.outerHTML = `<div id="awayLogoNBC" class="logo-ph">LOGO</div>`;
-      }
-    }
-  }
+  // Team colors
+  const hc = isValidHex(S.homeColor) ? S.homeColor : '#4a4a4a';
+  const ac = isValidHex(S.awayColor) ? S.awayColor : '#c8102e';
 
-  /* Possession glowing strip */
-  document.getElementById('possHome')?.classList.toggle('on', S.possession === 'home');
-  document.getElementById('possAway')?.classList.toggle('on', S.possession === 'away');
+  // HOME: abbr tab = team color, score seg = darkened team color, logo seg = very dark team color
+  const hTab = el('homeTab');
+  const hScoreSeg = el('homeScoreSeg');
+  const hLogoSeg  = el('homeLogoSeg');
+  if (hTab)      hTab.style.background      = hc;
+  if (hScoreSeg) hScoreSeg.style.background = darken(hc, 0.55);
+  if (hLogoSeg)  hLogoSeg.style.background  = darken(hc, 0.38);
+
+  // AWAY: score seg = team color (full brightness), abbr tab = darker, logo seg = very dark
+  const aTab = el('awayTab');
+  const aScoreSeg = el('awayScoreSeg');
+  const aLogoSeg  = el('awayLogoSeg');
+  if (aScoreSeg) aScoreSeg.style.background = ac;
+  if (aTab)      aTab.style.background      = darken(ac, 0.65);
+  if (aLogoSeg)  aLogoSeg.style.background  = darken(ac, 0.38);
+
+  // Logos
+  setLogo('homeLogoInner', S.homeLogo);
+  setLogo('awayLogoInner', S.awayLogo);
 }
 
-/* ── AUDIO ── */
+/* ─── Audio ─── */
 window.addEventListener('load', () => {
   const a = new Audio('/buzzer.mp3'); a.volume = 0;
   a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => {});
@@ -579,7 +533,7 @@ window.addEventListener('load', () => {
 function playGameBuzzer() { const a = new Audio('/buzzer.mp3'); a.volume = 1.0; a.play().catch(() => {}); }
 function playShotBuzzer() { const a = new Audio('/buzzer.mp3'); a.volume = 1.0; a.play().catch(() => {}); }
 
-/* ── SSE / FIREBASE CONNECTION ── */
+/* ─── SSE / Firebase connection ─── */
 function connectSSE() {
   if (useFirebase && db) {
     db.ref(`states/${fbUser}`).on('value', snapshot => {
@@ -613,7 +567,7 @@ function connectSSE() {
   es.onerror = () => { es.close(); setTimeout(connectSSE, 2000); };
 }
 
-/* ── BOOTSTRAP ── */
+/* ─── Bootstrap ─── */
 if (useFirebase && db) {
   db.ref(`states/${fbUser}`).once('value').then(snapshot => {
     const data = snapshot.val();
