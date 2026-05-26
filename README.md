@@ -59,6 +59,13 @@ Best for cloud streaming setups or remote production workflows where no persiste
 * **Controlboard URL**:
   * `https://your-app.vercel.app/?user=my_session_name` (e.g. `https://hoop-culture.vercel.app/?user=court_3`)
   * *Note: Usernames or emails containing dots (e.g. `first.last@domain.com`) are automatically sanitized to `first_last` for Firebase paths.*
+* **Google Sign-In & Operator Whitelist**:
+  * Users authenticate by clicking **"Continue with Google"** on the login screen.
+  * The system validates their account against an authorized operator whitelist stored in your Firebase Realtime Database.
+  * The super-administrator account **`admin@hoopculture.ca`** has bypass access to log in and manage directory entries.
+* **Accessing the Operator Directory Management Console**:
+  * Access URL: `https://your-app.vercel.app/admin` (or click the orange **⚙️ Admin** button in the control panel header when logged in as `admin@hoopculture.ca`).
+  * Super-admins can add new operator Google email addresses or remove existing operators instantly with a single click.
 * **How it Syncs**: 
   * **Remote spectator tabs**: Sync via WebSockets directly to the Firebase Realtime Database.
   * **Same-device overlay tabs (OBS & display tabs on the operator's PC)**: Sync instantly in **0–1ms** via the built-in browser **`BroadcastChannel` API**, bypassing internet routing entirely.

@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hoop Culture — User Management Console</title>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script src="/firebase-config.js"></script>
+  <style>
+    :root {
+      --bg: #080605;
+      --bg2: #100d0a;
+      --bg3: #1a1410;
+      --orange: #e8430a;
+      --orange2: #ff6b1a;
+      --fire1: #ff4500;
+      --fire2: #ff6a00;
+      --fire3: #ffa500;
+      --white: #f2ede8;
+      --grey: #a09080;
+      --border: #2a1e14;
+      --border2: #3a2818;
+      --red: #d32f2f;
+      --red-hover: #f44336;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1.5rem;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(232, 67, 10, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .admin-container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 600px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    .admin-container::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--fire1), var(--fire3));
+      border-radius: 16px 16px 0 0;
+    }
+
+    .header-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+    }
+
+    .brand-title {
+      font-family: 'Anton', sans-serif;
+      font-size: 1.8rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--white);
+    }
+
+    .brand-subtitle {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--orange2);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .btn-back {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 8px 16px;
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--white);
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-back:hover {
+      border-color: var(--white);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Add User Form */
+    .add-user-form {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .form-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--grey);
+      margin-bottom: 1rem;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .input-field {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px 16px;
+      font-family: 'Barlow', sans-serif;
+      font-size: 14px;
+      color: var(--white);
+      transition: all 0.2s;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--orange2);
+      box-shadow: 0 0 8px rgba(255, 107, 26, 0.2);
+    }
+
+    .btn-add {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 0 24px;
+      border: none;
+      border-radius: 4px;
+      background: var(--orange);
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-add:hover {
+      background: var(--orange2);
+      box-shadow: 0 4px 12px rgba(232, 67, 10, 0.4);
+    }
+
+    /* User List */
+    .user-list-section {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+    }
+
+    .list-header {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--grey);
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .user-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    .user-item:last-child {
+      border-bottom: none;
+    }
+
+    .user-item:hover {
+      background: rgba(255, 107, 26, 0.02);
+    }
+
+    .user-email {
+      font-size: 14px;
+      color: var(--white);
+    }
+
+    .user-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-delete {
+      padding: 6px 12px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border: none;
+      background: var(--red);
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-delete:hover {
+      background: var(--red-hover);
+      box-shadow: 0 2px 8px rgba(211, 47, 47, 0.4);
+    }
+
+    .no-users {
+      padding: 30px;
+      text-align: center;
+      color: var(--grey);
+      font-size: 14px;
+    }
+
+    .loading-spinner {
+      padding: 30px;
+      text-align: center;
+      color: var(--orange2);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-container">
+    
+    <!-- Header -->
+    <div class="header-section">
+      <div>
+        <h1 class="brand-title">Operator Directory</h1>
+        <div class="brand-subtitle">Scoreboard User Access</div>
+      </div>
+      <a href="/control" class="btn-back">← Controlboard</a>
+    </div>
+
+    <!-- Add Operator Form -->
+    <div class="add-user-form">
+      <h2 class="form-title">Add Authorized League Operator</h2>
+      <form id="addUserForm" onsubmit="handleAddUser(event)">
+        <div class="input-row">
+          <input type="email" id="newUserEmail" class="input-field" placeholder="operator@gmail.com" required>
+          <button type="submit" class="btn-add">Authorize</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Operator List -->
+    <div class="user-list-section">
+      <div class="list-header">Currently Whitelisted Google Accounts</div>
+      <div id="loading" class="loading-spinner">Loading database...</div>
+      <div id="noUsers" class="no-users" style="display:none;">No operators whitelisted yet. Only admin@hoopculture.ca can access.</div>
+      <div id="userList" style="display:none;"></div>
+    </div>
+
+  </div>
+
+  <script>
+    // Authorization Check: Must be admin@hoopculture.ca
+    const sessionUser = localStorage.getItem('hc_session_user');
+    if (!sessionUser || sessionUser !== 'admin@hoopculture.ca') {
+      alert("Access Denied: Only the super-administrator (admin@hoopculture.ca) can access the management panel.");
+      window.location.href = '/login?redirect=/admin';
+    }
+
+    // Initialize Firebase
+    let db = null;
+    try {
+      if (typeof firebase !== 'undefined') {
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+      }
+    } catch(e) {
+      console.error("Firebase init failed in admin console:", e);
+    }
+
+    const loadingEl = document.getElementById('loading');
+    const noUsersEl = document.getElementById('noUsers');
+    const userListEl = document.getElementById('userList');
+
+    if (!db) {
+      loadingEl.textContent = "Error: Firebase configuration missing.";
+      loadingEl.style.color = "var(--red)";
+    } else {
+      loadUsers();
+    }
+
+    // Load Whitelisted Users from Firebase
+    function loadUsers() {
+      db.ref('authorized_users').on('value', (snapshot) => {
+        loadingEl.style.display = 'none';
+        userListEl.innerHTML = '';
+        
+        const data = snapshot.val();
+        if (!data) {
+          noUsersEl.style.display = 'block';
+          userListEl.style.display = 'none';
+          return;
+        }
+
+        noUsersEl.style.display = 'none';
+        userListEl.style.display = 'block';
+
+        // Stored format is sanitized (dots/etc replaced with '_').
+        // We retrieve the original email values or render them nicely.
+        Object.keys(data).forEach((key) => {
+          if (data[key] === true) {
+            // Restore email format (approximated, or just display the db key which has underscores instead of dots)
+            // To be accurate, we can store the actual email string in the value rather than just 'true'!
+            // Let's support both formats: if the value is a string, display it; otherwise, display key.
+            const displayEmail = (typeof data[key] === 'string') ? data[key] : key.replace(/_/g, '.');
+
+            const item = document.createElement('div');
+            item.className = 'user-item';
+            item.innerHTML = `
+              <span class="user-email">${displayEmail}</span>
+              <div class="user-actions">
+                <button class="btn-delete" onclick="deleteUser('${key}')">Remove</button>
+              </div>
+            `;
+            userListEl.appendChild(item);
+          }
+        });
+      }, (error) => {
+        loadingEl.textContent = "Failed to read database. Check Firebase Rules.";
+        loadingEl.style.color = "var(--red)";
+      });
+    }
+
+    // Add User to Whitelist
+    function handleAddUser(event) {
+      event.preventDefault();
+      const emailInput = document.getElementById('newUserEmail');
+      const email = emailInput.value.trim().toLowerCase();
+      
+      if (!email) return;
+
+      // Sanitize key for Firebase path
+      const safeKey = email.replace(/[\.\#\$\[\]]/g, '_');
+
+      // Write to Firebase Database: Store the actual email as the value to display it nicely
+      db.ref(`authorized_users/${safeKey}`).set(email)
+        .then(() => {
+          emailInput.value = '';
+          alert("Successfully authorized: " + email);
+        })
+        .catch((error) => {
+          alert("Error adding operator: " + error.message);
+        });
+    }
+
+    // Delete User from Whitelist
+    function deleteUser(key) {
+      if (confirm("Are you sure you want to remove authorization for this operator?")) {
+        db.ref(`authorized_users/${key}`).remove()
+          .then(() => {
+            alert("Operator removed.");
+          })
+          .catch((error) => {
+            alert("Error removing operator: " + error.message);
+          });
+      }
+    }
+  </script>
+</body>
+</html>

@@ -112,6 +112,7 @@ const ROUTES = {
   '/control':            'basketball-scoreboard.html',
   '/landing':            'landing.html',
   '/login':              'login.html',
+  '/admin':              'admin.html',
   '/overlay':            'basketball-overlay.html',
   '/fullscreen':         'basketball-fullscreen.html',
   '/nbaoverlay':         'basketball-nbaoverlay.html',

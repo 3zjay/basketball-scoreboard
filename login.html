@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hoop Culture — Admin Login</title>
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script src="/firebase-config.js"></script>
   <style>
     :root {
       --bg: #080605;
@@ -215,6 +220,61 @@
       letter-spacing: 1px;
       text-transform: uppercase;
     }
+
+    /* Google Sign-In Styles */
+    .btn-google {
+      width: 100%;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 14px;
+      border: 1px solid var(--border2);
+      cursor: pointer;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      transition: all 0.2s;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn-google:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--grey);
+      transform: translateY(-2px);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 1.5rem 0;
+      color: var(--grey);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .divider:not(:empty)::before {
+      margin-right: .5em;
+    }
+
+    .divider:not(:empty)::after {
+      margin-left: .5em;
+    }
   </style>
 </head>
 <body>
@@ -226,6 +286,24 @@
     
     <h1 class="login-title">League Login</h1>
     <div class="login-subtitle">Scoreboard Administration</div>
+
+    <!-- Google Login (Shown only in Cloud Mode) -->
+    <div id="googleLoginArea" style="display:none;">
+      <button class="btn-google" type="button" onclick="handleGoogleSignIn()">
+        <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        Continue with Google
+      </button>
+    </div>
+
+    <!-- Divider Line -->
+    <div id="dividerLine" class="divider" style="display:none;">
+      <span>or offline admin login</span>
+    </div>
 
     <!-- Login Form -->
     <form id="loginForm" onsubmit="handleLogin(event)">
@@ -262,6 +340,29 @@
   </div>
 
   <script>
+    // Initialize Firebase
+    let db = null;
+    let auth = null;
+    const useFirebase = window.location.hostname.includes('vercel.app') ||
+                        window.location.hostname.includes('vercel.sh') ||
+                        window.location.hostname.includes('onrender.com');
+
+    try {
+      if (typeof firebase !== 'undefined' && isFirebaseConfigured) {
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        auth = firebase.auth();
+      }
+    } catch(e) {
+      console.warn("Firebase initialization failed in login page:", e);
+    }
+
+    // Toggle Google button visibility based on environment/config
+    if (isFirebaseConfigured) {
+      document.getElementById('googleLoginArea').style.display = 'block';
+      document.getElementById('dividerLine').style.display = 'flex';
+    }
+
     // Auto-redirect if session already exists
     if (localStorage.getItem('hc_session_user')) {
       const urlParams = new URLSearchParams(window.location.search);
@@ -269,6 +370,54 @@
       window.location.href = redirectUrl;
     }
 
+    // Google Sign-In Handler
+    function handleGoogleSignIn() {
+      if (!auth || !db) {
+        alert("Google Sign-In is currently unavailable (missing Firebase credentials).");
+        return;
+      }
+
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider)
+        .then((result) => {
+          const email = result.user.email.toLowerCase();
+          
+          // Super-admin bypass: always allow admin@hoopculture.ca
+          if (email === 'admin@hoopculture.ca') {
+            localStorage.setItem('hc_session_user', email);
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectUrl = urlParams.get('redirect') || '/control';
+            window.location.href = redirectUrl;
+            return;
+          }
+
+          // Check whitelist database
+          const safeKey = email.replace(/[\.\#\$\[\]]/g, '_');
+          db.ref(`authorized_users/${safeKey}`).once('value')
+            .then((snapshot) => {
+              if (snapshot.exists()) {
+                localStorage.setItem('hc_session_user', email);
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectUrl = urlParams.get('redirect') || '/control';
+                window.location.href = redirectUrl;
+              } else {
+                alert(`Access Denied: ${email} is not authorized in this league. Please contact your administrator to whitelist your Google account.`);
+                auth.signOut();
+              }
+            })
+            .catch((err) => {
+              console.error(err);
+              alert("Verification failed: " + err.message);
+              auth.signOut();
+            });
+        })
+        .catch((error) => {
+          console.error(error);
+          alert("Sign in failed: " + error.message);
+        });
+    }
+
+    // Offline Credentials Login Handler
     function handleLogin(event) {
       event.preventDefault();
       const email = document.getElementById('email').value.trim().toLowerCase();

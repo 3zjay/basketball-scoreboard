@@ -479,6 +479,7 @@ body.light .reset-btn:hover { background:#fee2e2; }
   <div class="page-title">🏀 <span>Scoreboard</span> Control</div>
   <div style="display:flex;align-items:center;gap:12px;">
     <button class="mode-toggle" id="installBtn" onclick="installApp()" style="display:none;border-color:#22c55e;color:#22c55e;">📲 Install App</button>
+    <a href="/admin" id="adminPanelLink" class="mode-toggle" style="text-decoration:none;display:none;border-color:var(--orange);color:var(--orange);align-items:center;justify-content:center;">⚙️ Admin</a>
     <a href="/" class="mode-toggle" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">🏠 Home</a>
     <button class="mode-toggle" onclick="logout()" style="border-color:var(--red);color:var(--red);">🚪 Logout</button>
     <button class="mode-toggle" id="fsToggle" onclick="toggleFullscreen()">⛶ Fullscreen</button>
@@ -859,6 +860,11 @@ window.addEventListener('DOMContentLoaded', () => {
     const url = `${origin}/display${suffix}`;
     venueLink.href = url;
     venueLink.textContent = url;
+  }
+
+  if (currentUser === 'admin@hoopculture.ca') {
+    const adminLink = document.getElementById('adminPanelLink');
+    if (adminLink) adminLink.style.display = 'inline-flex';
   }
 
   if (useFirebase && !isFirebaseConfigured) {

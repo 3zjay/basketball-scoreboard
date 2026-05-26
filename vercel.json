@@ -7,6 +7,7 @@
     { "source": "/", "destination": "/landing.html" },
     { "source": "/landing", "destination": "/landing.html" },
     { "source": "/login", "destination": "/login.html" },
+    { "source": "/admin", "destination": "/admin.html" },
     { "source": "/control", "destination": "/basketball-scoreboard.html" },
     { "source": "/display", "destination": "/scoreboard-display.html" },
     { "source": "/display2", "destination": "/scoreboard-display2.html" },
