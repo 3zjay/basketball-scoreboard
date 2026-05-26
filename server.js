@@ -3,91 +3,107 @@ const fs   = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 3000;
-let state = {
-  homeScore: 0, awayScore: 0,
-  homeFouls: 0, awayFouls: 0,
-  homeAbbr: 'HOME', awayAbbr: 'AWAY',
-  homeRecord: '0-0', awayRecord: '0-0',
-  homeColor: '#f5c842', awayColor: '#c8102e',
-  homeLogo: null, awayLogo: null,
-  quarter: 1,
-  gameSeconds: 600,
-  shotSeconds: 24,
-  gameRunning: false,
-  shotRunning: false,
-  timerPresetSeconds: 600,
-  rp1Title: 'BROADCAST', rp1Value: '',
-  rp2Title: 'VENUE',     rp2Value: '',
-  barColor: '#0d1117',
-  possession: null,
-};
-let logos = { home: null, away: null };
 
-function fullState() {
+let states = {}; // userEmail -> state
+let logos = {}; // userEmail -> { home: null, away: null }
+let sseClients = {}; // userEmail -> [res, res, ...]
+let gameTimers = {}; // userEmail -> interval
+let shotTimers = {}; // userEmail -> interval
+
+function getOrCreateUser(user) {
+  const u = user || 'default';
+  if (!states[u]) {
+    states[u] = {
+      homeScore: 0, awayScore: 0,
+      homeFouls: 0, awayFouls: 0,
+      homeAbbr: 'HOME', awayAbbr: 'AWAY',
+      homeRecord: '0-0', awayRecord: '0-0',
+      homeColor: '#f5c842', awayColor: '#c8102e',
+      homeLogo: null, awayLogo: null,
+      quarter: 1,
+      gameSeconds: 600,
+      shotSeconds: 24,
+      gameRunning: false,
+      shotRunning: false,
+      timerPresetSeconds: 600,
+      rp1Title: 'BROADCAST', rp1Value: '',
+      rp2Title: 'VENUE',     rp2Value: '',
+      barColor: '#0d1117',
+      possession: null,
+    };
+  }
+  if (!logos[u]) {
+    logos[u] = { home: null, away: null };
+  }
+  if (!sseClients[u]) {
+    sseClients[u] = [];
+  }
+  return u;
+}
+
+function fullState(u) {
+  const user = getOrCreateUser(u);
   return {
-    ...state,
-    homeLogo: logos.home !== null ? logos.home : (state.homeLogo || null),
-    awayLogo: logos.away !== null ? logos.away : (state.awayLogo || null),
+    ...states[user],
+    homeLogo: logos[user].home !== null ? logos[user].home : (states[user].homeLogo || null),
+    awayLogo: logos[user].away !== null ? logos[user].away : (states[user].awayLogo || null),
   };
 }
-let clients = [];
 
-// ── SERVER-OWNED CLOCKS ────────────────────────────────────────────────────
-// The server ticks both clocks and pushes SSE every second.
-// The control panel sends commands (/cmd). All clients stay perfectly in sync.
-
-let gameTimer = null;
-let shotTimer = null;
-
-function startGameClock() {
-  if (gameTimer) return;
-  if (!(state.gameSeconds > 0)) return;
-  state.gameRunning = true;
-  gameTimer = setInterval(() => {
-    state.gameSeconds = Math.max(0, (state.gameSeconds || 0) - 1);
-    if (state.gameSeconds <= 0) {
-      state.gameSeconds = 0;
-      stopGameClock();
-      pushToAll({ type: 'state', data: fullState() });
-      pushToAll({ type: 'buzz', kind: 'game' });
+// ── SERVER-OWNED CLOCKS (PARTITIONED) ──────────────────────────────────────
+function startGameClock(u) {
+  const user = getOrCreateUser(u);
+  if (gameTimers[user]) return;
+  if (!(states[user].gameSeconds > 0)) return;
+  states[user].gameRunning = true;
+  gameTimers[user] = setInterval(() => {
+    states[user].gameSeconds = Math.max(0, (states[user].gameSeconds || 0) - 1);
+    if (states[user].gameSeconds <= 0) {
+      states[user].gameSeconds = 0;
+      stopGameClock(user);
+      pushToAll(user, { type: 'state', data: fullState(user) });
+      pushToAll(user, { type: 'buzz', kind: 'game' });
     } else {
-      pushToAll({ type: 'state', data: fullState() });
+      pushToAll(user, { type: 'state', data: fullState(user) });
     }
   }, 1000);
-  pushToAll({ type: 'state', data: fullState() });
+  pushToAll(user, { type: 'state', data: fullState(user) });
 }
 
-function stopGameClock() {
-  if (gameTimer) { clearInterval(gameTimer); gameTimer = null; }
-  state.gameRunning = false;
+function stopGameClock(u) {
+  const user = getOrCreateUser(u);
+  if (gameTimers[user]) { clearInterval(gameTimers[user]); gameTimers[user] = null; }
+  states[user].gameRunning = false;
 }
 
-function startShotClock() {
-  if (shotTimer) return;
-  if (!(state.shotSeconds > 0)) return;
-  state.shotRunning = true;
-  shotTimer = setInterval(() => {
-    state.shotSeconds = Math.max(0, (state.shotSeconds || 0) - 1);
-    if (state.shotSeconds <= 0) {
-      state.shotSeconds = 0;
-      stopShotClock();
-      pushToAll({ type: 'state', data: fullState() });
-      pushToAll({ type: 'buzz', kind: 'shot' });
+function startShotClock(u) {
+  const user = getOrCreateUser(u);
+  if (shotTimers[user]) return;
+  if (!(states[user].shotSeconds > 0)) return;
+  states[user].shotRunning = true;
+  shotTimers[user] = setInterval(() => {
+    states[user].shotSeconds = Math.max(0, (states[user].shotSeconds || 0) - 1);
+    if (states[user].shotSeconds <= 0) {
+      states[user].shotSeconds = 0;
+      stopShotClock(user);
+      pushToAll(user, { type: 'state', data: fullState(user) });
+      pushToAll(user, { type: 'buzz', kind: 'shot' });
       // Auto-reset to 24 and restart
       setTimeout(() => {
-        state.shotSeconds = 24;
-        startShotClock();
+        states[user].shotSeconds = 24;
+        startShotClock(user);
       }, 500);
     } else {
-      pushToAll({ type: 'state', data: fullState() });
+      pushToAll(user, { type: 'state', data: fullState(user) });
     }
   }, 1000);
-  pushToAll({ type: 'state', data: fullState() });
+  pushToAll(user, { type: 'state', data: fullState(user) });
 }
 
-function stopShotClock() {
-  if (shotTimer) { clearInterval(shotTimer); shotTimer = null; }
-  state.shotRunning = false;
+function stopShotClock(u) {
+  const user = getOrCreateUser(u);
+  if (shotTimers[user]) { clearInterval(shotTimers[user]); shotTimers[user] = null; }
+  states[user].shotRunning = false;
 }
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -114,9 +130,10 @@ const ROUTES = {
   '/marketing-workflow-dark.png': 'marketing-workflow-dark.png',
 };
 
-function pushToAll(payload) {
+function pushToAll(u, payload) {
+  const user = getOrCreateUser(u);
   const msg = 'data: ' + JSON.stringify(payload) + '\n\n';
-  clients = clients.filter(res => {
+  sseClients[user] = sseClients[user].filter(res => {
     try { res.write(msg); return true; } catch(e) { return false; }
   });
 }
@@ -130,6 +147,9 @@ function readBody(req) {
 }
 
 http.createServer((req, res) => {
+  const reqUrl = new URL(req.url, 'http://localhost');
+  const pathname = reqUrl.pathname;
+  const user = getOrCreateUser(reqUrl.searchParams.get('user') || 'default');
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -137,73 +157,72 @@ http.createServer((req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
   // POST /cmd — clock commands from the control panel
-  if (req.method === 'POST' && req.url === '/cmd') {
+  if (req.method === 'POST' && pathname === '/cmd') {
     readBody(req).then(b => {
       try {
         const { cmd, seconds } = JSON.parse(b);
 
         if (cmd === 'game_start') {
-          if (!state.gameRunning) startGameClock();
+          if (!states[user].gameRunning) startGameClock(user);
 
         } else if (cmd === 'game_stop') {
-          if (state.gameRunning) {
-            stopGameClock();
-            pushToAll({ type: 'state', data: fullState() });
+          if (states[user].gameRunning) {
+            stopGameClock(user);
+            pushToAll(user, { type: 'state', data: fullState(user) });
           }
 
         } else if (cmd === 'game_reset') {
-          stopGameClock();
-          state.gameSeconds = seconds || state.timerPresetSeconds || 600;
-          pushToAll({ type: 'state', data: fullState() });
+          stopGameClock(user);
+          states[user].gameSeconds = seconds || states[user].timerPresetSeconds || 600;
+          pushToAll(user, { type: 'state', data: fullState(user) });
 
         } else if (cmd === 'game_set') {
-          if (!state.gameRunning) {
-            state.gameSeconds = seconds != null ? seconds : (state.gameSeconds || 600);
-            pushToAll({ type: 'state', data: fullState() });
+          if (!states[user].gameRunning) {
+            states[user].gameSeconds = seconds != null ? seconds : (states[user].gameSeconds || 600);
+            pushToAll(user, { type: 'state', data: fullState(user) });
           }
 
         } else if (cmd === 'shot_start') {
-          if (!state.shotRunning) startShotClock();
+          if (!states[user].shotRunning) startShotClock(user);
 
         } else if (cmd === 'shot_stop') {
-          if (state.shotRunning) {
-            stopShotClock();
-            pushToAll({ type: 'state', data: fullState() });
+          if (states[user].shotRunning) {
+            stopShotClock(user);
+            pushToAll(user, { type: 'state', data: fullState(user) });
           }
 
         } else if (cmd === 'shot_reset') {
-          stopShotClock();
-          state.shotSeconds = seconds || 24;
-          // Always start shot clock on reset — pressing 24/14/8 = intent to run
-          startShotClock();
+          stopShotClock(user);
+          states[user].shotSeconds = seconds || 24;
+          startShotClock(user);
 
         } else if (cmd === 'reset_all') {
-          stopGameClock();
-          stopShotClock();
-          const preset = state.timerPresetSeconds || 600;
-          state = {
+          stopGameClock(user);
+          stopShotClock(user);
+          const preset = states[user].timerPresetSeconds || 600;
+          states[user] = {
             homeScore: 0, awayScore: 0,
             homeFouls: 0, awayFouls: 0,
-            homeAbbr: state.homeAbbr || 'HOME',
-            awayAbbr: state.awayAbbr || 'AWAY',
-            homeRecord: state.homeRecord || '0-0',
-            awayRecord: state.awayRecord || '0-0',
-            homeColor: state.homeColor || '#f5c842',
-            awayColor: state.awayColor || '#c8102e',
+            homeAbbr: states[user].homeAbbr || 'HOME',
+            awayAbbr: states[user].awayAbbr || 'AWAY',
+            homeRecord: states[user].homeRecord || '0-0',
+            awayRecord: states[user].awayRecord || '0-0',
+            homeColor: states[user].homeColor || '#f5c842',
+            awayColor: states[user].awayColor || '#c8102e',
             quarter: 1,
             gameSeconds: preset,
             shotSeconds: 24,
             gameRunning: false,
             shotRunning: false,
             timerPresetSeconds: preset,
-            rp1Title: state.rp1Title || 'BROADCAST',
-            rp1Value: state.rp1Value || '',
-            rp2Title: state.rp2Title || 'VENUE',
-            rp2Value: state.rp2Value || '',
-            barColor: state.barColor || '#0d1117',
+            rp1Title: states[user].rp1Title || 'BROADCAST',
+            rp1Value: states[user].rp1Value || '',
+            rp2Title: states[user].rp2Title || 'VENUE',
+            rp2Value: states[user].rp2Value || '',
+            barColor: states[user].barColor || '#0d1117',
             possession: null,
           };
-          pushToAll({ type: 'state', data: fullState() });
+          pushToAll(user, { type: 'state', data: fullState(user) });
         }
       } catch(e) {}
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -213,8 +232,7 @@ http.createServer((req, res) => {
   }
 
   // POST /update — non-clock state (scores, names, colors, period, etc.)
-  // Server owns clock fields — strips them from incoming data.
-  if (req.method === 'POST' && req.url === '/update') {
+  if (req.method === 'POST' && pathname === '/update') {
     readBody(req).then(b => {
       try {
         const incoming = JSON.parse(b);
@@ -222,9 +240,9 @@ http.createServer((req, res) => {
         delete incoming.shotRunning;
         delete incoming.gameSeconds;
         delete incoming.shotSeconds;
-        state = { ...state, ...incoming };
+        states[user] = { ...states[user], ...incoming };
       } catch(e) {}
-      pushToAll({ type: 'state', data: fullState() });
+      pushToAll(user, { type: 'state', data: fullState(user) });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end('{"ok":true}');
     });
@@ -232,11 +250,11 @@ http.createServer((req, res) => {
   }
 
   // POST /buzz — broadcast buzzer sound
-  if (req.method === 'POST' && req.url === '/buzz') {
+  if (req.method === 'POST' && pathname === '/buzz') {
     readBody(req).then(b => {
       let kind = 'game';
       try { kind = JSON.parse(b).kind || 'game'; } catch(e) {}
-      pushToAll({ type: 'buzz', kind });
+      pushToAll(user, { type: 'buzz', kind });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end('{"ok":true}');
     });
@@ -244,11 +262,11 @@ http.createServer((req, res) => {
   }
 
   // POST /logo/home or /logo/away
-  if (req.method === 'POST' && (req.url === '/logo/home' || req.url === '/logo/away')) {
-    const side = req.url === '/logo/home' ? 'home' : 'away';
+  if (req.method === 'POST' && (pathname === '/logo/home' || pathname === '/logo/away')) {
+    const side = pathname === '/logo/home' ? 'home' : 'away';
     readBody(req).then(b => {
-      try { const d = JSON.parse(b); logos[side] = d.logo; } catch(e) {}
-      pushToAll({ type: 'state', data: fullState() });
+      try { const d = JSON.parse(b); logos[user][side] = d.logo; } catch(e) {}
+      pushToAll(user, { type: 'state', data: fullState(user) });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end('{"ok":true}');
     });
@@ -256,31 +274,32 @@ http.createServer((req, res) => {
   }
 
   // GET /events — SSE stream for all clients
-  if (req.url === '/events') {
+  if (pathname === '/events') {
     res.writeHead(200, {
       'Content-Type':  'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection':    'keep-alive',
     });
     res.write('\n');
-    if (Object.keys(state).length) {
-      res.write('data: ' + JSON.stringify({ type: 'state', data: fullState() }) + '\n\n');
+    const uState = fullState(user);
+    if (Object.keys(uState).length) {
+      res.write('data: ' + JSON.stringify({ type: 'state', data: uState }) + '\n\n');
     }
     const ping = setInterval(() => {
       try { res.write(': ping\n\n'); } catch(e) { clearInterval(ping); }
     }, 20000);
-    clients.push(res);
+    sseClients[user].push(res);
     req.on('close', () => {
       clearInterval(ping);
-      clients = clients.filter(c => c !== res);
+      sseClients[user] = sseClients[user].filter(c => c !== res);
     });
     return;
   }
 
   // GET /state — initial snapshot
-  if (req.url === '/state') {
+  if (pathname === '/state') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(fullState()));
+    res.end(JSON.stringify(fullState(user)));
     return;
   }
 

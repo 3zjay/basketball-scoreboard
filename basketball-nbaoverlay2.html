@@ -158,6 +158,16 @@ html, body { background:transparent; overflow:hidden; width:100%; height:100%; }
 
 </div>
 <script>
+const SERVER_URL = (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname.startsWith('192.168.') ||
+  window.location.hostname.includes('onrender.com')
+) ? '' : 'https://basketball-scoreboard-o0c7.onrender.com';
+
+const urlParams = new URLSearchParams(window.location.search);
+const currentUser = urlParams.get('user') || 'default';
+
 const DEF={homeScore:0,awayScore:0,homeFouls:0,awayFouls:0,homeAbbr:'HOME',homeColor:'#1a4fa0',homeLogo:null,awayAbbr:'AWAY',awayColor:'#c8102e',awayLogo:null,quarter:1,gameSeconds:600,shotSeconds:24,gameRunning:false,shotRunning:false,possession:null};
 const PERIODS=['1ST','2ND','3RD','4TH','OT','2OT'];
 let S={...DEF},lastHome=-1,lastAway=-1;
@@ -234,11 +244,11 @@ window.addEventListener('load',()=>{const a=new Audio('/buzzer.mp3');a.volume=0;
 function playGameBuzzer(){const a=new Audio('/buzzer.mp3');a.volume=1;a.play().catch(()=>{});}
 function playShotBuzzer(){const a=new Audio('/buzzer.mp3');a.volume=1;a.play().catch(()=>{});}
 function connectSSE(){
-  const es=new EventSource('/events');
+  const es=new EventSource(`${SERVER_URL}/events?user=${encodeURIComponent(currentUser)}`);
   es.onmessage=e=>{try{const msg=JSON.parse(e.data);if(msg.type==='buzz'){if(msg.kind==='game')playGameBuzzer();else playShotBuzzer();}else if(msg.type==='state'){stopLocalTick();S={...DEF,...msg.data};render();syncLocalTick();}}catch(err){}};
   es.onerror=()=>{es.close();setTimeout(connectSSE,2000);};
 }
-fetch('/state').then(r=>r.json()).then(d=>{if(Object.keys(d).length){S={...DEF,...d};render();syncLocalTick();}}).catch(()=>{}).finally(()=>connectSSE());
+fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`).then(r=>r.json()).then(d=>{if(Object.keys(d).length){S={...DEF,...d};render();syncLocalTick();}}).catch(()=>{}).finally(()=>connectSSE());
 </script>
 </body>
 </html>

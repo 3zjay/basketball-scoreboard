@@ -976,5 +976,39 @@
     <p class="footer-subtext">Hoop Culture Network 🏀</p>
   </footer>
 
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = localStorage.getItem('hc_session_user');
+      if (user) {
+        // Update nav button to go straight to control panel
+        const navBtn = document.querySelector('nav .btn.primary');
+        if (navBtn) {
+          navBtn.textContent = 'Control Panel';
+          navBtn.href = '/control';
+        }
+        
+        // Update hero button to go straight to control panel
+        const heroBtn = document.querySelector('.hero-actions .btn.primary');
+        if (heroBtn) {
+          heroBtn.textContent = 'Go to Console';
+          heroBtn.href = '/control';
+        }
+
+        // Add a Sign Out link in the navbar
+        const navLinks = document.querySelector('.nav-links');
+        if (navLinks) {
+          const logoutLi = document.createElement('li');
+          logoutLi.innerHTML = `<a href="#" onclick="logout(event)" style="color: var(--red); font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; text-decoration: none;">Sign Out</a>`;
+          navLinks.appendChild(logoutLi);
+        }
+      }
+    });
+
+    function logout(e) {
+      if (e) e.preventDefault();
+      localStorage.removeItem('hc_session_user');
+      window.location.reload();
+    }
+  </script>
 </body>
 </html>

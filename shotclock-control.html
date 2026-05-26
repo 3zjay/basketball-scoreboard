@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+  if (!localStorage.getItem('hc_session_user')) {
+    const currentPath = window.location.pathname + window.location.search;
+    window.location.href = '/login?redirect=' + encodeURIComponent(currentPath);
+  }
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Shot Clock Operator</title>
@@ -201,6 +207,29 @@ html, body {
   pointer-events:none;
 }
 @keyframes rippleAnim { to { transform:scale(10); opacity:0; } }
+
+.btn-header {
+  background: #1c2030;
+  border: 1.5px solid #2a3040;
+  border-radius: 8px;
+  color: #a0a5b5;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  cursor: pointer;
+  text-decoration: none;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+.btn-header:hover {
+  border-color: #ffaa00;
+  color: #ffaa00;
+}
 </style>
 </head>
 <body>
@@ -209,7 +238,11 @@ html, body {
   <div class="offline-banner" id="offlineBanner">⚠ Disconnected — Reconnecting…</div>
 
   <div class="header">
-    <div class="header-title">⏱ Shot Clock</div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="header-title">⏱ Shot Clock</div>
+      <a href="/" class="btn-header">🏠 Home</a>
+      <button class="btn-header" onclick="logout()" style="border-color:#ef4444;color:#ef4444;">🚪 Logout</button>
+    </div>
     <div class="conn-badge">
       <div class="conn-dot" id="connDot"></div>
       <div class="conn-text" id="connText">Offline</div>
@@ -253,6 +286,21 @@ html, body {
 
 </div>
 <script>
+const SERVER_URL = (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname.startsWith('192.168.') ||
+  window.location.hostname.includes('onrender.com')
+) ? '' : 'https://basketball-scoreboard-o0c7.onrender.com';
+
+const urlParams = new URLSearchParams(window.location.search);
+const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
+
+function logout() {
+  localStorage.removeItem('hc_session_user');
+  window.location.href = '/login';
+}
+
 let shotSeconds = 24;
 let shotRunning = false;
 let _lastCmd = 0;
@@ -314,7 +362,7 @@ function stopLocalTick() {
 function cmd(command, seconds) {
   _lastCmd = Date.now();
   const body = seconds != null ? { cmd: command, seconds } : { cmd: command };
-  fetch('/cmd', {
+  fetch(`${SERVER_URL}/cmd?user=${encodeURIComponent(currentUser)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
@@ -348,7 +396,7 @@ function resetShotCustom(e) {
 function soundBuzzer(e) {
   ripple(e, document.getElementById('buzzerBtn'));
   playBuzz();
-  fetch('/buzz', {
+  fetch(`${SERVER_URL}/buzz?user=${encodeURIComponent(currentUser)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ kind: 'shot' })
@@ -384,7 +432,7 @@ function playBuzz() { const a = new Audio('/buzzer.mp3'); a.volume = 1; a.play()
 // ── SSE ──
 function connectSSE() {
   setConnected(false);
-  const es = new EventSource('/events');
+  const es = new EventSource(`${SERVER_URL}/events?user=${encodeURIComponent(currentUser)}`);
   es.onopen = () => setConnected(true);
   es.onmessage = (e) => {
     try {
@@ -413,7 +461,7 @@ function connectSSE() {
 }
 
 // ── Init ──
-fetch('/state').then(r => r.json()).then(d => {
+fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`).then(r => r.json()).then(d => {
   if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
   shotRunning = !!d.shotRunning;
   if (shotRunning) startLocalTick();

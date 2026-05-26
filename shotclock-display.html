@@ -142,6 +142,16 @@ html, body {
 <script>
 'use strict';
 
+const SERVER_URL = (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname.startsWith('192.168.') ||
+  window.location.hostname.includes('onrender.com')
+) ? '' : 'https://basketball-scoreboard-o0c7.onrender.com';
+
+const urlParams = new URLSearchParams(window.location.search);
+const currentUser = urlParams.get('user') || 'default';
+
 let shotSeconds = 24;
 let shotRunning = false;
 
@@ -199,7 +209,7 @@ function connectSSE() {
   const ns = document.getElementById('noSignal');
   ns.classList.add('show');
 
-  const es = new EventSource('/events');
+  const es = new EventSource(`${SERVER_URL}/events?user=${encodeURIComponent(currentUser)}`);
 
   es.onopen = () => ns.classList.remove('show');
 
@@ -241,7 +251,7 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 // ── Init ──
-fetch('/state')
+fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`)
   .then(r => r.json())
   .then(d => {
     if (d.shotSeconds != null) shotSeconds = d.shotSeconds;

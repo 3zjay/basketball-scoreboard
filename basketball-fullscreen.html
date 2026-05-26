@@ -204,6 +204,16 @@ html, body {
 </div>
 
 <script>
+const SERVER_URL = (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname.startsWith('192.168.') ||
+  window.location.hostname.includes('onrender.com')
+) ? '' : 'https://basketball-scoreboard-o0c7.onrender.com';
+
+const urlParams = new URLSearchParams(window.location.search);
+const currentUser = urlParams.get('user') || 'default';
+
 const DEF = {
   homeScore:0, awayScore:0,
   homeAbbr:'HOME', homeRecord:'0-0', homeColor:'#f5c842', homeLogo:null,
@@ -281,7 +291,7 @@ function playGameBuzzer(){ const a=new Audio('/buzzer.mp3'); a.volume=1.0; a.pla
 function playShotBuzzer(){ const a=new Audio('/buzzer.mp3'); a.volume=1.0; a.play().catch(()=>{}); }
 
 function connectSSE(){
-  const es=new EventSource('/events');
+  const es=new EventSource(`${SERVER_URL}/events?user=${encodeURIComponent(currentUser)}`);
   es.onmessage=(e)=>{
     try {
       const msg=JSON.parse(e.data);
@@ -292,7 +302,7 @@ function connectSSE(){
   es.onerror=()=>{ es.close(); setTimeout(connectSSE,2000); };
 }
 
-fetch('/state').then(r=>r.json()).then(data=>{
+fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`).then(r=>r.json()).then(data=>{
   if(Object.keys(data).length){ S={...DEF,...data}; render(); syncLocalTick(); }
 }).catch(()=>{}).finally(()=>{ connectSSE(); });
 </script>

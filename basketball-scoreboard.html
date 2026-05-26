@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+  if (!localStorage.getItem('hc_session_user')) {
+    const currentPath = window.location.pathname + window.location.search;
+    window.location.href = '/login?redirect=' + encodeURIComponent(currentPath);
+  }
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
@@ -469,6 +475,8 @@ body.light .reset-btn:hover { background:#fee2e2; }
   <div class="page-title">🏀 <span>Scoreboard</span> Control</div>
   <div style="display:flex;align-items:center;gap:12px;">
     <button class="mode-toggle" id="installBtn" onclick="installApp()" style="display:none;border-color:#22c55e;color:#22c55e;">📲 Install App</button>
+    <a href="/" class="mode-toggle" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">🏠 Home</a>
+    <button class="mode-toggle" onclick="logout()" style="border-color:var(--red);color:var(--red);">🚪 Logout</button>
     <button class="mode-toggle" id="fsToggle" onclick="toggleFullscreen()">⛶ Fullscreen</button>
     <button class="mode-toggle" id="modeToggle" onclick="toggleMode()">☀️ Light Mode</button>
     <div class="live-badge connecting" id="liveBadge">
@@ -804,6 +812,21 @@ body.light .reset-btn:hover { background:#fee2e2; }
 </div>
 
 <script>
+const SERVER_URL = (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname.startsWith('192.168.') ||
+  window.location.hostname.includes('onrender.com')
+) ? '' : 'https://basketball-scoreboard-o0c7.onrender.com';
+
+const urlParams = new URLSearchParams(window.location.search);
+const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
+
+function logout() {
+  localStorage.removeItem('hc_session_user');
+  window.location.href = '/login';
+}
+
 const DEF = {
   homeScore:0, awayScore:0,
   homeFouls:0, awayFouls:0,
@@ -841,7 +864,7 @@ function pushState(){
   // homeLogoThumb / awayLogoThumb remain in toSend — they flow to all devices via SSE
   delete toSend.gameRunning; delete toSend.shotRunning;
   delete toSend.gameSeconds; delete toSend.shotSeconds;
-  fetch('/update', {
+  fetch(`${SERVER_URL}/update?user=${encodeURIComponent(currentUser)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(toSend)
@@ -850,7 +873,7 @@ function pushState(){
 // Send a clock command to the server
 function cmd(command, seconds){
   const body = seconds != null ? {cmd: command, seconds} : {cmd: command};
-  fetch('/cmd', {
+  fetch(`${SERVER_URL}/cmd?user=${encodeURIComponent(currentUser)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
@@ -1103,7 +1126,7 @@ function setLogo(team, input){
 
       save();
       renderAll();
-      fetch('/logo/' + team, {
+      fetch(`${SERVER_URL}/logo/${team}?user=${encodeURIComponent(currentUser)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ logo: resized })
@@ -1157,7 +1180,7 @@ function triggerBuzz(kind) {
   // Play locally immediately
   if(kind === 'game') playGameBuzzer(); else playShotBuzzer();
   // Broadcast to all other devices via server
-  fetch('/buzz', {
+  fetch(`${SERVER_URL}/buzz?user=${encodeURIComponent(currentUser)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ kind })
@@ -1400,7 +1423,7 @@ let _lastLocalBuzz = 0;
 function refBuzzer(){
   _lastLocalBuzz = Date.now();
   playGameBuzzer(); // play locally immediately
-  fetch('/buzz', {
+  fetch(`${SERVER_URL}/buzz?user=${encodeURIComponent(currentUser)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ kind: 'game' })
@@ -1445,7 +1468,7 @@ function resetAll(){
 // Load from server first (so tablet gets live state, not stale localStorage)
 loadCustomOptions();
 setLiveStatus('connecting');
-fetch('/state').then(r=>r.json()).then(data=>{
+fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`).then(r=>r.json()).then(data=>{
   // Logos are never pushed to the server (too large) — always restore from localStorage
   let localLogos = {};
   try {
@@ -1475,7 +1498,7 @@ fetch('/state').then(r=>r.json()).then(data=>{
 // SSE — server pushes state every second while clocks run, instantly on any action
 function connectSSE(){
   setLiveStatus('connecting');
-  const es = new EventSource('/events');
+  const es = new EventSource(`${SERVER_URL}/events?user=${encodeURIComponent(currentUser)}`);
   es.onopen = () => setLiveStatus('connected');
   es.onmessage = (e) => {
     try {

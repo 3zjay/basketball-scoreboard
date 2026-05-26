@@ -262,17 +262,33 @@
   </div>
 
   <script>
-    // Demo authentication handler redirecting to control panel
+    // Auto-redirect if session already exists
+    if (localStorage.getItem('hc_session_user')) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectUrl = urlParams.get('redirect') || '/control';
+      window.location.href = redirectUrl;
+    }
+
     function handleLogin(event) {
       event.preventDefault();
-      const email = document.getElementById('email').value;
+      const email = document.getElementById('email').value.trim().toLowerCase();
       const password = document.getElementById('password').value;
 
-      // Save email session locally to mock login state
-      localStorage.setItem('hc_session_user', email);
-      
-      // Redirect to the main operator control page
-      window.location.href = '/control';
+      // Define target credentials
+      const validEmail = "admin@hoopculture.ca";
+      const validPassword = "hoopculture2026";
+
+      if (email === validEmail && password === validPassword) {
+        // Save session locally to authorise routing guards
+        localStorage.setItem('hc_session_user', email);
+        
+        // Redirect to original target if provided, otherwise control panel
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectUrl = urlParams.get('redirect') || '/control';
+        window.location.href = redirectUrl;
+      } else {
+        alert("Invalid League Email or Password! Please check your credentials and try again.");
+      }
     }
   </script>
 
