@@ -27,6 +27,11 @@
       --blue: #2d5fa6;
       --border: #2a1e14;
       --border2: #3a2818;
+      
+      /* Cloud themed variables */
+      --purple: #a855f7;
+      --teal: #14b8a6;
+      --pink: #ec4899;
     }
 
     * {
@@ -72,7 +77,7 @@
 
     /* Branded Header styling matching website */
     .brand-header {
-      margin-bottom: 3rem;
+      margin-bottom: 2rem;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -84,7 +89,7 @@
     }
 
     .brand-logo {
-      height: 160px;
+      height: 120px;
       width: auto;
       object-fit: contain;
       filter: drop-shadow(0 0 20px rgba(255, 102, 0, 0.7));
@@ -117,6 +122,61 @@
       text-shadow: 0 4px 10px rgba(0,0,0,0.8);
     }
 
+    /* Mode Selector Toggles */
+    .toggle-container {
+      display: flex;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 6px;
+      margin-bottom: 2.5rem;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      gap: 8px;
+    }
+    
+    .toggle-btn {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 10px 24px;
+      border: none;
+      background: transparent;
+      color: var(--grey);
+      border-radius: 40px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .toggle-btn.active {
+      background: linear-gradient(135deg, var(--fire1), var(--fire2));
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(232, 67, 10, 0.4);
+    }
+    
+    .toggle-btn:hover:not(.active) {
+      color: var(--white);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .btn-icon {
+      font-size: 16px;
+    }
+
+    /* Diagram Animation Wrapper */
+    .diagram-wrapper {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
     /* Visual Diagram Layout CSS */
     .diagram-section {
       width: 100%;
@@ -125,23 +185,38 @@
       border: 1px solid var(--border);
       border-radius: 20px;
       padding: 3rem 2rem;
-      margin-bottom: 4rem;
+      margin-bottom: 2rem;
       box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-      display: grid;
+      display: none; /* hidden by default */
       grid-template-columns: 1fr 100px 1.1fr 100px 1fr;
       align-items: center;
       position: relative;
+      opacity: 0;
+      transform: translateY(15px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    
+    .diagram-section.active {
+      display: grid;
+    }
+    
+    .diagram-section.fade-in {
+      opacity: 1;
+      transform: translateY(0);
     }
 
     @media (max-width: 960px) {
       .diagram-section {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
         gap: 3rem;
         padding: 3rem 1.5rem;
       }
       .connector-arrow {
         transform: rotate(90deg);
         margin: 1rem auto;
+      }
+      .feature-bar {
+        grid-column: span 1 !important;
       }
     }
 
@@ -168,6 +243,11 @@
     .badge-tablet { background: rgba(22, 199, 132, 0.1); color: var(--green); border: 1px solid rgba(22, 199, 132, 0.2); }
     .badge-laptop { background: rgba(255, 106, 0, 0.1); color: var(--orange2); border: 1px solid rgba(255, 106, 0, 0.2); }
     .badge-tv { background: rgba(229, 57, 53, 0.1); color: var(--red); border: 1px solid rgba(229, 57, 53, 0.2); }
+    
+    /* Cloud Badges */
+    .badge-vercel { background: rgba(168, 85, 247, 0.1); color: var(--purple); border: 1px solid rgba(168, 85, 247, 0.2); }
+    .badge-onrender { background: rgba(20, 184, 166, 0.1); color: var(--teal); border: 1px solid rgba(20, 184, 166, 0.2); }
+    .badge-remote { background: rgba(236, 72, 153, 0.1); color: var(--pink); border: 1px solid rgba(236, 72, 153, 0.2); }
 
     /* Mockups */
     .mockup-frame {
@@ -273,6 +353,8 @@
     .log-white { color: #fff; }
     .log-orange { color: var(--orange2); }
     .log-dim { color: #475569; }
+    .log-purple { color: var(--purple); font-weight: bold; }
+    .log-teal { color: var(--teal); }
 
     /* TV Mockup */
     .tv-frame {
@@ -397,10 +479,20 @@
       filter: drop-shadow(0 0 6px rgba(232, 67, 10, 0.5));
       animation: slideArrow 2s infinite ease-in-out;
     }
+    
+    .connector-arrow-svg.cloud {
+      stroke: var(--teal);
+      filter: drop-shadow(0 0 6px rgba(20, 184, 166, 0.5));
+    }
 
     @keyframes slideArrow {
       0%, 100% { transform: translateX(-4px); opacity: 0.6; }
       50% { transform: translateX(4px); opacity: 1; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
     }
 
     /* Bottom Features Ticker Bar */
@@ -410,11 +502,10 @@
       gap: 3rem;
       flex-wrap: wrap;
       padding: 1.2rem 3rem;
-      background: var(--bg2);
+      background: var(--bg3);
       border-radius: 8px;
       border: 1px solid var(--border);
       width: 100%;
-      max-width: 1100px;
     }
 
     @media (max-width: 600px) {
@@ -445,6 +536,11 @@
       border-radius: 50%;
       box-shadow: 0 0 8px var(--fire2);
     }
+    
+    .feature-dot.cloud {
+      background-color: var(--teal);
+      box-shadow: 0 0 8px var(--teal);
+    }
   </style>
 </head>
 <body>
@@ -460,124 +556,297 @@
       <h1 class="main-title">Ecosystem Workflow</h1>
     </header>
 
-    <!-- Detailed CSS Reconstruction of Infographic -->
-    <section class="diagram-section">
+    <!-- Mode Selector Segmented Control -->
+    <div class="toggle-container">
+      <button class="toggle-btn active" id="btn-offline" onclick="switchMode('offline')">
+        <span class="btn-icon">🔌</span> Offline Local Mode
+      </button>
+      <button class="toggle-btn" id="btn-cloud" onclick="switchMode('cloud')">
+        <span class="btn-icon">☁️</span> Cloud Online Mode
+      </button>
+    </div>
+
+    <!-- Interactive Diagram Area -->
+    <div class="diagram-wrapper">
       
-      <!-- Column 1: Tablet -->
-      <div class="node-col">
-        <span class="node-badge badge-tablet">TABLET</span>
-        <div class="mockup-frame tablet-frame">
-          <div class="tablet-screen">
-            <div class="screen-header">
-              <span>● CONTROLLER</span>
-              <span>100%</span>
-            </div>
-            <div style="text-align: center;">
-              <span style="font-size: 7px; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase;">GAME CLOCK</span>
-              <div class="screen-clock">12:34</div>
-              <span style="font-size: 8px; color: #94a3b8; font-weight: bold; text-transform: uppercase;">Q4 - PERIOD 2</span>
-            </div>
-            <div>
-              <div class="screen-scores">
-                <div class="screen-btn">HOME +</div>
-                <div class="screen-btn guest">GUEST -</div>
+      <!-- MODE 1: OFFLINE DIAGRAM -->
+      <section class="diagram-section active fade-in" id="offline-diagram">
+        
+        <!-- Column 1: Tablet -->
+        <div class="node-col">
+          <span class="node-badge badge-tablet">LOCAL TABLET</span>
+          <div class="mockup-frame tablet-frame">
+            <div class="tablet-screen">
+              <div class="screen-header">
+                <span>● CONTROLLER</span>
+                <span>100%</span>
               </div>
-              <div class="screen-footer-btn">TIMEOUT</div>
-            </div>
-          </div>
-        </div>
-        <h3 class="node-title">Scoreboard Controller</h3>
-        <p class="node-subtitle">NON-TECHNICAL USER APP</p>
-      </div>
-
-      <!-- Connector 1 -->
-      <div class="connector-col">
-        <span class="connector-label-top">DATA SIGNAL</span>
-        <div class="connector-arrow">
-          <svg class="connector-arrow-svg" viewBox="0 0 24 24">
-            <line x1="2" y1="12" x2="22" y2="12"></line>
-            <polyline points="14 6 22 12 14 18"></polyline>
-          </svg>
-        </div>
-        <span class="connector-label-bottom">COMMANDS</span>
-      </div>
-
-      <!-- Column 2: Laptop -->
-      <div class="node-col">
-        <span class="node-badge badge-laptop">LAPTOP</span>
-        <div style="display: flex; flex-direction: column; align-items: center;">
-          <div class="mockup-frame laptop-frame">
-            <div class="laptop-screen">
-              <span class="log-green">&gt; LOCAL SERVER RUNNING</span><br>
-              <span class="log-white">IP ADDRESS: 192.168.1.10</span><br>
-              <span class="log-orange">STATUS: CONNECTED</span><br>
-              <span class="log-green">SCOREBOARD ACTIVE</span><br>
-              <span class="log-dim">&gt; waiting for commands...</span>
-            </div>
-          </div>
-          <div class="laptop-base"></div>
-        </div>
-        <h3 class="node-title">Local Server</h3>
-        <p class="node-subtitle">IP ADDRESS: 192.168.1.10</p>
-      </div>
-
-      <!-- Connector 2 -->
-      <div class="connector-col">
-        <span class="connector-label-top">DATA FEED</span>
-        <div class="connector-arrow">
-          <svg class="connector-arrow-svg" viewBox="0 0 24 24">
-            <line x1="2" y1="12" x2="22" y2="12"></line>
-            <polyline points="14 6 22 12 14 18"></polyline>
-          </svg>
-        </div>
-        <span class="connector-label-bottom">UPDATES</span>
-      </div>
-
-      <!-- Column 3: TV Display -->
-      <div class="node-col">
-        <span class="node-badge badge-tv">TV / BROADCAST</span>
-        <div style="display: flex; flex-direction: column; align-items: center;">
-          <div class="mockup-frame tv-frame">
-            <div class="tv-screen">
-              <div class="tv-overlay-title">🔴 LIVE SCOREBOARD FEED</div>
-              <div class="tv-overlay-content">
-                <div class="tv-team">
-                  <span class="tv-team-name">BEARS</span>
-                  <span class="tv-team-score red">24</span>
+              <div style="text-align: center;">
+                <span style="font-size: 7px; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase;">GAME CLOCK</span>
+                <div class="screen-clock">12:34</div>
+                <span style="font-size: 8px; color: #94a3b8; font-weight: bold; text-transform: uppercase;">Q4 - PERIOD 2</span>
+              </div>
+              <div>
+                <div class="screen-scores">
+                  <div class="screen-btn">HOME +</div>
+                  <div class="screen-btn guest">GUEST -</div>
                 </div>
-                <div class="tv-clock">08:15</div>
-                <div class="tv-team">
-                  <span class="tv-team-name">LIONS</span>
-                  <span class="tv-team-score blue">17</span>
-                </div>
+                <div class="screen-footer-btn">TIMEOUT</div>
               </div>
             </div>
           </div>
-          <div class="tv-base"></div>
+          <h3 class="node-title">Scoreboard Controller</h3>
+          <p class="node-subtitle">NON-TECHNICAL USER APP</p>
         </div>
-        <h3 class="node-title">Live Score Overlay</h3>
-        <p class="node-subtitle">HDMI TV & OBS LIVE STREAM</p>
-      </div>
 
-    </section>
+        <!-- Connector 1 -->
+        <div class="connector-col">
+          <span class="connector-label-top">DATA SIGNAL</span>
+          <div class="connector-arrow">
+            <svg class="connector-arrow-svg" viewBox="0 0 24 24">
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <polyline points="14 6 22 12 14 18"></polyline>
+            </svg>
+          </div>
+          <span class="connector-label-bottom">COMMANDS</span>
+        </div>
 
-    <!-- Bottom Features Ticker Bar -->
-    <footer class="feature-bar">
-      <div class="feature-item">
-        <span class="feature-dot"></span>
-        100% Offline Court Wi-Fi
-      </div>
-      <div class="feature-item">
-        <span class="feature-dot"></span>
-        Zero Clock Delay
-      </div>
-      <div class="feature-item">
-        <span class="feature-dot"></span>
-        Auto Team Color Matching
-      </div>
-    </footer>
+        <!-- Column 2: Laptop -->
+        <div class="node-col">
+          <span class="node-badge badge-laptop">LOCAL SERVER</span>
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="mockup-frame laptop-frame">
+              <div class="laptop-screen">
+                <span class="log-green">&gt; LOCAL SERVER RUNNING</span><br>
+                <span class="log-white">IP ADDRESS: 192.168.1.10</span><br>
+                <span class="log-orange">STATUS: CONNECTED</span><br>
+                <span class="log-green">SCOREBOARD ACTIVE</span><br>
+                <span class="log-dim">&gt; waiting for commands...</span>
+              </div>
+            </div>
+            <div class="laptop-base"></div>
+          </div>
+          <h3 class="node-title">Local Laptop Server</h3>
+          <p class="node-subtitle">IP ADDRESS: 192.168.1.10</p>
+        </div>
+
+        <!-- Connector 2 -->
+        <div class="connector-col">
+          <span class="connector-label-top">DATA FEED</span>
+          <div class="connector-arrow">
+            <svg class="connector-arrow-svg" viewBox="0 0 24 24">
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <polyline points="14 6 22 12 14 18"></polyline>
+            </svg>
+          </div>
+          <span class="connector-label-bottom">UPDATES</span>
+        </div>
+
+        <!-- Column 3: TV Display -->
+        <div class="node-col">
+          <span class="node-badge badge-tv">LOCAL DISPLAY</span>
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="mockup-frame tv-frame">
+              <div class="tv-screen">
+                <div class="tv-overlay-title">🔴 LIVE SCOREBOARD FEED</div>
+                <div class="tv-overlay-content">
+                  <div class="tv-team">
+                    <span class="tv-team-name">BEARS</span>
+                    <span class="tv-team-score red">24</span>
+                  </div>
+                  <div class="tv-clock">08:15</div>
+                  <div class="tv-team">
+                    <span class="tv-team-name">LIONS</span>
+                    <span class="tv-team-score blue">17</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tv-base"></div>
+          </div>
+          <h3 class="node-title">Live Score Overlay</h3>
+          <p class="node-subtitle">HDMI TV & OBS LIVE STREAM</p>
+        </div>
+
+        <!-- Offline Footer Benefits -->
+        <footer class="feature-bar" style="grid-column: span 5; margin-top: 3rem;">
+          <div class="feature-item">
+            <span class="feature-dot"></span>
+            100% Offline Court Wi-Fi
+          </div>
+          <div class="feature-item">
+            <span class="feature-dot"></span>
+            Zero Clock Delay
+          </div>
+          <div class="feature-item">
+            <span class="feature-dot"></span>
+            Auto Team Color Matching
+          </div>
+        </footer>
+
+      </section>
+      
+      <!-- MODE 2: CLOUD DIAGRAM -->
+      <section class="diagram-section" id="cloud-diagram">
+        
+        <!-- Column 1: Vercel Web Controller -->
+        <div class="node-col">
+          <span class="node-badge badge-vercel">VERCEL CONTROL</span>
+          <div class="mockup-frame tablet-frame" style="border-color: #3b2838;">
+            <div class="tablet-screen" style="background: #0b0716; border-color: #3b2858;">
+              <div class="screen-header" style="border-color: #2b1f3c; color: #a855f7;">
+                <span>● VERCEL APP</span>
+                <span style="color: #4ade80;">☁️ SYNCED</span>
+              </div>
+              <div style="text-align: center;">
+                <span style="font-size: 6px; color: #a0a0ff; letter-spacing: 0.5px; text-transform: uppercase;">league: admin@hoopculture.ca</span>
+                <div class="screen-clock" style="color: var(--white); text-shadow: 0 0 10px rgba(255,255,255,0.2);">12:34</div>
+                <span style="font-size: 8px; color: #a855f7; font-weight: bold; text-transform: uppercase;">Q4 - PERIOD 2</span>
+              </div>
+              <div>
+                <div class="screen-scores">
+                  <div class="screen-btn" style="background: var(--purple);">HOME +</div>
+                  <div class="screen-btn guest" style="background: var(--blue);">GUEST -</div>
+                </div>
+                <div class="screen-footer-btn" style="background: #25183a; color: #c084fc;">LOGOUT</div>
+              </div>
+            </div>
+          </div>
+          <h3 class="node-title">Web Control Panel</h3>
+          <p class="node-subtitle">VERCEL.APP (SECURE HTTPS)</p>
+        </div>
+
+        <!-- Connector 1 -->
+        <div class="connector-col">
+          <span class="connector-label-top" style="color: var(--purple);">CLOUD REQUESTS</span>
+          <div class="connector-arrow">
+            <svg class="connector-arrow-svg cloud" viewBox="0 0 24 24">
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <polyline points="14 6 22 12 14 18"></polyline>
+            </svg>
+          </div>
+          <span class="connector-label-bottom" style="color: var(--purple);">PARTITIONED API</span>
+        </div>
+
+        <!-- Column 2: OnRender Server Brain -->
+        <div class="node-col">
+          <span class="node-badge badge-onrender">ONRENDER SERVER</span>
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="mockup-frame laptop-frame" style="width: 240px; height: 150px; padding: 12px 16px; border-color: #1a2c28;">
+              <div class="laptop-screen" style="background: #020617; border-color: #1e293b; padding: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 4px; margin-bottom: 4px;">
+                  <span style="color: var(--teal); font-size: 8px; font-weight: bold; letter-spacing: 0.5px;">☁️ ONRENDER SYSTEM</span>
+                  <span style="color: #22c55e; font-size: 7px; animation: pulse 1.5s infinite;">● ONLINE</span>
+                </div>
+                <div style="flex: 1; font-family: monospace; font-size: 7px; color: #94a3b8; line-height: 1.35;">
+                  <span style="color: var(--teal);">$ npm run start</span><br>
+                  <span class="log-white">Scoreboard Active on port 443</span><br>
+                  <span style="color: #fb7185;">[User Map] partition activated</span><br>
+                  <span class="log-orange">&gt; [admin@hoopculture.ca] state updated</span><br>
+                  <span class="log-dim">&gt; Broadcasting SSE package...</span>
+                </div>
+              </div>
+            </div>
+            <div style="width: 270px; height: 12px; background: #182824; border-radius: 0 0 6px 6px; box-shadow: 0 8px 16px rgba(0,0,0,0.6); margin-bottom: 1rem;"></div>
+          </div>
+          <h3 class="node-title">Cloud Server Brain</h3>
+          <p class="node-subtitle">ONRENDER.COM (SSE HUB)</p>
+        </div>
+
+        <!-- Connector 2 -->
+        <div class="connector-col">
+          <span class="connector-label-top" style="color: var(--pink);">SSE BROADCAST</span>
+          <div class="connector-arrow">
+            <svg class="connector-arrow-svg cloud" viewBox="0 0 24 24" style="stroke: var(--pink); filter: drop-shadow(0 0 6px rgba(236, 72, 153, 0.5));">
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <polyline points="14 6 22 12 14 18"></polyline>
+            </svg>
+          </div>
+          <span class="connector-label-bottom" style="color: var(--pink);">LIVE EVENT FEED</span>
+        </div>
+
+        <!-- Column 3: Remote OBS Display -->
+        <div class="node-col">
+          <span class="node-badge badge-remote">REMOTE DISPLAY</span>
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="mockup-frame tv-frame" style="border-color: #3b202e;">
+              <div class="tv-screen" style="background: #0d060e; border-color: #3b1e2a;">
+                <div class="tv-overlay-title" style="color: var(--pink);">🔴 REMOTE STREAM FEED (?user=...)</div>
+                <div class="tv-overlay-content" style="background: #1b0c15; border-color: #3c1c30;">
+                  <div class="tv-team">
+                    <span class="tv-team-name">BEARS</span>
+                    <span class="tv-team-score red" style="color: var(--pink);">24</span>
+                  </div>
+                  <div class="tv-clock" style="color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.4);">08:15</div>
+                  <div class="tv-team">
+                    <span class="tv-team-name">LIONS</span>
+                    <span class="tv-team-score blue" style="color: var(--teal);">17</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tv-base" style="background: #3a1e2d;"></div>
+          </div>
+          <h3 class="node-title">OBS Overlay / TV</h3>
+          <p class="node-subtitle">GLOBAL LIVE EVENT STREAM</p>
+        </div>
+
+        <!-- Cloud Footer Benefits -->
+        <footer class="feature-bar" style="grid-column: span 5; margin-top: 3rem;">
+          <div class="feature-item">
+            <span class="feature-dot cloud"></span>
+            Multi-User State Isolation
+          </div>
+          <div class="feature-item">
+            <span class="feature-dot cloud"></span>
+            Vercel Global CDN Edge
+          </div>
+          <div class="feature-item">
+            <span class="feature-dot cloud"></span>
+            OnRender Real-Time SSE
+          </div>
+        </footer>
+
+      </section>
+      
+    </div>
 
   </div>
+
+  <script>
+    function switchMode(mode) {
+      const btnOffline = document.getElementById('btn-offline');
+      const btnCloud = document.getElementById('btn-cloud');
+      const secOffline = document.getElementById('offline-diagram');
+      const secCloud = document.getElementById('cloud-diagram');
+
+      if (mode === 'offline') {
+        btnOffline.classList.add('active');
+        btnCloud.classList.remove('active');
+        
+        secCloud.classList.remove('fade-in');
+        setTimeout(() => {
+          secCloud.classList.remove('active');
+          secOffline.classList.add('active');
+          setTimeout(() => {
+            secOffline.classList.add('fade-in');
+          }, 50);
+        }, 300);
+      } else {
+        btnCloud.classList.add('active');
+        btnOffline.classList.remove('active');
+        
+        secOffline.classList.remove('fade-in');
+        setTimeout(() => {
+          secOffline.classList.remove('active');
+          secCloud.classList.add('active');
+          setTimeout(() => {
+            secCloud.classList.add('fade-in');
+          }, 50);
+        }, 300);
+      }
+    }
+  </script>
 
 </body>
 </html>
