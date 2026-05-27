@@ -109,7 +109,7 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
   border-bottom-right-radius:2.1vw;
 }
 .circle{
-  width:3.8vw;height:3.8vw;
+  width:4.05vw;height:4.05vw;
   border-radius:50%;
   overflow:hidden;
   display:flex;align-items:center;justify-content:center;
@@ -451,18 +451,18 @@ function draw(){
   const hTextColor = isLight(homePrimary) ? '#111111' : '#ffffff';
   const aTextColor = isLight(awayPrimary) ? '#111111' : '#ffffff';
 
-  /* home logo wrapper background (secondary color/different shade in corners) */
+  /* home logo wrapper background (primary team color in corners) */
   const hLW=$('hLogoWrapper');
-  if(hLW)hLW.style.background=dk(hcRaw, 0.58);
+  if(hLW)hLW.style.background=hcRaw;
 
   /* home logo cell background (primary picked color) */
   const hLC=$('hLogoCell');
   if(hLC)hLC.style.background=homeCellColor;
 
-  /* home circle background (white shade gradient of the team logo color) */
+  /* home circle background (darker shader gradient of the team logo color) */
   const hC=$('hCircle');
   if(hC){
-    hC.style.background=`radial-gradient(circle at 40% 35%, #ffffff, ${lt(hcRaw, 0.78)})`;
+    hC.style.background=`radial-gradient(circle at 40% 35%, ${dk(hcRaw, 0.75)}, ${dk(hcRaw, 0.3)})`;
   }
 
   /* home brace + score block (primary color and text/line color) */
@@ -477,18 +477,18 @@ function draw(){
     hScore.style.color=hTextColor;
   }
 
-  /* away logo wrapper background (secondary color/different shade in corners) */
+  /* away logo wrapper background (primary team color in corners) */
   const aLW=$('aLogoWrapper');
-  if(aLW)aLW.style.background=dk(acRaw, 0.58);
+  if(aLW)aLW.style.background=acRaw;
 
   /* away logo cell background (primary picked color) */
   const aLC=$('aLogoCell');
   if(aLC)aLC.style.background=awayCellColor;
 
-  /* away circle background (white shade gradient of the team logo color) */
+  /* away circle background (darker shader gradient of the team logo color) */
   const aC=$('aCircle');
   if(aC){
-    aC.style.background=`radial-gradient(circle at 40% 35%, #ffffff, ${lt(acRaw, 0.78)})`;
+    aC.style.background=`radial-gradient(circle at 40% 35%, ${dk(acRaw, 0.75)}, ${dk(acRaw, 0.3)})`;
   }
 
   /* away score block + brace (primary color and text/line color) */
