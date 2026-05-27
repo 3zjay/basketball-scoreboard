@@ -439,23 +439,23 @@ function draw(){
   const hcRaw = isHex(S.homeColor) ? S.homeColor : '#888888';
   const acRaw = isHex(S.awayColor) ? S.awayColor : '#c8102e';
 
-  // Home Colors: logo cell is the darker shader (bigger), corners/wrapper and score block are primary color
-  const homeCellColor = dk(hcRaw, 0.58);
+  // Home Colors: logo cell and score block are the picked team color
+  const homeCellColor = hcRaw;
   const homePrimary = hcRaw; // Home score segment and brace column is the team color
 
-  // Away Colors: logo cell is the darker shader (bigger), corners/wrapper and score block are primary color
-  const awayCellColor = dk(acRaw, 0.58);
+  // Away Colors: logo cell is the picked color, circle background is the white shade of the logo color
+  const awayCellColor = acRaw;
   const awayPrimary = acRaw; // Away score segment and brace column is the team color
 
   // Determine text and line contrast colors
   const hTextColor = isLight(homePrimary) ? '#111111' : '#ffffff';
   const aTextColor = isLight(awayPrimary) ? '#111111' : '#ffffff';
 
-  /* home logo wrapper background (primary team color in corners) */
+  /* home logo wrapper background (secondary color/different shade in corners) */
   const hLW=$('hLogoWrapper');
-  if(hLW)hLW.style.background=hcRaw;
+  if(hLW)hLW.style.background=dk(hcRaw, 0.58);
 
-  /* home logo cell background (secondary color/darker shader) */
+  /* home logo cell background (primary picked color) */
   const hLC=$('hLogoCell');
   if(hLC)hLC.style.background=homeCellColor;
 
@@ -477,11 +477,11 @@ function draw(){
     hScore.style.color=hTextColor;
   }
 
-  /* away logo wrapper background (primary team color in corners) */
+  /* away logo wrapper background (secondary color/different shade in corners) */
   const aLW=$('aLogoWrapper');
-  if(aLW)aLW.style.background=acRaw;
+  if(aLW)aLW.style.background=dk(acRaw, 0.58);
 
-  /* away logo cell background (secondary color/darker shader) */
+  /* away logo cell background (primary picked color) */
   const aLC=$('aLogoCell');
   if(aLC)aLC.style.background=awayCellColor;
 
