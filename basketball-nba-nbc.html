@@ -145,13 +145,13 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
 .score-num{
   font-family:'Teko',sans-serif;
   font-size:3.2vw;font-weight:700;
-  color:#fff;line-height:1;
+  color:inherit;line-height:1;
   font-variant-numeric:tabular-nums;
 }
 @keyframes bump{
-  0%  {transform:scale(1);   color:#fff}
+  0%  {transform:scale(1)}
   40% {transform:scale(1.22);color:#ffe066}
-  100%{transform:scale(1);   color:#fff}
+  100%{transform:scale(1)}
 }
 .bump{animation:bump .38s ease}
 
@@ -250,9 +250,9 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
     <!-- ② HOME BRACE — Broadcast Divider & Notched Line -->
     <div class="brace-col" id="hBraceCol">
       <svg class="brace-svg" viewBox="0 0 16 42">
-        <line x1="14" y1="0" x2="14" y2="42" stroke="rgba(255,255,255,0.25)" stroke-width="1.2" />
-        <path d="M 9,6 L 9,18 L 4,21 L 9,24 L 9,36" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="square" />
-        <text x="8" y="13" font-family="'Barlow Condensed', sans-serif" font-size="8.5" font-weight="900" fill="#fff" text-anchor="end" id="hFouls"></text>
+        <line x1="14" y1="0" x2="14" y2="42" stroke="currentColor" stroke-opacity="0.25" stroke-width="1.2" />
+        <path d="M 9,6 L 9,18 L 4,21 L 9,24 L 9,36" fill="none" stroke="currentColor" stroke-opacity="0.7" stroke-width="1.5" stroke-linecap="square" />
+        <text x="8" y="13" font-family="'Barlow Condensed', sans-serif" font-size="8.5" font-weight="900" fill="currentColor" text-anchor="end" id="hFouls"></text>
       </svg>
     </div>
 
@@ -279,9 +279,9 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
     <!-- ⑥ AWAY BRACE — Broadcast Divider & Notched Line -->
     <div class="brace-col" id="aBraceCol">
       <svg class="brace-svg" viewBox="0 0 16 42">
-        <line x1="2" y1="0" x2="2" y2="42" stroke="rgba(255,255,255,0.25)" stroke-width="1.2" />
-        <path d="M 7,6 L 7,18 L 12,21 L 7,24 L 7,36" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="square" />
-        <text x="8" y="13" font-family="'Barlow Condensed', sans-serif" font-size="8.5" font-weight="900" fill="#fff" text-anchor="start" id="aFouls"></text>
+        <line x1="2" y1="0" x2="2" y2="42" stroke="currentColor" stroke-opacity="0.25" stroke-width="1.2" />
+        <path d="M 7,6 L 7,18 L 12,21 L 7,24 L 7,36" fill="none" stroke="currentColor" stroke-opacity="0.7" stroke-width="1.5" stroke-linecap="square" />
+        <text x="8" y="13" font-family="'Barlow Condensed', sans-serif" font-size="8.5" font-weight="900" fill="currentColor" text-anchor="start" id="aFouls"></text>
       </svg>
     </div>
 
@@ -327,22 +327,6 @@ const DEF={
   rp1Title:'',rp1Value:'',rp2Title:'',rp2Value:'',
 };
 const PER=['1ST','2ND','3RD','4TH','OT','2OT'];
-const TEAM_PRESETS = {
-  'OKC': { primary: '#007ac1', secondary: '#ef3b24' },
-  'SAS': { primary: '#1c1c1c', secondary: '#bac3c9' },
-  'LAL': { primary: '#552583', secondary: '#fdb927' },
-  'GSW': { primary: '#1d428a', secondary: '#ffc72c' },
-  'BOS': { primary: '#007a33', secondary: '#ffffff' },
-  'CHI': { primary: '#ce1141', secondary: '#111111' },
-  'MIA': { primary: '#98002e', secondary: '#f9a01b' },
-  'NYK': { primary: '#006bb6', secondary: '#f58426' },
-  'CLE': { primary: '#860038', secondary: '#fdbb30' },
-  'PHX': { primary: '#1d1160', secondary: '#e56020' },
-  'MIL': { primary: '#00471b', secondary: '#eee1c6' },
-  'PHI': { primary: '#006bb6', secondary: '#ed174c' },
-  'BKN': { primary: '#111111', secondary: '#ffffff' },
-  'TOR': { primary: '#ce1141', secondary: '#111111' },
-};
 let S={...DEF},lH=-1,lA=-1;
 
 /* ══ TICK ══ */
@@ -431,58 +415,68 @@ function draw(){
   tx('qf',(!isNaN(qfn)&&qfn>0)?String(qfn):'');
 
   /* ── COLORS ──
-     Dynamically load team presets if abbreviation matches, otherwise fallback
+     Dynamically calculate logo and cell colors based on controlboard inputs
   */
-  const hAbbrClean = (S.homeAbbr || 'HOME').trim().toUpperCase();
-  const aAbbrClean = (S.awayAbbr || 'AWAY').trim().toUpperCase();
-
-  const hPreset = TEAM_PRESETS[hAbbrClean];
-  const aPreset = TEAM_PRESETS[aAbbrClean];
-
   const DARK = '#2d2d2d';
   const hcRaw = isHex(S.homeColor) ? S.homeColor : '#888888';
   const acRaw = isHex(S.awayColor) ? S.awayColor : '#c8102e';
 
-  // Home Colors
-  let homePrimary = DARK;
-  let homeSecondary = hcRaw;
-  if(hPreset){
-    homePrimary = hPreset.primary;
-    homeSecondary = hPreset.secondary;
-  }
+  // Home Colors: logo color (hcRaw) and cell color (different shade: dk(hcRaw, 0.58))
+  const homeLogoColor = hcRaw;
+  const homeCellColor = dk(hcRaw, 0.58);
+  const homePrimary = DARK; // Home score segment and brace column remains dark charcoal
 
-  // Away Colors
-  let awayPrimary = acRaw;
-  let awaySecondary = dk(acRaw, .58);
-  if(aPreset){
-    awayPrimary = aPreset.primary;
-    awaySecondary = aPreset.secondary;
-  }
+  // Away Colors: logo color (acRaw) and cell color (different shade: dk(acRaw, 0.58))
+  const awayLogoColor = acRaw;
+  const awayCellColor = dk(acRaw, 0.58);
+  const awayPrimary = acRaw; // Away score segment and brace column is the team color
 
-  /* home logo cell background (secondary color) */
+  // Determine text and line contrast colors
+  const hTextColor = isLight(homePrimary) ? '#111111' : '#ffffff';
+  const aTextColor = isLight(awayPrimary) ? '#111111' : '#ffffff';
+
+  /* home logo cell background (secondary color/different shade) */
   const hLC=$('hLogoCell');
-  if(hLC)hLC.style.background=homeSecondary;
+  if(hLC)hLC.style.background=homeCellColor;
 
-  /* home brace + score block (primary color) */
-  [$('hBraceCol'),$('hScoreSeg')].forEach(el=>{if(el)el.style.background=homePrimary;});
-
-  /* home circle background sphere shading */
+  /* home circle background sphere shading (using primary logo color) */
   const hC=$('hCircle');
   if(hC){
-    hC.style.background=`radial-gradient(circle at 40% 35%, ${homePrimary}, ${dk(homePrimary, 0.4)})`;
+    hC.style.background=`radial-gradient(circle at 40% 35%, ${homeLogoColor}, ${dk(homeLogoColor, 0.4)})`;
   }
 
-  /* away logo cell background (secondary color) */
+  /* home brace + score block (primary color and text/line color) */
+  const hBrace = $('hBraceCol');
+  if(hBrace){
+    hBrace.style.background=homePrimary;
+    hBrace.style.color=hTextColor;
+  }
+  const hScore = $('hScoreSeg');
+  if(hScore){
+    hScore.style.background=homePrimary;
+    hScore.style.color=hTextColor;
+  }
+
+  /* away logo cell background (secondary color/different shade) */
   const aLC=$('aLogoCell');
-  if(aLC)aLC.style.background=awaySecondary;
+  if(aLC)aLC.style.background=awayCellColor;
 
-  /* away score block + brace (primary color) */
-  [$('aScoreSeg'),$('aBraceCol')].forEach(el=>{if(el)el.style.background=awayPrimary;});
-
-  /* away circle background sphere shading */
+  /* away circle background sphere shading (using primary logo color) */
   const aC=$('aCircle');
   if(aC){
-    aC.style.background=`radial-gradient(circle at 40% 35%, ${awayPrimary}, ${dk(awayPrimary, 0.4)})`;
+    aC.style.background=`radial-gradient(circle at 40% 35%, ${awayLogoColor}, ${dk(awayLogoColor, 0.4)})`;
+  }
+
+  /* away score block + brace (primary color and text/line color) */
+  const aBrace = $('aBraceCol');
+  if(aBrace){
+    aBrace.style.background=awayPrimary;
+    aBrace.style.color=aTextColor;
+  }
+  const aScore = $('aScoreSeg');
+  if(aScore){
+    aScore.style.background=awayPrimary;
+    aScore.style.color=aTextColor;
   }
 
   /* logos */
