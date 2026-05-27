@@ -225,6 +225,15 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
   font-size:.74vw;font-weight:900;
   color:#fff;letter-spacing:.06vw;text-transform:uppercase;
 }
+#sc{
+  font-family:'Teko',sans-serif;
+  font-size:1vw;font-weight:700;
+  color:#f5c842;
+  line-height:.9;
+  font-variant-numeric:tabular-nums;
+  transition:color .3s;
+}
+#sc.warn{color:#ff4040}
 #qf{
   font-family:'Barlow Condensed',sans-serif;
   font-size:.74vw;font-weight:900;
@@ -310,6 +319,7 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
       <div id="clk">10:00</div>
       <div id="prow">
         <span id="per">1ST</span>
+        <span id="sc">24</span>
         <span id="qf"></span>
       </div>
     </div>
@@ -437,6 +447,7 @@ function tock(){
   const s=S.gameSeconds,m=Math.floor(s/60),sec=s%60;
   const v=s<60?`${s}.0`:`${m}:${sec.toString().padStart(2,'0')}`;
   const e=$('clk');if(e){e.textContent=v;e.className=s<=30?'warn':'';}
+  const sc=$('sc');if(sc){sc.textContent=S.shotSeconds;sc.className=S.shotSeconds<=5?'warn':'';}
 }
 
 /* ══ DRAW ══ */
