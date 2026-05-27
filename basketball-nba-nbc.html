@@ -439,9 +439,9 @@ function draw(){
   const hcRaw = isHex(S.homeColor) ? S.homeColor : '#888888';
   const acRaw = isHex(S.awayColor) ? S.awayColor : '#c8102e';
 
-  // Home Colors: logo cell is the picked color, circle background is the white shade of the logo color
+  // Home Colors: logo cell and score block are the picked team color
   const homeCellColor = hcRaw;
-  const homePrimary = DARK; // Home score segment and brace column remains dark charcoal
+  const homePrimary = hcRaw; // Home score segment and brace column is the team color
 
   // Away Colors: logo cell is the picked color, circle background is the white shade of the logo color
   const awayCellColor = acRaw;
