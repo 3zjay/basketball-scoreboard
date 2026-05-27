@@ -525,15 +525,15 @@ $y += 22
 
 # PAGE BUTTONS — 2 per row
 $pages = @(
-    @{ Label="🎛️ Control Board";     Path="";               HoverColor=[System.Drawing.Color]::FromArgb(255, 140, 0) }, # orange
-    @{ Label="🖥️ Venue Display";      Path="display";        HoverColor=[System.Drawing.Color]::FromArgb(245, 158, 11) }, # amber
-    @{ Label="🖥️ Venue Display 2";    Path="display2";       HoverColor=[System.Drawing.Color]::FromArgb(245, 158, 11) },
-    @{ Label="⏱️ Shot Clock Display"; Path="shotclock-display"; HoverColor=[System.Drawing.Color]::FromArgb(59, 130, 246) }, # blue
-    @{ Label="🕹️ Shot Clock Ctrl";    Path="shotclock";      HoverColor=[System.Drawing.Color]::FromArgb(59, 130, 246) },
-    @{ Label="🎥 OBS Bar Overlay";    Path="overlay";        HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) }, # purple
-    @{ Label="🎥 OBS Fullscreen";     Path="fullscreen";     HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) },
-    @{ Label="🏀 NBA Scorebug";       Path="nbaoverlay";     HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) },
-    @{ Label="🏀 NBA Scorebug 2";     Path="nbaoverlay2";    HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) },
+    @{ Label="Control Board";        Path="";               HoverColor=[System.Drawing.Color]::FromArgb(255, 140, 0) },
+    @{ Label="Venue Display";         Path="display";        HoverColor=[System.Drawing.Color]::FromArgb(245, 158, 11) },
+    @{ Label="Venue Display 2";       Path="display2";       HoverColor=[System.Drawing.Color]::FromArgb(245, 158, 11) },
+    @{ Label="Shot Clock Display";    Path="shotclock-display"; HoverColor=[System.Drawing.Color]::FromArgb(59, 130, 246) },
+    @{ Label="Shot Clock Ctrl";       Path="shotclock";      HoverColor=[System.Drawing.Color]::FromArgb(59, 130, 246) },
+    @{ Label="OBS Bar Overlay";       Path="overlay";        HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) },
+    @{ Label="OBS Fullscreen";        Path="fullscreen";     HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) },
+    @{ Label="NBA Scorebug";          Path="nbaoverlay";     HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) },
+    @{ Label="NBA Scorebug 2";        Path="nbaoverlay2";    HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) },
     @{ Label="NBA - NBC Overlay";     Path="nbc";            HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) }
 )
 
