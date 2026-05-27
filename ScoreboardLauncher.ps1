@@ -534,7 +534,7 @@ $pages = @(
     @{ Label="🎥 OBS Fullscreen";     Path="fullscreen";     HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) },
     @{ Label="🏀 NBA Scorebug";       Path="nbaoverlay";     HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) },
     @{ Label="🏀 NBA Scorebug 2";     Path="nbaoverlay2";    HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) },
-    @{ Label="📺 NBA – NBC Overlay";  Path="nbc";            HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) }
+    @{ Label="NBA - NBC Overlay";     Path="nbc";            HoverColor=[System.Drawing.Color]::FromArgb(139, 92, 246) }
 )
 
 $BH  = 44   # button height
