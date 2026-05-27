@@ -100,7 +100,7 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
   border-bottom-right-radius:2.1vw;
 }
 .circle{
-  width:3.65vw;height:3.65vw;
+  width:3.8vw;height:3.8vw;
   border-radius:50%;
   overflow:hidden;
   display:flex;align-items:center;justify-content:center;
@@ -459,8 +459,12 @@ function draw(){
     awaySecondary = aPreset.secondary;
   }
 
-  /* home body — logo cell + brace + score block */
-  [$('hLogoCell'),$('hBraceCol'),$('hScoreSeg')].forEach(el=>{if(el)el.style.background=homePrimary;});
+  /* home logo cell background (secondary color) */
+  const hLC=$('hLogoCell');
+  if(hLC)hLC.style.background=homeSecondary;
+
+  /* home brace + score block (primary color) */
+  [$('hBraceCol'),$('hScoreSeg')].forEach(el=>{if(el)el.style.background=homePrimary;});
 
   /* home circle background sphere shading */
   const hC=$('hCircle');
@@ -468,8 +472,12 @@ function draw(){
     hC.style.background=`radial-gradient(circle at 40% 35%, ${homePrimary}, ${dk(homePrimary, 0.4)})`;
   }
 
-  /* away body — score block + brace + logo cell */
-  [$('aScoreSeg'),$('aBraceCol'),$('aLogoCell')].forEach(el=>{if(el)el.style.background=awayPrimary;});
+  /* away logo cell background (secondary color) */
+  const aLC=$('aLogoCell');
+  if(aLC)aLC.style.background=awaySecondary;
+
+  /* away score block + brace (primary color) */
+  [$('aScoreSeg'),$('aBraceCol')].forEach(el=>{if(el)el.style.background=awayPrimary;});
 
   /* away circle background sphere shading */
   const aC=$('aCircle');
