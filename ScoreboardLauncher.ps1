@@ -491,7 +491,7 @@ $y += 106
 
 # REFRESH IPs
 $btnRefresh           = New-Object System.Windows.Forms.Button
-$btnRefresh.Text      = "↻  Refresh Network Addresses"
+$btnRefresh.Text      = "Refresh Network Addresses"
 $btnRefresh.Size      = New-Object System.Drawing.Size($CTW, 30)
 $btnRefresh.Location  = New-Object System.Drawing.Point($PAD, $y)
 $btnRefresh.BackColor = $COLOR_SIDEBAR

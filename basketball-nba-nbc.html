@@ -83,7 +83,8 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
   display:flex;align-items:center;justify-content:center;
   background:radial-gradient(circle at 40% 35%, #2e2e2e, #111);
   flex-shrink:0;
-  box-shadow:inset 0 0 .4vw rgba(0,0,0,.6);
+  border:0.12vw solid rgba(255,255,255,0.85);
+  box-shadow:inset 0 0 .4vw rgba(0,0,0,.8), 0 0.1vw 0.3vw rgba(0,0,0,0.5);
 }
 .circle img{width:90%;height:90%;object-fit:contain}
 .no-logo{
@@ -92,28 +93,19 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
   color:rgba(255,255,255,.15);text-transform:uppercase;
 }
 
-/* ─── BRACE COLUMN (fouls + curly bracket separator) ─── */
+/* ─── BRACE COLUMN (fouls + high-end SVG brace) ─── */
 .brace-col{
-  width:1.4vw;
+  width:1.6vw;
   flex-shrink:0;
   display:flex;
-  flex-direction:column;
-  align-items:center;
+  align-items:stretch;
   justify-content:center;
   background:#2d2d2d;       /* JS: home=dark, away=team color */
-  padding-top:.08vw;
 }
-.foul-lbl{
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:.65vw;font-weight:900;
-  color:#fff;line-height:1;
-  min-height:.65vw;text-align:center;
-}
-.brace-char{
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:2.8vw;font-weight:300;
-  color:rgba(255,255,255,.5);
-  line-height:.8;
+.brace-svg{
+  width:100%;
+  height:100%;
+  display:block;
 }
 
 /* ─── SCORE BLOCKS ─── */
@@ -179,45 +171,41 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
 }
 
 /* ══════════════════════════════════════════════
-   BOTTOM STRIP — custom text (no BONUS)
-   rp1Title=left · rp2Title – rp2Value=center · rp1Value=right
+   BOTTOM STRIP — Clean Centered Broadcast Info
    ══════════════════════════════════════════════ */
 #strip{
-  display:flex;align-items:center;
-  height:1.1vw;
-  background:#0c0c0c;
-  border-top:1px solid rgba(255,255,255,.06);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:1.25vw;
+  background:linear-gradient(to bottom, #181818 0%, #0c0c0c 50%, #020202 100%);
+  border-top:0.06vw solid rgba(255,255,255,0.18);
+  box-shadow:inset 0 0.05vw 0.1vw rgba(255,255,255,0.05);
 }
-.s-side{
-  display:flex;align-items:center;gap:.4vw;
-  padding:0 .75vw;flex-shrink:0;
+#strip-content{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0.4vw;
 }
-.s-line{
-  width:1.2vw;height:1px;
-  background:rgba(255,255,255,.2);
+#strip-logo{
+  width:0.7vw;
+  height:0.7vw;
+  object-fit:contain;
+  border-radius:50%;
+  box-shadow:0 0 0.1vw rgba(255,255,255,0.6);
   flex-shrink:0;
 }
-.s-lbl{
+#strip-text{
   font-family:'Barlow Condensed',sans-serif;
-  font-size:.46vw;font-weight:800;
-  letter-spacing:.17vw;color:rgba(255,255,255,.5);
-  text-transform:uppercase;white-space:nowrap;
-}
-#s-center{
-  flex:1;display:flex;align-items:center;
-  justify-content:center;gap:.32vw;
-  overflow:hidden;padding:0 .4vw;
-}
-.ball{
-  width:.5vw;height:.5vw;border-radius:50%;flex-shrink:0;
-  background:radial-gradient(circle at 35% 35%,#f85c0a,#a03800);
-}
-#s-txt{
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:.5vw;font-weight:800;
-  letter-spacing:.18vw;color:rgba(255,255,255,.5);
-  text-transform:uppercase;white-space:nowrap;
+  font-size:0.58vw;
+  font-weight:900;
+  letter-spacing:0.18vw;
+  color:rgba(255,255,255,0.8);
+  text-transform:uppercase;
+  white-space:nowrap;
   font-style:italic;
+  text-shadow:0 0.05vw 0.1vw rgba(0,0,0,0.8);
 }
 </style>
 </head>
@@ -237,10 +225,13 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
       <div class="circle" id="hCircle"><div class="no-logo">LOGO</div></div>
     </div>
 
-    <!-- ③ HOME BRACE  }  (foul number above brace) -->
+    <!-- ③ HOME BRACE — Broadcast Divider & Bracket -->
     <div class="brace-col" id="hBraceCol">
-      <span class="foul-lbl" id="hFouls"></span>
-      <span class="brace-char">}</span>
+      <svg class="brace-svg" viewBox="0 0 16 42">
+        <line x1="14" y1="0" x2="14" y2="42" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" />
+        <path d="M 10,4 L 5,4 L 5,18 L 1,21 L 5,24 L 5,38 L 10,38" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="square" />
+        <text x="9" y="14" font-family="'Barlow Condensed', sans-serif" font-size="8.5" font-weight="900" fill="#fff" text-anchor="end" id="hFouls"></text>
+      </svg>
     </div>
 
     <!-- ④ HOME SCORE  (dark) -->
@@ -263,10 +254,13 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
       <span class="score-num" id="aNum">0</span>
     </div>
 
-    <!-- ⑦ AWAY BRACE  {  (foul number above brace) -->
+    <!-- ⑦ AWAY BRACE — Broadcast Divider & Bracket -->
     <div class="brace-col" id="aBraceCol">
-      <span class="foul-lbl" id="aFouls"></span>
-      <span class="brace-char">{</span>
+      <svg class="brace-svg" viewBox="0 0 16 42">
+        <line x1="2" y1="0" x2="2" y2="42" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" />
+        <path d="M 6,4 L 11,4 L 11,18 L 15,21 L 11,24 L 11,38 L 6,38" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="square" />
+        <text x="7" y="14" font-family="'Barlow Condensed', sans-serif" font-size="8.5" font-weight="900" fill="#fff" text-anchor="start" id="aFouls"></text>
+      </svg>
     </div>
 
     <!-- ⑧ AWAY LOGO -->
@@ -281,19 +275,11 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
 
   </div><!-- /row -->
 
-  <!-- BOTTOM STRIP -->
+  <!-- BOTTOM STRIP — Clean Centered Broadcast Info -->
   <div id="strip">
-    <div class="s-side">
-      <span class="s-lbl" id="sLeft"></span>
-      <div class="s-line" id="sLineL" style="display:none"></div>
-    </div>
-    <div id="s-center">
-      <div class="ball" id="sBall" style="display:none"></div>
-      <span id="s-txt"></span>
-    </div>
-    <div class="s-side">
-      <div class="s-line" id="sLineR" style="display:none"></div>
-      <span class="s-lbl" id="sRight"></span>
+    <div id="strip-content">
+      <img id="strip-logo" src="/hoop-culture-logo.png" alt="HC">
+      <span id="strip-text">HOOP CULTURE NETWORK</span>
     </div>
   </div>
 
@@ -418,22 +404,17 @@ function draw(){
   setLogo('aCircle',S.awayLogo);
 
   /* ── BOTTOM STRIP ──
-     rp1Title → left label    rp2Title + ' – ' + rp2Value → center
-     rp1Value → right label   (all optional, nothing shown if empty)
+     Dynamic display of Broadcast (rp1Value) & Venue (rp2Value) from controlboard
   */
-  const left=(S.rp1Title||'').trim();
-  const right=(S.rp1Value||'').trim();
-  const cv=[S.rp2Title,S.rp2Value].map(x=>(x||'').trim()).filter(Boolean).join(' – ');
+  const bcVal = (S.rp1Value || '').trim();
+  const vnVal = (S.rp2Value || '').trim();
 
-  tx('sLeft',left);
-  tx('sRight',right);
-  tx('s-txt',cv);
+  // Filter out empty or none values like '—'
+  const cleanBc = (bcVal === '—' || bcVal === '-') ? '' : bcVal;
+  const cleanVn = (vnVal === '—' || vnVal === '-') ? '' : vnVal;
 
-  const hasSides=left||right;
-  const hasCenter=cv;
-  if($('sLineL'))$('sLineL').style.display=hasSides?'block':'none';
-  if($('sLineR'))$('sLineR').style.display=hasSides?'block':'none';
-  if($('sBall'))$('sBall').style.display=hasCenter?'block':'none';
+  const combined = [cleanBc, cleanVn].filter(Boolean).join('  •  ');
+  tx('strip-text', combined || 'HOOP CULTURE NETWORK');
 }
 
 /* ══ AUDIO ══ */
