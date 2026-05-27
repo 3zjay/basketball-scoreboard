@@ -82,9 +82,18 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
 }
 
 /* ─── LOGO CELLS (square = row height) ─── */
-.logo-cell{
+.logo-wrapper{
   width:4.2vw;              /* square */
   flex-shrink:0;
+  display:flex;
+  align-items:stretch;
+  overflow:hidden;
+  position:relative;
+  z-index:1;
+}
+.logo-cell{
+  width:100%;
+  height:100%;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -243,8 +252,10 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
   <div id="row">
 
     <!-- ① HOME LOGO -->
-    <div class="logo-cell" id="hLogoCell">
-      <div class="circle" id="hCircle"><div class="no-logo">LOGO</div></div>
+    <div class="logo-wrapper" id="hLogoWrapper">
+      <div class="logo-cell" id="hLogoCell">
+        <div class="circle" id="hCircle"><div class="no-logo">LOGO</div></div>
+      </div>
     </div>
 
     <!-- ② HOME BRACE — Broadcast Divider & Notched Line -->
@@ -286,8 +297,10 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
     </div>
 
     <!-- ⑦ AWAY LOGO -->
-    <div class="logo-cell" id="aLogoCell">
-      <div class="circle" id="aCircle"><div class="no-logo">LOGO</div></div>
+    <div class="logo-wrapper" id="aLogoWrapper">
+      <div class="logo-cell" id="aLogoCell">
+        <div class="circle" id="aCircle"><div class="no-logo">LOGO</div></div>
+      </div>
     </div>
 
   </div><!-- /row -->
@@ -438,6 +451,10 @@ function draw(){
   const hTextColor = isLight(homePrimary) ? '#111111' : '#ffffff';
   const aTextColor = isLight(awayPrimary) ? '#111111' : '#ffffff';
 
+  /* home logo wrapper background (secondary color/different shade in corners) */
+  const hLW=$('hLogoWrapper');
+  if(hLW)hLW.style.background=dk(hcRaw, 0.58);
+
   /* home logo cell background (primary picked color) */
   const hLC=$('hLogoCell');
   if(hLC)hLC.style.background=homeCellColor;
@@ -459,6 +476,10 @@ function draw(){
     hScore.style.background=homePrimary;
     hScore.style.color=hTextColor;
   }
+
+  /* away logo wrapper background (secondary color/different shade in corners) */
+  const aLW=$('aLogoWrapper');
+  if(aLW)aLW.style.background=dk(acRaw, 0.58);
 
   /* away logo cell background (primary picked color) */
   const aLC=$('aLogoCell');
