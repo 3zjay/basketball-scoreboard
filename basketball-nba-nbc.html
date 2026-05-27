@@ -56,15 +56,21 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
   background:#888;          /* JS sets homeColor / dk(awayColor,.6) */
 }
 .tab-txt{
-  display:block;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
   font-family:'Barlow Condensed',sans-serif;
-  font-size:.95vw;
+  font-size:0.95vw;
   font-weight:900;
   color:#fff;               /* JS may set to #111 for light tabs */
   text-transform:uppercase;
-  letter-spacing:.08vw;
-  white-space:nowrap;
-  transform:rotate(90deg);  /* clockwise → first char TOP, last BOTTOM */
+  line-height:0.82vw;       /* tight vertical stacking of letters */
+  letter-spacing:0;
+}
+.tab-txt span{
+  display:block;
+  text-align:center;
 }
 
 /* ─── LOGO CELLS (square = row height) ─── */
@@ -225,12 +231,12 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
       <div class="circle" id="hCircle"><div class="no-logo">LOGO</div></div>
     </div>
 
-    <!-- ③ HOME BRACE — Broadcast Divider & Bracket -->
+    <!-- ③ HOME BRACE — Broadcast Divider & Notched Line -->
     <div class="brace-col" id="hBraceCol">
       <svg class="brace-svg" viewBox="0 0 16 42">
-        <line x1="14" y1="0" x2="14" y2="42" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" />
-        <path d="M 10,4 L 5,4 L 5,18 L 1,21 L 5,24 L 5,38 L 10,38" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="square" />
-        <text x="9" y="14" font-family="'Barlow Condensed', sans-serif" font-size="8.5" font-weight="900" fill="#fff" text-anchor="end" id="hFouls"></text>
+        <line x1="14" y1="0" x2="14" y2="42" stroke="rgba(255,255,255,0.25)" stroke-width="1.2" />
+        <path d="M 9,6 L 9,18 L 4,21 L 9,24 L 9,36" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="square" />
+        <text x="8" y="13" font-family="'Barlow Condensed', sans-serif" font-size="8.5" font-weight="900" fill="#fff" text-anchor="end" id="hFouls"></text>
       </svg>
     </div>
 
@@ -254,12 +260,12 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
       <span class="score-num" id="aNum">0</span>
     </div>
 
-    <!-- ⑦ AWAY BRACE — Broadcast Divider & Bracket -->
+    <!-- ⑦ AWAY BRACE — Broadcast Divider & Notched Line -->
     <div class="brace-col" id="aBraceCol">
       <svg class="brace-svg" viewBox="0 0 16 42">
-        <line x1="2" y1="0" x2="2" y2="42" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" />
-        <path d="M 6,4 L 11,4 L 11,18 L 15,21 L 11,24 L 11,38 L 6,38" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="square" />
-        <text x="7" y="14" font-family="'Barlow Condensed', sans-serif" font-size="8.5" font-weight="900" fill="#fff" text-anchor="start" id="aFouls"></text>
+        <line x1="2" y1="0" x2="2" y2="42" stroke="rgba(255,255,255,0.25)" stroke-width="1.2" />
+        <path d="M 7,6 L 7,18 L 12,21 L 7,24 L 7,36" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="square" />
+        <text x="8" y="13" font-family="'Barlow Condensed', sans-serif" font-size="8.5" font-weight="900" fill="#fff" text-anchor="start" id="aFouls"></text>
       </svg>
     </div>
 
@@ -336,6 +342,11 @@ function setLogo(cid,url){
   const c=$(cid);if(!c)return;
   c.innerHTML=url?`<img src="${url}" alt="" style="width:100%;height:100%;object-fit:contain">`:'<div class="no-logo">LOGO</div>';
 }
+function setStacked(id,text){
+  const el=$(id);if(!el)return;
+  const chars=(text||'').toUpperCase().slice(0,4).split('');
+  el.innerHTML=chars.map(c=>`<span>${c}</span>`).join('');
+}
 
 /* ══ CLOCK ══ */
 function tock(){
@@ -356,9 +367,9 @@ function draw(){
   if(aE&&parseInt(aE.textContent)!==S.awayScore){aE.textContent=S.awayScore;if(lA>=0){aE.classList.remove('bump');void aE.offsetWidth;aE.classList.add('bump');}}
   lH=S.homeScore;lA=S.awayScore;
 
-  /* abbr — max 4 chars */
-  tx('hAbbr',(S.homeAbbr||'HOME').toUpperCase().slice(0,4));
-  tx('aAbbr',(S.awayAbbr||'AWAY').toUpperCase().slice(0,4));
+  /* abbr — max 4 chars stacked vertically */
+  setStacked('hAbbr', S.homeAbbr || 'HOME');
+  setStacked('aAbbr', S.awayAbbr || 'AWAY');
 
   /* fouls in brace columns */
   const hf=S.homeFouls||0,af=S.awayFouls||0;
