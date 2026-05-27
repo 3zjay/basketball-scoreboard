@@ -83,29 +83,31 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
 
 /* ─── LOGO CELLS (square = row height) ─── */
 .logo-cell{
-  width:2.2vw;
+  width:4.2vw;              /* square */
   flex-shrink:0;
   display:flex;
   align-items:center;
   justify-content:center;
-  background:transparent;
-  overflow:visible;
-  position:relative;
-  z-index:2;
+  background:#2d2d2d;       /* JS sets background color dynamically */
+  overflow:hidden;
+}
+#hLogoCell{
+  border-top-left-radius:2.1vw;
+  border-bottom-left-radius:2.1vw;
+}
+#aLogoCell{
+  border-top-right-radius:2.1vw;
+  border-bottom-right-radius:2.1vw;
 }
 .circle{
-  width:3.8vw;height:3.8vw;
+  width:3.65vw;height:3.65vw;
   border-radius:50%;
   overflow:hidden;
   display:flex;align-items:center;justify-content:center;
   background:radial-gradient(circle at 40% 35%, #2e2e2e, #111);
   flex-shrink:0;
   border:0.14vw double rgba(255,255,255,0.85);
-  box-shadow:inset 0 0 .4vw rgba(0,0,0,.8), 0 0.15vw 0.4vw rgba(0,0,0,0.6);
-  position:absolute;
-  left:50%;
-  top:50%;
-  transform:translate(-50%, -50%);
+  box-shadow:inset 0 0 .4vw rgba(0,0,0,.8), 0 0.1vw 0.3vw rgba(0,0,0,0.5);
 }
 .circle img{width:90%;height:90%;object-fit:contain}
 .no-logo{
@@ -240,17 +242,12 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
   <!-- MAIN ROW -->
   <div id="row">
 
-    <!-- ① HOME TAB -->
-    <div class="tab" id="hTab">
-      <span class="tab-txt" id="hAbbr">HOME</span>
-    </div>
-
-    <!-- ② HOME LOGO -->
+    <!-- ① HOME LOGO -->
     <div class="logo-cell" id="hLogoCell">
       <div class="circle" id="hCircle"><div class="no-logo">LOGO</div></div>
     </div>
 
-    <!-- ③ HOME BRACE — Broadcast Divider & Notched Line -->
+    <!-- ② HOME BRACE — Broadcast Divider & Notched Line -->
     <div class="brace-col" id="hBraceCol">
       <svg class="brace-svg" viewBox="0 0 16 42">
         <line x1="14" y1="0" x2="14" y2="42" stroke="rgba(255,255,255,0.25)" stroke-width="1.2" />
@@ -259,12 +256,12 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
       </svg>
     </div>
 
-    <!-- ④ HOME SCORE  (dark) -->
+    <!-- ③ HOME SCORE  (dark) -->
     <div class="score-seg" id="hScoreSeg">
       <span class="score-num" id="hNum">0</span>
     </div>
 
-    <!-- ⑤ CENTER -->
+    <!-- ④ CENTER -->
     <div id="ctr">
       <img id="hcLogo" src="/hoop-culture-logo.png" alt="HC">
       <div id="clk">10:00</div>
@@ -274,12 +271,12 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
       </div>
     </div>
 
-    <!-- ⑥ AWAY SCORE  (bright team color) -->
+    <!-- ⑤ AWAY SCORE  (bright team color) -->
     <div class="score-seg" id="aScoreSeg">
       <span class="score-num" id="aNum">0</span>
     </div>
 
-    <!-- ⑦ AWAY BRACE — Broadcast Divider & Notched Line -->
+    <!-- ⑥ AWAY BRACE — Broadcast Divider & Notched Line -->
     <div class="brace-col" id="aBraceCol">
       <svg class="brace-svg" viewBox="0 0 16 42">
         <line x1="2" y1="0" x2="2" y2="42" stroke="rgba(255,255,255,0.25)" stroke-width="1.2" />
@@ -288,14 +285,9 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
       </svg>
     </div>
 
-    <!-- ⑧ AWAY LOGO -->
+    <!-- ⑦ AWAY LOGO -->
     <div class="logo-cell" id="aLogoCell">
       <div class="circle" id="aCircle"><div class="no-logo">LOGO</div></div>
-    </div>
-
-    <!-- ⑨ AWAY TAB -->
-    <div class="tab" id="aTab">
-      <span class="tab-txt" id="aAbbr">AWAY</span>
     </div>
 
   </div><!-- /row -->
@@ -467,16 +459,8 @@ function draw(){
     awaySecondary = aPreset.secondary;
   }
 
-  /* home tab */
-  const hT=$('hTab');
-  if(hT){
-    hT.style.background=homeSecondary;
-    const t=hT.querySelector('.tab-txt');
-    if(t)t.style.color=isLight(homeSecondary)?'#111':'#fff';
-  }
-
-  /* home body — brace + score block */
-  [$('hBraceCol'),$('hScoreSeg')].forEach(el=>{if(el)el.style.background=homePrimary;});
+  /* home body — logo cell + brace + score block */
+  [$('hLogoCell'),$('hBraceCol'),$('hScoreSeg')].forEach(el=>{if(el)el.style.background=homePrimary;});
 
   /* home circle background sphere shading */
   const hC=$('hCircle');
@@ -484,21 +468,13 @@ function draw(){
     hC.style.background=`radial-gradient(circle at 40% 35%, ${homePrimary}, ${dk(homePrimary, 0.4)})`;
   }
 
-  /* away body — brace + score block */
-  [$('aBraceCol'),$('aScoreSeg')].forEach(el=>{if(el)el.style.background=awayPrimary;});
+  /* away body — score block + brace + logo cell */
+  [$('aScoreSeg'),$('aBraceCol'),$('aLogoCell')].forEach(el=>{if(el)el.style.background=awayPrimary;});
 
   /* away circle background sphere shading */
   const aC=$('aCircle');
   if(aC){
     aC.style.background=`radial-gradient(circle at 40% 35%, ${awayPrimary}, ${dk(awayPrimary, 0.4)})`;
-  }
-
-  /* away tab */
-  const aT=$('aTab');
-  if(aT){
-    aT.style.background=awaySecondary;
-    const t=aT.querySelector('.tab-txt');
-    if(t)t.style.color=isLight(awaySecondary)?'#111':'#fff';
   }
 
   /* logos */
