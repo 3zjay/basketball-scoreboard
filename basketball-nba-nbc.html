@@ -563,8 +563,8 @@ function draw(){
   }
 
   /* logos */
-  setLogo('hCircle',S.homeLogo);
-  setLogo('aCircle',S.awayLogo);
+  setLogo('hCircle',S.homeLogo || S.homeLogoThumb);
+  setLogo('aCircle',S.awayLogo || S.awayLogoThumb);
 
   /* ── BOTTOM STRIP ──
      Dynamic display of Broadcast (rp1Value) & Venue (rp2Value) from controlboard

@@ -251,8 +251,9 @@ function render(){
 
   // Home logo seg — dark bg with home color glow
   const hL=document.getElementById('homeLogoN2');
+  const hLogo = S.homeLogo || S.homeLogoThumb;
   if(hL){
-    hL.innerHTML=S.homeLogo?`<img src="${S.homeLogo}" alt="">`:'<div class="logo-ph">LOGO</div>';
+    hL.innerHTML=hLogo?`<img src="${hLogo}" alt="">`:'<div class="logo-ph">LOGO</div>';
     hL.style.background=darken(hc, 0.35);
     hL.style.boxShadow=`0 0 0.8vw ${hc}, 0 0 2vw ${hc}66`;
     hL.style.borderRight=`0.18vw solid ${hc}88`;
@@ -260,8 +261,9 @@ function render(){
 
   // Away logo seg (center divider) — dark bg with away color glow
   const aL=document.getElementById('awayLogoN2');
+  const aLogo = S.awayLogo || S.awayLogoThumb;
   if(aL){
-    aL.innerHTML=S.awayLogo?`<img src="${S.awayLogo}" alt="">`:'<div class="logo-ph">LOGO</div>';
+    aL.innerHTML=aLogo?`<img src="${aLogo}" alt="">`:'<div class="logo-ph">LOGO</div>';
     aL.style.background=darken(ac, 0.35);
     aL.style.boxShadow=`0 0 0.8vw ${ac}, 0 0 2vw ${ac}66`;
     aL.style.borderLeft=`0.18vw solid ${ac}88`;

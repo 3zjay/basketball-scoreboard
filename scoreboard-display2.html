@@ -409,16 +409,18 @@ function render(){
 
   const hlEl = document.getElementById('possLogoHome');
   const alEl = document.getElementById('possLogoAway');
+  const hLogo = S.homeLogo || S.homeLogoThumb;
   if(hlEl){
-    hlEl.innerHTML = S.homeLogo
-      ? `<img src="${S.homeLogo}" alt="">`
+    hlEl.innerHTML = hLogo
+      ? `<img src="${hLogo}" alt="">`
       : `<div class="poss-logo-ph">${(S.homeAbbr||'HOME').substring(0,3).toUpperCase()}</div>`;
     hlEl.style.borderColor = S.homeColor||'#f5c842';
     hlEl.style.boxShadow = homeOn ? `0 0 14px ${S.homeColor||'#f5c842'}, 0 0 28px ${S.homeColor||'#f5c842'}88` : '';
   }
+  const aLogo = S.awayLogo || S.awayLogoThumb;
   if(alEl){
-    alEl.innerHTML = S.awayLogo
-      ? `<img src="${S.awayLogo}" alt="">`
+    alEl.innerHTML = aLogo
+      ? `<img src="${aLogo}" alt="">`
       : `<div class="poss-logo-ph">${(S.awayAbbr||'AWAY').substring(0,3).toUpperCase()}</div>`;
     alEl.style.borderColor = S.awayColor||'#c8102e';
     alEl.style.boxShadow = awayOn ? `0 0 14px ${S.awayColor||'#c8102e'}, 0 0 28px ${S.awayColor||'#c8102e'}88` : '';

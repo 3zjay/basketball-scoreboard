@@ -322,8 +322,13 @@ function render(){
   s('rp1TOv',S.rp1Title); s('rp1VOv',S.rp1Value);
   s('rp2TOv',S.rp2Title); s('rp2VOv',S.rp2Value);
 
-  if(S.homeLogo){ const e=document.getElementById('homeLogoOv'); if(e) e.innerHTML=`<img src="${S.homeLogo}" alt="">`; }
-  if(S.awayLogo){ const e=document.getElementById('awayLogoOv'); if(e) e.innerHTML=`<img src="${S.awayLogo}" alt="">`; }
+  const hLogo = S.homeLogo || S.homeLogoThumb;
+  const hEl = document.getElementById('homeLogoOv');
+  if(hEl) hEl.innerHTML = hLogo ? `<img src="${hLogo}" alt="">` : '<div class="logo-ph">LOGO</div>';
+
+  const aLogo = S.awayLogo || S.awayLogoThumb;
+  const aEl = document.getElementById('awayLogoOv');
+  if(aEl) aEl.innerHTML = aLogo ? `<img src="${aLogo}" alt="">` : '<div class="logo-ph">LOGO</div>';
 
   // Apply team colors to logo borders
   const hCircle = document.getElementById('homeLogoOv');
