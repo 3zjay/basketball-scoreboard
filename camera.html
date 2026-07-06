@@ -245,7 +245,10 @@
 
   <!-- Top bar status controls -->
   <div class="controls-overlay top-bar">
-    <div class="title">📸 AI Scoreboard Scanner</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="title">📸 AI Scoreboard Scanner</div>
+      <button class="btn" onclick="toggleHelp()" style="padding:4px 8px;border-radius:50%;font-size:12px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-color:var(--grey);color:var(--grey);line-height:1;">?</button>
+    </div>
     <button class="btn" id="sync-btn" onclick="toggleSync()">🛰️ Start Sync</button>
   </div>
 
@@ -266,6 +269,22 @@
     <div class="status-panel">
       <div class="status-item">Status: <span id="status-text" style="color:#f5c842;">Configuring...</span></div>
       <div class="status-item">Engine: <span id="engine-status">Loading OCR...</span></div>
+    </div>
+  </div>
+
+  <!-- Help Overlay Modal -->
+  <div id="help-overlay" style="display:none;position:absolute;inset:0;background:rgba(8,6,5,0.95);z-index:2000;padding:20px;overflow-y:auto;align-items:center;justify-content:center;">
+    <div style="max-width:400px;width:100%;border:1px solid var(--border);background:#0d0906;border-radius:12px;padding:24px;position:relative;">
+      <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--orange2);margin-bottom:16px;text-transform:uppercase;letter-spacing:1px;text-align:center;">How to Use the Scanner 📱</h3>
+      <ol style="margin-left:16px;margin-bottom:20px;font-size:13px;line-height:1.6;color:#dfd5cb;">
+        <li style="margin-bottom:8px;">Position your phone on a tripod facing the gym's physical scoreboard.</li>
+        <li style="margin-bottom:8px;">Grant camera permissions when prompted. The rear camera will load.</li>
+        <li style="margin-bottom:8px;">Drag and resize the colored boxes on the screen to frame only the scoreboard digits.</li>
+        <li style="margin-bottom:8px;">Enter a unique session name (e.g., <code>court_1</code>) at the bottom and click <strong>Save Session</strong>.</li>
+        <li style="margin-bottom:8px;">Tap <strong>Start Sync</strong>. The status will update to green.</li>
+        <li style="margin-bottom:8px;">Go to your controller console page on your operator tablet, and toggle <strong>AI Sync</strong> to <strong>ON</strong>.</li>
+      </ol>
+      <button class="btn" onclick="toggleHelp()" style="width:100%;border-color:var(--orange);color:var(--orange);padding:10px;">Close Guide</button>
     </div>
   </div>
 
@@ -554,12 +573,28 @@
       alert(`Session saved as: ${user}`);
     }
 
+    function toggleHelp() {
+      const overlay = document.getElementById('help-overlay');
+      const isVisible = overlay.style.display === 'flex';
+      overlay.style.display = isVisible ? 'none' : 'flex';
+      if (!isVisible) {
+        localStorage.setItem('hc_ocr_help_shown', 'true');
+      }
+    }
+
     // Initial setups
     window.addEventListener('load', () => {
       const savedSession = localStorage.getItem('hc_ocr_session');
       if (savedSession) {
         document.getElementById('session-input').value = savedSession;
       }
+      
+      // Auto-show help guide on first visit
+      const helpShown = localStorage.getItem('hc_ocr_help_shown');
+      if (!helpShown) {
+        toggleHelp();
+      }
+
       startCamera();
       initOCR();
     });
