@@ -136,6 +136,9 @@ const ROUTES = {
   '/LOCAL_SETUP.md': 'LOCAL_SETUP.md',
   '/AI_SCOREBOARD_GUIDE.md': 'AI_SCOREBOARD_GUIDE.md',
   '/README.md': 'README.md',
+  '/LOCAL_SETUP.txt': 'LOCAL_SETUP.txt',
+  '/AI_SCOREBOARD_GUIDE.txt': 'AI_SCOREBOARD_GUIDE.txt',
+  '/README.txt': 'README.txt',
 };
 
 function pushToAll(u, payload) {

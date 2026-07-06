@@ -1572,8 +1572,8 @@
         activeView.classList.add('active');
         // Fetch and parse the guide file dynamically if not loaded yet
         if (!activeView.dataset.loaded) {
-          const files = { manual: 'LOCAL_SETUP.md', ai: 'AI_SCOREBOARD_GUIDE.md', setup: 'README.md' };
-          const filePath = files[docId] || 'README.md';
+          const files = { manual: 'LOCAL_SETUP.txt', ai: 'AI_SCOREBOARD_GUIDE.txt', setup: 'README.txt' };
+          const filePath = files[docId] || 'README.txt';
           fetch('/' + filePath)
             .then(res => {
               if (!res.ok) throw new Error();
