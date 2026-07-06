@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Hoop Culture — AI Camera OCR Scanner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;900&family=Barlow:wght@400;600&display=swap" rel="stylesheet"/>
+  <!-- Tesseract.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    :root {
+      --bg: #080605;
+      --orange: #e8430a;
+      --orange2: #ff6b1a;
+      --white: #f2ede8;
+      --grey: #a09080;
+      --border: #2a1e14;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+    }
+
+    #video-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      background: #000;
+    }
+
+    #camera-view {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* SVG overlay for drag boxes */
+    #overlay-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    /* Floating control headers */
+    .controls-overlay {
+      position: absolute;
+      left: 15px;
+      right: 15px;
+      z-index: 10;
+      pointer-events: auto;
+    }
+
+    .top-bar {
+      top: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(8, 6, 5, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .bottom-bar {
+      bottom: 25px;
+      background: rgba(8, 6, 5, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--orange2);
+    }
+
+    .btn {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--white);
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+
+    .btn.active {
+      background: var(--orange);
+      border-color: transparent;
+      color: #fff;
+    }
+
+    /* Draggable Crop Frame UI */
+    .crop-frame {
+      position: absolute;
+      border: 2px solid #00ff00;
+      z-index: 6;
+      cursor: move;
+      pointer-events: auto;
+      box-shadow: 0 0 10px rgba(0,255,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .crop-frame.clock { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56,189,248,0.3); }
+    .crop-frame.home { border-color: #f5c842; box-shadow: 0 0 10px rgba(245,200,66,0.3); }
+    .crop-frame.away { border-color: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.3); }
+    .crop-frame.period { border-color: #a855f7; box-shadow: 0 0 10px rgba(168,85,247,0.3); }
+
+    .crop-label {
+      position: absolute;
+      top: -18px;
+      left: 0;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 3px 3px 0 0;
+      color: #000;
+    }
+
+    .crop-frame.clock .crop-label { background: #38bdf8; }
+    .crop-frame.home .crop-label { background: #f5c842; }
+    .crop-frame.away .crop-label { background: #ef4444; }
+    .crop-frame.period .crop-label { background: #a855f7; }
+
+    /* Touch Resize Handles */
+    .resize-handle {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: rgba(255,255,255,0.7);
+      border: 1px solid #000;
+      border-radius: 50%;
+      bottom: -10px;
+      right: -10px;
+      cursor: se-resize;
+    }
+
+    .status-panel {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--grey);
+    }
+
+    .status-item span {
+      font-weight: bold;
+      color: var(--white);
+    }
+
+    /* Helper canvas hides in background */
+    #helper-canvas {
+      display: none;
+    }
+
+    /* Toggle Config list */
+    .config-tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+    }
+
+    .config-tab {
+      padding: 6px 10px;
+      font-size: 11px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--grey);
+      cursor: pointer;
+    }
+
+    .config-tab.active {
+      color: #fff;
+      border-color: var(--orange2);
+      background: rgba(232, 67, 10, 0.1);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Camera Viewport -->
+  <div id="video-container">
+    <video id="camera-view" autoplay playsinline muted></video>
+  </div>
+
+  <!-- Draggable Crop Frames -->
+  <div class="crop-frame clock" id="frame-clock" style="top: 15%; left: 15%; width: 140px; height: 50px;">
+    <div class="crop-label">CLOCK</div>
+    <div class="resize-handle" onmousedown="startResize(event, 'clock')" ontouchstart="startResize(event, 'clock')"></div>
+  </div>
+
+  <div class="crop-frame home" id="frame-home" style="top: 30%; left: 15%; width: 100px; height: 50px;">
+    <div class="crop-label">HOME</div>
+    <div class="resize-handle" onmousedown="startResize(event, 'home')" ontouchstart="startResize(event, 'home')"></div>
+  </div>
+
+  <div class="crop-frame away" id="frame-away" style="top: 30%; left: 55%; width: 100px; height: 50px;">
+    <div class="crop-label">AWAY</div>
+    <div class="resize-handle" onmousedown="startResize(event, 'away')" ontouchstart="startResize(event, 'away')"></div>
+  </div>
+
+  <div class="crop-frame period" id="frame-period" style="top: 15%; left: 65%; width: 60px; height: 50px;">
+    <div class="crop-label">QTR</div>
+    <div class="resize-handle" onmousedown="startResize(event, 'period')" ontouchstart="startResize(event, 'period')"></div>
+  </div>
+
+  <!-- Top bar status controls -->
+  <div class="controls-overlay top-bar">
+    <div class="title">📸 AI Scoreboard Scanner</div>
+    <button class="btn" id="sync-btn" onclick="toggleSync()">🛰️ Start Sync</button>
+  </div>
+
+  <!-- Bottom bar configuration settings -->
+  <div class="controls-overlay bottom-bar">
+    <div class="config-tabs">
+      <div class="config-tab active" onclick="selectCrop('clock')">Clock</div>
+      <div class="config-tab" onclick="selectCrop('home')">Home Score</div>
+      <div class="config-tab" onclick="selectCrop('away')">Away Score</div>
+      <div class="config-tab" onclick="selectCrop('period')">Period</div>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <input type="text" id="session-input" placeholder="User Session" value="default" style="flex:1;background:#0d0906;border:1px solid var(--border);color:#fff;border-radius:4px;padding:6px 10px;font-size:12px;">
+      <button class="btn" onclick="saveSession()">Save Session</button>
+    </div>
+
+    <div class="status-panel">
+      <div class="status-item">Status: <span id="status-text" style="color:#f5c842;">Configuring...</span></div>
+      <div class="status-item">Engine: <span id="engine-status">Loading OCR...</span></div>
+    </div>
+  </div>
+
+  <!-- Background Processing canvas -->
+  <canvas id="helper-canvas"></canvas>
+
+  <script>
+    let stream = null;
+    let syncActive = false;
+    let ocrWorker = null;
+    let activeCrop = 'clock';
+
+    // Drag-and-drop state
+    let activeDragFrame = null;
+    let activeResizeFrame = null;
+    let dragStartX, dragStartY, dragStartLeft, dragStartTop;
+    let resizeStartWidth, resizeStartHeight;
+
+    const frames = {
+      clock: document.getElementById('frame-clock'),
+      home: document.getElementById('frame-home'),
+      away: document.getElementById('frame-away'),
+      period: document.getElementById('frame-period')
+    };
+
+    // Initialize Camera Stream
+    async function startCamera() {
+      try {
+        const constraints = {
+          video: {
+            facingMode: 'environment', // Use rear camera
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const video = document.getElementById('camera-view');
+        video.srcObject = stream;
+      } catch (err) {
+        alert('Could not access rear camera. Make sure you grant camera permissions.');
+      }
+    }
+
+    // Initialize Tesseract.js Worker
+    async function initOCR() {
+      document.getElementById('engine-status').textContent = 'Initializing...';
+      try {
+        ocrWorker = await Tesseract.createWorker('eng');
+        await ocrWorker.setParameters({
+          tessedit_char_whitelist: '0123456789:',
+        });
+        document.getElementById('engine-status').textContent = 'Ready';
+        document.getElementById('engine-status').style.color = '#16c784';
+      } catch (e) {
+        document.getElementById('engine-status').textContent = 'Error Loading';
+        document.getElementById('engine-status').style.color = '#ef4444';
+      }
+    }
+
+    // Drag-and-drop mechanics
+    Object.keys(frames).forEach(k => {
+      const f = frames[k];
+      f.addEventListener('mousedown', (e) => startDrag(e, k));
+      f.addEventListener('touchstart', (e) => startDrag(e, k), { passive: false });
+    });
+
+    function startDrag(e, key) {
+      if (e.target.classList.contains('resize-handle')) return;
+      e.preventDefault();
+      
+      activeDragFrame = frames[key];
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      dragStartX = clientX;
+      dragStartY = clientY;
+      dragStartLeft = activeDragFrame.offsetLeft;
+      dragStartTop = activeDragFrame.offsetTop;
+
+      document.addEventListener('mousemove', onDrag);
+      document.addEventListener('touchmove', onDrag, { passive: false });
+      document.addEventListener('mouseup', endDrag);
+      document.addEventListener('touchend', endDrag);
+    }
+
+    function onDrag(e) {
+      if (!activeDragFrame) return;
+      e.preventDefault();
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      const dx = clientX - dragStartX;
+      const dy = clientY - dragStartY;
+
+      activeDragFrame.style.left = `${dragStartLeft + dx}px`;
+      activeDragFrame.style.top = `${dragStartTop + dy}px`;
+    }
+
+    function endDrag() {
+      activeDragFrame = null;
+      document.removeEventListener('mousemove', onDrag);
+      document.removeEventListener('touchmove', onDrag);
+    }
+
+    // Resize mechanics
+    function startResize(e, key) {
+      e.stopPropagation();
+      e.preventDefault();
+
+      activeResizeFrame = frames[key];
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      dragStartX = clientX;
+      dragStartY = clientY;
+      resizeStartWidth = activeResizeFrame.offsetWidth;
+      resizeStartHeight = activeResizeFrame.offsetHeight;
+
+      document.addEventListener('mousemove', onResize);
+      document.addEventListener('touchmove', onResize, { passive: false });
+      document.addEventListener('mouseup', endResize);
+      document.addEventListener('touchend', endResize);
+    }
+
+    function onResize(e) {
+      if (!activeResizeFrame) return;
+      e.preventDefault();
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      const dx = clientX - dragStartX;
+      const dy = clientY - dragStartY;
+
+      activeResizeFrame.style.width = `${Math.max(50, resizeStartWidth + dx)}px`;
+      activeResizeFrame.style.height = `${Math.max(30, resizeStartHeight + dy)}px`;
+    }
+
+    function endResize() {
+      activeResizeFrame = null;
+      document.removeEventListener('mousemove', onResize);
+      document.removeEventListener('touchmove', onResize);
+    }
+
+    // Canvas pre-processing for binarization
+    function preprocess(ctx, w, h) {
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const data = imgData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const brightness = 0.34 * data[i] + 0.5 * data[i + 1] + 0.16 * data[i + 2];
+        // Binarize (Threshold)
+        const v = brightness > 120 ? 0 : 255;
+        data[i] = v;
+        data[i+1] = v;
+        data[i+2] = v;
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    // Run OCR Loop
+    async function captureAndOCR() {
+      if (!syncActive || !ocrWorker) return;
+
+      const video = document.getElementById('camera-view');
+      const canvas = document.getElementById('helper-canvas');
+      const ctx = canvas.getContext('2d');
+
+      const videoW = video.videoWidth;
+      const videoH = video.videoHeight;
+      const viewW = video.offsetWidth;
+      const viewH = video.offsetHeight;
+
+      if (!videoW || !videoH) {
+        setTimeout(captureAndOCR, 500);
+        return;
+      }
+
+      const payload = {};
+
+      for (let key of Object.keys(frames)) {
+        const frame = frames[key];
+        
+        // Map screen coordinates relative to actual video resolution
+        const cropX = (frame.offsetLeft / viewW) * videoW;
+        const cropY = (frame.offsetTop / viewH) * videoH;
+        const cropW = (frame.offsetWidth / viewW) * videoW;
+        const cropH = (frame.offsetHeight / viewH) * videoH;
+
+        canvas.width = cropW * 2.5; // Scale up for text clarity
+        canvas.height = cropH * 2.5;
+
+        // Draw crop area on helper canvas
+        ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+        
+        // Binarize for high-contrast OCR
+        preprocess(ctx, canvas.width, canvas.height);
+
+        try {
+          const { data: { text } } = await ocrWorker.recognize(canvas);
+          const cleanText = text.replace(/[^0-9:]/g, '').trim();
+          if (cleanText) {
+            payload[key === 'period' ? 'period' : key] = cleanText;
+          }
+        } catch(err) {}
+      }
+
+      if (Object.keys(payload).length > 0) {
+        sendUpdate(payload);
+      }
+
+      // Repeat loop
+      setTimeout(captureAndOCR, 600);
+    }
+
+    // Transmit state to cloud
+    function sendUpdate(payload) {
+      const user = document.getElementById('session-input').value || 'default';
+      const url = `/api/ocr?user=${encodeURIComponent(user)}`;
+
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(d => {
+        document.getElementById('status-text').textContent = `Syncing... (${JSON.stringify(payload)})`;
+        document.getElementById('status-text').style.color = '#16c784';
+      })
+      .catch(() => {
+        document.getElementById('status-text').textContent = 'Connection Error';
+        document.getElementById('status-text').style.color = '#ef4444';
+      });
+    }
+
+    function toggleSync() {
+      if (!ocrWorker) {
+        alert('OCR Engine is still loading. Please wait.');
+        return;
+      }
+
+      syncActive = !syncActive;
+      const btn = document.getElementById('sync-btn');
+      
+      if (syncActive) {
+        btn.textContent = '⏸️ Stop Sync';
+        btn.classList.add('active');
+        document.getElementById('status-text').textContent = 'Sync Active';
+        document.getElementById('status-text').style.color = '#16c784';
+        captureAndOCR();
+      } else {
+        btn.textContent = '🛰️ Start Sync';
+        btn.classList.remove('active');
+        document.getElementById('status-text').textContent = 'Stopped';
+        document.getElementById('status-text').style.color = '#f5c842';
+      }
+    }
+
+    function saveSession() {
+      const user = document.getElementById('session-input').value;
+      localStorage.setItem('hc_ocr_session', user);
+      alert(`Session saved as: ${user}`);
+    }
+
+    // Initial setups
+    window.addEventListener('load', () => {
+      const savedSession = localStorage.getItem('hc_ocr_session');
+      if (savedSession) {
+        document.getElementById('session-input').value = savedSession;
+      }
+      startCamera();
+      initOCR();
+    });
+  </script>
+</body>
+</html>

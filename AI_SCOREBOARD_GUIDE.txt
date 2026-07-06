@@ -47,6 +47,18 @@ Navigate to the **API** tab in the bottom-left corner of ScoreSight and check **
 
 ---
 
+## 📱 Alternative Setup — 100% Mobile Browser Scanner (No Laptop Required!)
+
+If you want to run the scoreboard OCR directly on your phone's browser without using a laptop or installing third-party apps:
+1. Open **Chrome** or **Safari** on your scanning phone and go to:
+   `https://basketball-scoreboard-taupe-five.vercel.app/camera?user=your_session`
+2. Grant camera permissions. The page will load your phone's rear camera feed and initialize Tesseract OCR.
+3. Align your phone towards the physical scoreboard and **drag/resize the crop boxes** (`CLOCK`, `HOME`, `AWAY`, `QTR`) on your screen to match the digits.
+4. Input your session name at the bottom and click **"Save Session"**.
+5. Click **"Start Sync"**. Your phone will run OCR locally inside its browser and stream the scoreboard state directly to your Vercel site and Firebase database!
+
+---
+
 ## ⚡ Sync Latency & Redundancy
 
 * **Offline Local Mode:** Under **0.25 seconds** (virtually instantaneous).

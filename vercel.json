@@ -17,6 +17,7 @@
     { "source": "/fullscreen", "destination": "/basketball-fullscreen.html" },
     { "source": "/nbaoverlay", "destination": "/basketball-nbaoverlay.html" },
     { "source": "/nbaoverlay2", "destination": "/basketball-nbaoverlay2.html" },
-    { "source": "/nbc", "destination": "/basketball-nba-nbc.html" }
+    { "source": "/nbc", "destination": "/basketball-nba-nbc.html" },
+    { "source": "/camera", "destination": "/camera.html" }
   ]
 }

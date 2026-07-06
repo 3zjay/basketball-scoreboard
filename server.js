@@ -121,6 +121,7 @@ const ROUTES = {
   '/nbc':               'basketball-nba-nbc.html',
   '/mobile-overlay':     'mobile-overlay.html',
   '/display':            'scoreboard-display.html',
+  '/camera':             'camera.html',
   '/display2':           'scoreboard-display2.html',
   '/shotclock':          'shotclock-control.html',
   '/shotclock-display':  'shotclock-display.html',
