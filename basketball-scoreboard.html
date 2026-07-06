@@ -491,6 +491,10 @@ body.light .reset-btn:hover { background:#fee2e2; }
     <button class="mode-toggle" onclick="logout()" style="border-color:var(--red);color:var(--red);">🚪 Logout</button>
     <button class="mode-toggle" id="fsToggle" onclick="toggleFullscreen()">⛶ Fullscreen</button>
     <button class="mode-toggle" id="modeToggle" onclick="toggleMode()">☀️ Light Mode</button>
+    <label class="mode-toggle" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;border-color:var(--orange);color:var(--orange);padding:6px 12px;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:0;">
+      <input type="checkbox" id="aiSyncToggle" onchange="toggleAiSync(this.checked)" style="accent-color:var(--orange);cursor:pointer;width:14px;height:14px;margin:0;">
+      🤖 AI Sync
+    </label>
     <div class="live-badge connecting" id="liveBadge">
       <div class="live-dot"></div>
       <div class="live-text" id="liveText">Connecting…</div>
@@ -911,7 +915,8 @@ const DEF = {
   rp1Title:'BROADCAST', rp1Value:'Facebook',
   rp2Title:'VENUE', rp2Value:'DMC - 2467 Eglinton Ave E, Scarborough, ON M1K 2R1',
   barColor:'#0d1117',
-  possession:null
+  possession:null,
+  aiSyncEnabled:false
 };
 
 let S = {...DEF};
@@ -1066,6 +1071,10 @@ function renderAll(){
   const acEl = document.getElementById('awayColorIn');
   if(hcEl && document.activeElement !== hcEl) hcEl.value = S.homeColor || '#f5c842';
   if(acEl && document.activeElement !== acEl) acEl.value = S.awayColor || '#c8102e';
+
+  // Sync AI Sync checkbox state
+  const aiToggleEl = document.getElementById('aiSyncToggle');
+  if(aiToggleEl) aiToggleEl.checked = S.aiSyncEnabled || false;
 }
 
 function t(id,val){ if(val===null)return; const e=document.getElementById(id); if(e) e.textContent=val; }
@@ -1759,6 +1768,68 @@ function connectSSE(){
       renderAll();
     });
 
+    db.ref(`ocr/${fbUser}`).on('value', snapshot => {
+      if (S.aiSyncEnabled) {
+        const incoming = snapshot.val();
+        if (!incoming) return;
+        let updated = {};
+
+        if (incoming.clock != null) {
+          const clockStr = String(incoming.clock).trim();
+          if (clockStr.includes(':')) {
+            const parts = clockStr.split(':');
+            const mins = parseInt(parts[0], 10) || 0;
+            const secs = parseInt(parts[1], 10) || 0;
+            updated.gameSeconds = mins * 60 + secs;
+          } else {
+            const parsedVal = parseFloat(clockStr) || 0;
+            updated.gameSeconds = Math.round(parsedVal);
+          }
+        }
+
+        if (incoming.homeScore != null) {
+          updated.homeScore = parseInt(incoming.homeScore, 10) || 0;
+        }
+        if (incoming.awayScore != null) {
+          updated.awayScore = parseInt(incoming.awayScore, 10) || 0;
+        }
+
+        if (incoming.period != null) {
+          updated.quarter = parseInt(incoming.period, 10) || 1;
+        }
+
+        if (incoming.shotClock != null) {
+          const scStr = String(incoming.shotClock).trim();
+          updated.shotSeconds = parseInt(scStr, 10) || 24;
+        }
+
+        const hasChanges = Object.keys(updated).some(k => S[k] !== updated[k]);
+        if (hasChanges) {
+          S = { ...S, ...updated };
+          
+          if (S.gameRunning) {
+            S.gameRunning = false;
+            stopLocalGameTick();
+          }
+          if (S.shotRunning) {
+            S.shotRunning = false;
+            stopLocalShotTick();
+          }
+          
+          db.ref(`states/${fbUser}`).update({
+            homeScore: S.homeScore,
+            awayScore: S.awayScore,
+            quarter: S.quarter,
+            gameSeconds: S.gameSeconds,
+            shotSeconds: S.shotSeconds,
+            gameRunning: S.gameRunning,
+            shotRunning: S.shotRunning,
+          }).catch(e => console.error(e));
+          renderAll();
+        }
+      }
+    });
+
     db.ref(`buzz/${fbUser}`).on('value', snapshot => {
       const msg = snapshot.val();
       if (!msg) return;
@@ -1823,6 +1894,16 @@ function connectSSE(){
     } catch(err){}
   };
   es.onerror = () => { setLiveStatus('offline'); es.close(); setTimeout(connectSSE, 3000); };
+}
+
+function toggleAiSync(enabled) {
+  S.aiSyncEnabled = enabled;
+  
+  // Update toggle checkbox state
+  const checkbox = document.getElementById('aiSyncToggle');
+  if (checkbox) checkbox.checked = enabled;
+
+  saveNow();
 }
 
 // ── KEYBOARD SHORTCUTS ──────────────────────────────────────

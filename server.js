@@ -30,6 +30,7 @@ function getOrCreateUser(user) {
       rp2Title: 'VENUE',     rp2Value: '',
       barColor: '#0d1117',
       possession: null,
+      aiSyncEnabled: false,
     };
   }
   if (!logos[u]) {
@@ -226,6 +227,66 @@ http.createServer((req, res) => {
             barColor: states[user].barColor || '#0d1117',
             possession: null,
           };
+          pushToAll(user, { type: 'state', data: fullState(user) });
+        }
+      } catch(e) {}
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end('{"ok":true}');
+    });
+    return;
+  }
+
+  // POST /api/ocr — camera sync feed endpoint (from ScoreSight)
+  if (req.method === 'POST' && pathname === '/api/ocr') {
+    readBody(req).then(b => {
+      try {
+        // Gatekeeper check: only apply if AI Sync is enabled in this session's state
+        if (states[user] && states[user].aiSyncEnabled) {
+          const incoming = JSON.parse(b);
+          let updated = {};
+
+          // 1. Parse Clock (e.g., "10:00", "09:58", "58.4", or integer seconds)
+          if (incoming.clock != null) {
+            const clockStr = String(incoming.clock).trim();
+            if (clockStr.includes(':')) {
+              const parts = clockStr.split(':');
+              const mins = parseInt(parts[0], 10) || 0;
+              const secs = parseInt(parts[1], 10) || 0;
+              updated.gameSeconds = mins * 60 + secs;
+            } else {
+              const parsedVal = parseFloat(clockStr) || 0;
+              updated.gameSeconds = Math.round(parsedVal);
+            }
+          }
+
+          // 2. Parse Scores
+          if (incoming.homeScore != null) {
+            updated.homeScore = parseInt(incoming.homeScore, 10) || 0;
+          }
+          if (incoming.awayScore != null) {
+            updated.awayScore = parseInt(incoming.awayScore, 10) || 0;
+          }
+
+          // 3. Parse Period/Quarter
+          if (incoming.period != null) {
+            updated.quarter = parseInt(incoming.period, 10) || 1;
+          }
+
+          // 4. Parse Shot Clock (if present)
+          if (incoming.shotClock != null) {
+            const scStr = String(incoming.shotClock).trim();
+            updated.shotSeconds = parseInt(scStr, 10) || 24;
+          }
+
+          // Since camera is running the clock, make sure local server ticker doesn't overlap
+          if (states[user].gameRunning) {
+            stopGameClock(user);
+          }
+          if (states[user].shotRunning) {
+            stopShotClock(user);
+          }
+
+          states[user] = { ...states[user], ...updated };
           pushToAll(user, { type: 'state', data: fullState(user) });
         }
       } catch(e) {}
