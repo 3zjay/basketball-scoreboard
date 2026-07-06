@@ -495,6 +495,9 @@ body.light .reset-btn:hover { background:#fee2e2; }
       <input type="checkbox" id="aiSyncToggle" onchange="toggleAiSync(this.checked)" style="accent-color:var(--orange);cursor:pointer;width:14px;height:14px;margin:0;">
       🤖 AI Sync
     </label>
+    <a href="/camera" id="scannerLink" target="_blank" class="mode-toggle" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:4px;border-color:#16c784;color:#16c784;">
+      📱 Scanner
+    </a>
     <div class="live-badge connecting" id="liveBadge">
       <div class="live-dot"></div>
       <div class="live-text" id="liveText">Connecting…</div>
@@ -872,6 +875,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const url = `${origin}/display${suffix}`;
     venueLink.href = url;
     venueLink.textContent = url;
+  const scannerLink = document.getElementById('scannerLink');
+  if (scannerLink) {
+    scannerLink.href = `${origin}/camera${suffix}`;
   }
 
   if (currentUser === 'admin@hoopculture.ca') {
