@@ -7,6 +7,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;900&family=Barlow:wght@400;600&display=swap" rel="stylesheet"/>
   <!-- Tesseract.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <style>
     :root {
       --bg: #080605;
@@ -274,6 +278,13 @@
     let ocrWorker = null;
     let activeCrop = 'clock';
 
+    // Initialize Firebase if configured
+    let db = null;
+    if (typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured) {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+    }
+
     // Drag-and-drop state
     let activeDragFrame = null;
     let activeResizeFrame = null;
@@ -481,8 +492,23 @@
     // Transmit state to cloud
     function sendUpdate(payload) {
       const user = document.getElementById('session-input').value || 'default';
-      const url = `/api/ocr?user=${encodeURIComponent(user)}`;
 
+      if (db) {
+        // Direct Firebase write for serverless cloud setup
+        db.ref(`ocr/${user}`).update(payload)
+          .then(() => {
+            document.getElementById('status-text').textContent = `Syncing (Firebase)... (${JSON.stringify(payload)})`;
+            document.getElementById('status-text').style.color = '#16c784';
+          })
+          .catch(() => {
+            document.getElementById('status-text').textContent = 'Firebase Sync Error';
+            document.getElementById('status-text').style.color = '#ef4444';
+          });
+        return;
+      }
+
+      // Local/OnRender HTTP POST fallback
+      const url = `/api/ocr?user=${encodeURIComponent(user)}`;
       fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -490,7 +516,7 @@
       })
       .then(res => res.json())
       .then(d => {
-        document.getElementById('status-text').textContent = `Syncing... (${JSON.stringify(payload)})`;
+        document.getElementById('status-text').textContent = `Syncing (API)... (${JSON.stringify(payload)})`;
         document.getElementById('status-text').style.color = '#16c784';
       })
       .catch(() => {
