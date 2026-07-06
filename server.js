@@ -133,6 +133,9 @@ const ROUTES = {
   '/hoop-culture-logo.jpg': 'hoop-culture-logo.jpg',
   '/marketing-workflow-dark.png': 'marketing-workflow-dark.png',
   '/firebase-config.js': 'firebase-config.js',
+  '/LOCAL_SETUP.md': 'LOCAL_SETUP.md',
+  '/AI_SCOREBOARD_GUIDE.md': 'AI_SCOREBOARD_GUIDE.md',
+  '/README.md': 'README.md',
 };
 
 function pushToAll(u, payload) {

@@ -688,6 +688,275 @@
       text-transform: uppercase;
       color: var(--mid);
     }
+
+    /* DOCUMENTATION MODAL OVERLAY */
+    .doc-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      padding: 20px;
+    }
+
+    .doc-modal-overlay.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .doc-modal-card {
+      background: #080605;
+      border: 1px solid var(--border2);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 40px rgba(232, 67, 10, 0.05);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 900px;
+      height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: scale(0.95);
+      transition: transform 0.3s ease;
+    }
+
+    .doc-modal-overlay.active .doc-modal-card {
+      transform: scale(1);
+    }
+
+    .doc-modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #0d0906;
+    }
+
+    .doc-modal-tabs {
+      display: flex;
+      gap: 10px;
+    }
+
+    .doc-tab-btn {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--grey);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .doc-tab-btn:hover {
+      border-color: var(--grey);
+      color: var(--white);
+    }
+
+    .doc-tab-btn.active {
+      background: linear-gradient(135deg, var(--fire1), var(--fire2));
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(232, 67, 10, 0.3);
+    }
+
+    .doc-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--grey);
+      font-size: 28px;
+      cursor: pointer;
+      line-height: 1;
+      transition: color 0.2s, transform 0.2s;
+    }
+
+    .doc-close-btn:hover {
+      color: var(--fire1);
+      transform: scale(1.1);
+    }
+
+    .doc-modal-body {
+      padding: 30px 40px;
+      overflow-y: auto;
+      flex: 1;
+      font-family: 'Barlow', sans-serif;
+      line-height: 1.7;
+      color: #dfd5cb;
+      font-size: 15px;
+    }
+
+    /* CUSTOM SCROLLBAR FOR MODAL */
+    .doc-modal-body::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .doc-modal-body::-webkit-scrollbar-track {
+      background: #080605;
+    }
+
+    .doc-modal-body::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 4px;
+    }
+
+    .doc-modal-body::-webkit-scrollbar-thumb:hover {
+      background: var(--mid);
+    }
+
+    /* DOCUMENTATION CONTENT STYLING */
+    .doc-view {
+      display: none;
+    }
+
+    .doc-view.active {
+      display: block;
+      animation: docFadeIn 0.3s ease forwards;
+    }
+
+    @keyframes docFadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .doc-view h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--white);
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    .doc-view h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--orange2);
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .doc-view h3 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--white);
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .doc-view p {
+      margin-bottom: 1.2rem;
+    }
+
+    .doc-view ul, .doc-view ol {
+      margin-bottom: 1.5rem;
+      padding-left: 20px;
+    }
+
+    .doc-view li {
+      margin-bottom: 0.6rem;
+    }
+
+    .doc-view code {
+      font-family: monospace;
+      background: rgba(255,255,255,0.06);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: var(--orange2);
+    }
+
+    .doc-view pre {
+      background: #0d0906;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px 20px;
+      overflow-x: auto;
+      margin-bottom: 1.5rem;
+    }
+
+    .doc-view pre code {
+      background: transparent;
+      padding: 0;
+      color: #dfd5cb;
+    }
+
+    /* Alerts */
+    .doc-alert {
+      background: rgba(232, 67, 10, 0.05);
+      border-left: 4px solid var(--orange);
+      padding: 15px 20px;
+      border-radius: 4px;
+      margin-bottom: 1.5rem;
+    }
+
+    .doc-alert-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 12px;
+      margin-bottom: 4px;
+      color: var(--orange2);
+    }
+
+    /* Tables */
+    .doc-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.5rem;
+      font-size: 14px;
+    }
+
+    .doc-table th, .doc-table td {
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    .doc-table th {
+      background: #0d0906;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--white);
+    }
+
+    .doc-table tr:nth-child(even) {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .doc-table tr:hover {
+      background: rgba(232, 67, 10, 0.03);
+    }
+
+    .kbd-btn {
+      background: #1c1815;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      box-shadow: 0 2px 0 rgba(0,0,0,0.5);
+      color: var(--white);
+      display: inline-block;
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      font-weight: bold;
+      line-height: 1.4;
+      padding: 2px 6px;
+      text-shadow: 0 1px 0 rgba(0,0,0,0.5);
+    }
   </style>
 </head>
 <body>
@@ -1172,7 +1441,7 @@
           <h3 class="screen-name">Manual Scorekeeper Guide</h3>
           <p class="screen-desc">Learn how to change team names, manage score adjustments, timeouts, fouls, and handle clock controls.</p>
         </div>
-        <a href="LOCAL_SETUP.md" class="screen-link">Read Guide ➔</a>
+        <a href="#" onclick="openDoc(event, 'manual')" class="screen-link">Read Guide ➔</a>
       </div>
 
       <!-- Card 2: AI Sync Setup -->
@@ -1182,7 +1451,7 @@
           <h3 class="screen-name">AI Camera Sync Guide</h3>
           <p class="screen-desc">Detailed guide on how to configure a smartphone or USB webcam with ScoreSight to extract scores and clocks automatically.</p>
         </div>
-        <a href="AI_SCOREBOARD_GUIDE.md" class="screen-link" style="color: var(--orange);">Read AI Guide ➔</a>
+        <a href="#" onclick="openDoc(event, 'ai')" class="screen-link" style="color: var(--orange);">Read AI Guide ➔</a>
       </div>
 
       <!-- Card 3: OBS Stream Setup -->
@@ -1192,10 +1461,35 @@
           <h3 class="screen-name">OBS Studio Stream Setup</h3>
           <p class="screen-desc">Learn how to configure lower-third scorebars and fullscreen scoreboard graphics directly into OBS Studio.</p>
         </div>
-        <a href="README.md" class="screen-link">View Setup ➔</a>
+        <a href="#" onclick="openDoc(event, 'setup')" class="screen-link">View Setup ➔</a>
       </div>
     </div>
   </section>
+
+  <!-- Documentation Modal Container -->
+  <div class="doc-modal-overlay" id="docOverlay" onclick="if(event.target === this) closeDoc()">
+    <div class="doc-modal-card">
+      <div class="doc-modal-header">
+        <div class="doc-modal-tabs">
+          <button class="doc-tab-btn" onclick="switchTab('manual')">🎮 Manual Guide</button>
+          <button class="doc-tab-btn" onclick="switchTab('ai')">🤖 AI Sync Guide</button>
+          <button class="doc-tab-btn" onclick="switchTab('setup')">🎥 OBS Setup</button>
+        </div>
+        <button class="doc-close-btn" onclick="closeDoc()">&times;</button>
+      </div>
+      <div class="doc-modal-body">
+        <div class="doc-view" id="doc-view-manual">
+          <div style="text-align:center;padding:40px 0;font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--grey);">Loading manual scorekeeper guide...</div>
+        </div>
+        <div class="doc-view" id="doc-view-ai">
+          <div style="text-align:center;padding:40px 0;font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--grey);">Loading AI scoreboard camera sync guide...</div>
+        </div>
+        <div class="doc-view" id="doc-view-setup">
+          <div style="text-align:center;padding:40px 0;font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--grey);">Loading OBS stream setup guide...</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Footer -->
   <footer>
@@ -1247,6 +1541,199 @@
       if (e) e.preventDefault();
       localStorage.removeItem('hc_session_user');
       window.location.reload();
+    }
+
+    // Documentation Modal Controller
+    function openDoc(event, docId) {
+      if (event) event.preventDefault();
+      const overlay = document.getElementById('docOverlay');
+      overlay.classList.add('active');
+      switchTab(docId);
+    }
+
+    function closeDoc() {
+      const overlay = document.getElementById('docOverlay');
+      overlay.classList.remove('active');
+    }
+
+    function switchTab(docId) {
+      document.querySelectorAll('.doc-tab-btn').forEach(btn => {
+        // Toggle active tab button styling
+        const isCurrent = (docId === 'manual' && btn.textContent.includes('Manual')) ||
+                          (docId === 'ai' && btn.textContent.includes('AI')) ||
+                          (docId === 'setup' && btn.textContent.includes('OBS'));
+        btn.classList.toggle('active', isCurrent);
+      });
+      document.querySelectorAll('.doc-view').forEach(view => {
+        view.classList.remove('active');
+      });
+      const activeView = document.getElementById(`doc-view-${docId}`);
+      if (activeView) {
+        activeView.classList.add('active');
+        // Fetch and parse the guide file dynamically if not loaded yet
+        if (!activeView.dataset.loaded) {
+          const files = { manual: 'LOCAL_SETUP.md', ai: 'AI_SCOREBOARD_GUIDE.md', setup: 'README.md' };
+          const filePath = files[docId] || 'README.md';
+          fetch('/' + filePath)
+            .then(res => {
+              if (!res.ok) throw new Error();
+              return res.text();
+            })
+            .then(text => {
+              activeView.innerHTML = parseMarkdown(text);
+              activeView.dataset.loaded = 'true';
+            })
+            .catch(() => {
+              activeView.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:18px;">Failed to load documentation file: ${filePath}</div>`;
+            });
+        }
+      }
+    }
+
+    // Lightweight markdown parser for dynamic guides
+    function parseMarkdown(md) {
+      let html = '';
+      const lines = md.split('\n');
+      let inList = false;
+      let inTable = false;
+      let tableHeaderParsed = false;
+      let inAlert = false;
+      let alertContent = [];
+      let alertType = 'note';
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
+
+        // Handle Alert boundaries
+        if (inAlert && (!lines[i].startsWith('>') && line !== '')) {
+          html += renderAlert(alertType, alertContent.join('<br>'));
+          inAlert = false;
+          alertContent = [];
+        }
+
+        // Handle Table boundaries
+        if (inTable && !line.startsWith('|')) {
+          html += '</tbody></table>';
+          inTable = false;
+          tableHeaderParsed = false;
+        }
+
+        // Handle List boundaries
+        if (inList && !line.startsWith('*') && !line.startsWith('-') && !/^\d+\./.test(line)) {
+          html += '</ul>';
+          inList = false;
+        }
+
+        if (line === '') continue;
+
+        // Heading 1
+        if (line.startsWith('# ')) {
+          html += `<h1>${line.slice(2)}</h1>`;
+        }
+        // Heading 2
+        else if (line.startsWith('## ')) {
+          html += `<h2>${line.slice(3)}</h2>`;
+        }
+        // Heading 3
+        else if (line.startsWith('### ')) {
+          html += `<h3>${line.slice(4)}</h3>`;
+        }
+        // Horizontal Rule
+        else if (line === '---') {
+          html += '<hr style="border:none;border-top:1px solid var(--border);margin:2rem 0;">';
+        }
+        // Unordered lists
+        else if (line.startsWith('* ') || line.startsWith('- ')) {
+          if (!inList) {
+            html += '<ul style="margin-left:1.5rem;margin-bottom:1.2rem;list-style-type:square;">';
+            inList = true;
+          }
+          html += `<li>${parseInlineMarkdown(line.slice(2))}</li>`;
+        }
+        // Alerts & Blockquotes
+        else if (line.startsWith('>')) {
+          let content = line.slice(1).trim();
+          if (content.startsWith('[!TIP]')) {
+            inAlert = true; alertType = 'tip';
+            alertContent.push(content.slice(6).trim());
+          } else if (content.startsWith('[!IMPORTANT]')) {
+            inAlert = true; alertType = 'important';
+            alertContent.push(content.slice(12).trim());
+          } else if (content.startsWith('[!NOTE]')) {
+            inAlert = true; alertType = 'note';
+            alertContent.push(content.slice(7).trim());
+          } else if (content.startsWith('[!WARNING]')) {
+            inAlert = true; alertType = 'warning';
+            alertContent.push(content.slice(10).trim());
+          } else {
+            if (inAlert) {
+              alertContent.push(content);
+            } else {
+              html += `<blockquote style="border-left:4px solid var(--border2);padding-left:1rem;color:var(--grey);margin-bottom:1.2rem;font-style:italic;">${parseInlineMarkdown(content)}</blockquote>`;
+            }
+          }
+        }
+        // Markdown Tables
+        else if (line.startsWith('|')) {
+          if (line.includes(':---') || line.includes('---:')) continue;
+          
+          const cells = line.split('|').map(c => c.trim()).filter((c, idx, arr) => idx > 0 && idx < arr.length - 1);
+          
+          if (!inTable) {
+            html += '<table class="doc-table">';
+            inTable = true;
+          }
+
+          if (!tableHeaderParsed) {
+            html += '<thead><tr>';
+            cells.forEach(c => { html += `<th>${parseInlineMarkdown(c)}</th>`; });
+            html += '</tr></thead><tbody>';
+            tableHeaderParsed = true;
+          } else {
+            html += '<tr>';
+            cells.forEach(c => { html += `<td>${parseInlineMarkdown(c)}</td>`; });
+            html += '</tr>';
+          }
+        }
+        // General text paragraph
+        else {
+          html += `<p>${parseInlineMarkdown(line)}</p>`;
+        }
+      }
+
+      // Cleanup trailing block scopes
+      if (inAlert) html += renderAlert(alertType, alertContent.join('<br>'));
+      if (inTable) html += '</tbody></table>';
+      if (inList) html += '</ul>';
+
+      return html;
+    }
+
+    function renderAlert(type, content) {
+      let title = type.toUpperCase();
+      let borderColor = 'var(--orange)';
+      let titleColor = 'var(--orange2)';
+      if (type === 'note') { borderColor = 'var(--blue)'; titleColor = '#60a5fa'; }
+      else if (type === 'tip') { borderColor = 'var(--green)'; titleColor = '#34d399'; }
+      return `<div class="doc-alert" style="border-color:${borderColor};">
+        <div class="doc-alert-title" style="color:${titleColor};">${title}</div>
+        <div>${parseInlineMarkdown(content)}</div>
+      </div>`;
+    }
+
+    function parseInlineMarkdown(text) {
+      // Bold text formatting
+      text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      // Inline code blocks
+      text = text.replace(/`(.*?)`/g, '<code>$1</code>');
+      // Hardware/kbd shortcuts
+      text = text.replace(/<kbd>(.*?)<\/kbd>/g, '<span class="kbd-btn">$1</span>');
+      // Clean link formatting, strip absolute file links to clean bold labels
+      text = text.replace(/\[(.*?)\]\((.*?)\)/g, (match, label, url) => {
+        if (url.startsWith('file://')) return `<strong>${label}</strong>`;
+        return `<a href="${url}" target="_blank" style="color:var(--orange2);text-decoration:none;">${label}</a>`;
+      });
+      return text;
     }
   </script>
 </body>
