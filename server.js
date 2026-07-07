@@ -293,7 +293,15 @@ http.createServer((req, res) => {
               }
             }
             updated.gameRunning = isRunning;
-            updated.gameSeconds = incomingSeconds;
+
+            // Lag compensation (processing roundtrip lag offset)
+            const compensatedSeconds = isRunning ? Math.max(0, incomingSeconds - 1) : incomingSeconds;
+            const drift = Math.abs((states[user].gameSeconds || 0) - compensatedSeconds);
+
+            // Only snap clock if drift is significant (> 3s) or running state changed
+            if (drift > 3 || states[user].gameRunning !== isRunning) {
+              updated.gameSeconds = compensatedSeconds;
+            }
           }
         }
 

@@ -944,7 +944,9 @@
       
       Object.keys(frames).forEach(k => {
         if (frames[k]) {
-          frames[k].style.display = batterySaverActive ? 'none' : 'block';
+          // Use opacity and pointerEvents instead of display:none to preserve layout offsetLeft/offsetTop parameters!
+          frames[k].style.opacity = batterySaverActive ? '0' : '1';
+          frames[k].style.pointerEvents = batterySaverActive ? 'none' : 'auto';
         }
       });
 
