@@ -411,14 +411,35 @@
       }
     }
     
+    let thresholds = { clock: 120, home: 120, away: 120, period: 120 };
     let thresholdValue = 120;
+    
     function updateThreshold(val) {
-      thresholdValue = parseInt(val, 10) || 120;
+      const tVal = parseInt(val, 10) || 120;
+      thresholds[activeCrop] = tVal;
+      thresholdValue = tVal;
       const displayVal = document.getElementById('threshold-val');
-      if (displayVal) displayVal.textContent = thresholdValue;
+      if (displayVal) displayVal.textContent = tVal;
       const slider = document.getElementById('threshold-slider');
-      if (slider) slider.value = thresholdValue;
-      localStorage.setItem('hc_ocr_threshold', thresholdValue.toString());
+      if (slider) slider.value = tVal;
+      localStorage.setItem('hc_ocr_thresholds', JSON.stringify(thresholds));
+    }
+
+    function selectCrop(key) {
+      activeCrop = key;
+      document.querySelectorAll('.config-tab').forEach(tab => {
+        const txt = tab.textContent.toLowerCase();
+        const isMatch = (key === 'clock' && txt.includes('clock')) ||
+                        (key === 'home' && txt.includes('home')) ||
+                        (key === 'away' && txt.includes('away')) ||
+                        (key === 'period' && txt.includes('period'));
+        tab.classList.toggle('active', isMatch);
+      });
+      const savedT = thresholds[key] || 120;
+      const displayVal = document.getElementById('threshold-val');
+      if (displayVal) displayVal.textContent = savedT;
+      const slider = document.getElementById('threshold-slider');
+      if (slider) slider.value = savedT;
     }
 
     // Initialize Tesseract.js Worker
@@ -536,16 +557,18 @@
     }
 
     // Canvas pre-processing for binarization
-    function preprocess(ctx, w, h) {
+    function preprocess(ctx, w, h, key) {
       const imgData = ctx.getImageData(0, 0, w, h);
       const data = imgData.data;
       let blackCount = 0;
       const totalPixels = w * h;
 
+      const tVal = thresholds[key] || thresholdValue;
+
       for (let i = 0; i < data.length; i += 4) {
         const brightness = 0.34 * data[i] + 0.5 * data[i + 1] + 0.16 * data[i + 2];
         // Binarize (Threshold)
-        const v = brightness > thresholdValue ? 0 : 255;
+        const v = brightness > tVal ? 0 : 255;
         data[i] = v;
         data[i+1] = v;
         data[i+2] = v;
@@ -634,7 +657,7 @@
           ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
           
           // Binarize for high-contrast OCR
-          const isValidFrame = preprocess(ctx, canvas.width, canvas.height);
+          const isValidFrame = preprocess(ctx, canvas.width, canvas.height, key);
           
           // Copy preprocessed binary frame to diagnostics preview canvas if active
           if (key === activeCrop) {
@@ -863,13 +886,14 @@
         if (select) select.value = queryTarget;
       }
 
-      // Load saved threshold value
-      const savedThreshold = localStorage.getItem('hc_ocr_threshold');
-      if (savedThreshold) {
-        updateThreshold(savedThreshold);
-      } else {
-        updateThreshold(120);
+      // Load saved thresholds map
+      const savedThresholds = localStorage.getItem('hc_ocr_thresholds');
+      if (savedThresholds) {
+        try {
+          thresholds = JSON.parse(savedThresholds);
+        } catch(e) {}
       }
+      updateThreshold(thresholds[activeCrop] || 120);
 
       // Auto-show help guide on first visit
       const helpShown = localStorage.getItem('hc_ocr_help_shown');
