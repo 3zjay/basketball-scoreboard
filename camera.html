@@ -1027,12 +1027,10 @@
       const videoContainer = document.getElementById('video-container');
       if (videoContainer) {
         if (batterySaverActive) {
-          // Move off-screen instead of display: none to keep iOS Safari/WebKit video decoding active!
-          videoContainer.style.position = 'absolute';
-          videoContainer.style.left = '-9999px';
+          // Keep layout size intact (so offsetWidth/offsetHeight do not collapse to 0) but make invisible
+          videoContainer.style.opacity = '0.01';
         } else {
-          videoContainer.style.position = '';
-          videoContainer.style.left = '';
+          videoContainer.style.opacity = '';
         }
       }
       
