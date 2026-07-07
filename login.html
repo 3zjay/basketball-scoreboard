@@ -415,11 +415,54 @@
       try { localStorage.setItem(key, val); } catch (e) {}
     }
 
-    // Auto-redirect if session already exists
-    if (safeGetItem('hc_session_user')) {
+    function getSessionFromCookie() {
+      try {
+        const match = document.cookie.match(new RegExp('(^| )hc_session_user=([^;]+)'));
+        return match ? decodeURIComponent(match[2]) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function performSecureRedirect(email) {
+      safeSetItem('hc_session_user', email);
+      try {
+        document.cookie = "hc_session_user=" + encodeURIComponent(email) + "; path=/; max-age=86400; SameSite=Lax; Secure";
+      } catch (e) {}
+
       const urlParams = new URLSearchParams(window.location.search);
-      const redirectUrl = urlParams.get('redirect') || '/control';
+      let redirectUrl = urlParams.get('redirect') || '/control';
+      const separator = redirectUrl.includes('?') ? '&' : '?';
+      redirectUrl += separator + 'user=' + encodeURIComponent(email);
+
+      try { sessionStorage.setItem('hc_redirect_loop_count', '0'); } catch(e) {}
       window.location.href = redirectUrl;
+    }
+
+    // Redirect Loop Buster Safeguard
+    let isLooping = false;
+    try {
+      const redirectCount = parseInt(sessionStorage.getItem('hc_redirect_loop_count') || '0', 10);
+      if (redirectCount > 4) {
+        isLooping = true;
+        console.warn("Redirect loop detected. Clearing session to stabilize.");
+        localStorage.removeItem('hc_session_user');
+        document.cookie = "hc_session_user=; path=/; max-age=0; SameSite=Lax; Secure";
+        sessionStorage.setItem('hc_redirect_loop_count', '0');
+      } else {
+        sessionStorage.setItem('hc_redirect_loop_count', (redirectCount + 1).toString());
+        setTimeout(() => {
+          try { sessionStorage.setItem('hc_redirect_loop_count', '0'); } catch(e) {}
+        }, 6000);
+      }
+    } catch (e) {}
+
+    // Auto-redirect if session already exists
+    if (!isLooping) {
+      const activeSession = safeGetItem('hc_session_user') || getSessionFromCookie();
+      if (activeSession) {
+        performSecureRedirect(activeSession);
+      }
     }
 
     // Google Sign-In Handler
@@ -436,10 +479,7 @@
           
           // Super-admin bypass: always allow admin@hoopculture.ca
           if (email === 'admin@hoopculture.ca') {
-            safeSetItem('hc_session_user', email);
-            const urlParams = new URLSearchParams(window.location.search);
-            const redirectUrl = urlParams.get('redirect') || '/control';
-            window.location.href = redirectUrl;
+            performSecureRedirect(email);
             return;
           }
 
@@ -448,10 +488,7 @@
           db.ref(`authorized_users/${safeKey}`).once('value')
             .then((snapshot) => {
               if (snapshot.exists()) {
-                safeSetItem('hc_session_user', email);
-                const urlParams = new URLSearchParams(window.location.search);
-                const redirectUrl = urlParams.get('redirect') || '/control';
-                window.location.href = redirectUrl;
+                performSecureRedirect(email);
               } else {
                 alert(`Access Denied: ${email} is not authorized in this league. Please contact your administrator to whitelist your Google account.`);
                 auth.signOut();
@@ -480,13 +517,7 @@
       const validPassword = "hoopculture2026";
 
       if (email === validEmail && password === validPassword) {
-        // Save session locally to authorise routing guards
-        safeSetItem('hc_session_user', email);
-        
-        // Redirect to original target if provided, otherwise control panel
-        const urlParams = new URLSearchParams(window.location.search);
-        const redirectUrl = urlParams.get('redirect') || '/control';
-        window.location.href = redirectUrl;
+        performSecureRedirect(email);
       } else {
         alert("Invalid League Email or Password! Please check your credentials and try again.");
       }

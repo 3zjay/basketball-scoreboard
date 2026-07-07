@@ -3,11 +3,14 @@
 <head>
 <script>
   // Redirect Loop Buster Safeguard
+  let stopRedirect = false;
   try {
     const redirectCount = parseInt(sessionStorage.getItem('hc_redirect_loop_count') || '0', 10);
     if (redirectCount > 4) {
-      console.warn("Redirect loop detected. Clearing session to stabilize.");
+      stopRedirect = true;
+      console.warn("Redirect loop detected. Halting redirects to stabilize.");
       localStorage.removeItem('hc_session_user');
+      document.cookie = "hc_session_user=; path=/; max-age=0; SameSite=Lax; Secure";
       sessionStorage.setItem('hc_redirect_loop_count', '0');
     } else {
       sessionStorage.setItem('hc_redirect_loop_count', (redirectCount + 1).toString());
@@ -17,9 +20,22 @@
     }
   } catch (e) {}
 
+  function getSessionFromCookie() {
+    try {
+      const match = document.cookie.match(new RegExp('(^| )hc_session_user=([^;]+)'));
+      return match ? decodeURIComponent(match[2]) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   let hasUserSession = false;
   try {
-    hasUserSession = !!localStorage.getItem('hc_session_user');
+    const urlParams = new URLSearchParams(window.location.search);
+    const userParam = urlParams.get('user');
+    hasUserSession = !!localStorage.getItem('hc_session_user') || 
+                     !!getSessionFromCookie() || 
+                     (userParam && userParam !== 'default');
   } catch (e) {
     console.warn("Storage access failed:", e);
   }
@@ -31,7 +47,7 @@
                   window.location.hostname.startsWith('10.') ||
                   window.location.hostname.startsWith('172.') ||
                   window.location.hostname.endsWith('.local');
-  if (!isLocal && !hasUserSession) {
+  if (!isLocal && !hasUserSession && !stopRedirect) {
     const currentPath = window.location.pathname + window.location.search;
     window.location.href = '/login?redirect=' + encodeURIComponent(currentPath);
   }
