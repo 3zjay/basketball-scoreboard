@@ -2,6 +2,46 @@
 <html lang="en">
 <head>
 <script>
+  // Global Storage Shield — prevents WebKit SecurityError exceptions on blocked localStorage/sessionStorage
+  (function() {
+    try {
+      localStorage.setItem('__test_ls__', '1');
+      localStorage.removeItem('__test_ls__');
+    } catch (e) {
+      console.warn("localStorage is blocked. Injecting in-memory fallback.");
+      var store = {};
+      Object.defineProperty(window, 'localStorage', {
+        value: {
+          getItem: function(k) { return store[k] === undefined ? null : store[k]; },
+          setItem: function(k, v) { store[k] = String(v); },
+          removeItem: function(k) { delete store[k]; },
+          clear: function() { store = {}; },
+          key: function(i) { return Object.keys(store)[i] || null; },
+          get length() { return Object.keys(store).length; }
+        },
+        configurable: true, writable: true
+      });
+    }
+    try {
+      sessionStorage.setItem('__test_ss__', '1');
+      sessionStorage.removeItem('__test_ss__');
+    } catch (e) {
+      console.warn("sessionStorage is blocked. Injecting in-memory fallback.");
+      var store = {};
+      Object.defineProperty(window, 'sessionStorage', {
+        value: {
+          getItem: function(k) { return store[k] === undefined ? null : store[k]; },
+          setItem: function(k, v) { store[k] = String(v); },
+          removeItem: function(k) { delete store[k]; },
+          clear: function() { store = {}; },
+          key: function(i) { return Object.keys(store)[i] || null; },
+          get length() { return Object.keys(store).length; }
+        },
+        configurable: true, writable: true
+      });
+    }
+  })();
+
   // Redirect Loop Buster Safeguard
   let stopRedirect = false;
   try {
