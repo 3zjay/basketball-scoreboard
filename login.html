@@ -479,21 +479,28 @@
       window.location.href = redirectUrl;
     }
 
-    // Redirect Loop Buster Safeguard
+    // Time-based Redirect Loop Buster Safeguard
     let isLooping = false;
     try {
+      const now = Date.now();
+      const lastLoad = parseInt(sessionStorage.getItem('hc_last_load_time') || '0', 10);
       const redirectCount = parseInt(sessionStorage.getItem('hc_redirect_loop_count') || '0', 10);
-      if (redirectCount > 4) {
-        isLooping = true;
-        console.warn("Redirect loop detected. Clearing session to stabilize.");
-        localStorage.removeItem('hc_session_user');
-        document.cookie = "hc_session_user=; path=/; max-age=0; SameSite=Lax; Secure";
-        sessionStorage.setItem('hc_redirect_loop_count', '0');
+      
+      sessionStorage.setItem('hc_last_load_time', now.toString());
+
+      if (now - lastLoad < 1500) {
+        if (redirectCount > 4) {
+          isLooping = true;
+          console.warn("Redirect loop detected. Clearing session to stabilize.");
+          localStorage.removeItem('hc_session_user');
+          document.cookie = "hc_session_user=; path=/; max-age=0; SameSite=Lax; Secure";
+          sessionStorage.setItem('hc_redirect_loop_count', '0');
+        } else {
+          sessionStorage.setItem('hc_redirect_loop_count', (redirectCount + 1).toString());
+        }
       } else {
-        sessionStorage.setItem('hc_redirect_loop_count', (redirectCount + 1).toString());
-        setTimeout(() => {
-          try { sessionStorage.setItem('hc_redirect_loop_count', '0'); } catch(e) {}
-        }, 6000);
+        // Reset counter on slow/normal loads (user interaction)
+        sessionStorage.setItem('hc_redirect_loop_count', '0');
       }
     } catch (e) {}
 
