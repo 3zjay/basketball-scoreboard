@@ -1868,22 +1868,37 @@ function connectSSE(){
 
         if (incoming.clock != null) {
           const clockStr = String(incoming.clock).replace(/\s/g, '').trim();
+          let incomingSeconds = null;
           if (clockStr.includes(':')) {
             const parts = clockStr.split(':');
             const mins = parseInt(parts[0], 10) || 0;
             const secs = parseInt(parts[1], 10) || 0;
-            updated.gameSeconds = mins * 60 + secs;
+            incomingSeconds = mins * 60 + secs;
           } else if (clockStr.length === 3) {
             const mins = parseInt(clockStr.substring(0, 1), 10) || 0;
             const secs = parseInt(clockStr.substring(1), 10) || 0;
-            updated.gameSeconds = mins * 60 + secs;
+            incomingSeconds = mins * 60 + secs;
           } else if (clockStr.length === 4) {
             const mins = parseInt(clockStr.substring(0, 2), 10) || 0;
             const secs = parseInt(clockStr.substring(2), 10) || 0;
-            updated.gameSeconds = mins * 60 + secs;
+            incomingSeconds = mins * 60 + secs;
           } else {
             const parsedVal = parseFloat(clockStr) || 0;
-            updated.gameSeconds = Math.round(parsedVal);
+            incomingSeconds = Math.round(parsedVal);
+          }
+
+          if (incomingSeconds !== null) {
+            updated.gameSeconds = incomingSeconds;
+            if (window.lastAISeconds !== undefined) {
+              if (incomingSeconds < window.lastAISeconds) {
+                updated.gameRunning = true;
+              } else if (incomingSeconds === window.lastAISeconds) {
+                updated.gameRunning = false;
+              }
+            } else {
+              updated.gameRunning = S.gameRunning;
+            }
+            window.lastAISeconds = incomingSeconds;
           }
         }
 
@@ -1907,13 +1922,19 @@ function connectSSE(){
         if (hasChanges) {
           S = { ...S, ...updated };
           
-          if (S.gameRunning) {
-            S.gameRunning = false;
-            stopLocalGameTick();
+          if (updated.gameRunning !== undefined) {
+            if (updated.gameRunning) {
+              startLocalGameTick();
+            } else {
+              stopLocalGameTick();
+            }
           }
-          if (S.shotRunning) {
-            S.shotRunning = false;
-            stopLocalShotTick();
+          if (updated.shotRunning !== undefined) {
+            if (updated.shotRunning) {
+              startLocalShotTick();
+            } else {
+              stopLocalShotTick();
+            }
           }
           
           db.ref(`states/${fbUser}`).update({

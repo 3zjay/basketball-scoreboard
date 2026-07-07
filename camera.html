@@ -628,14 +628,20 @@
 
       ocrLoopCount++;
 
-      // Interleaved Single-Scan Scheduling:
-      // Scan one item at a time (Clock 50% of the time, Scores/Period spread out)
-      // This reduces CPU spike and keeps the video stream butter-smooth on mobile!
+      // 5-Second Clock Sync & High-Speed Scores Sync Scheduler
+      // Scan clock strictly every 5 seconds so local time countdown remains smooth.
+      // During the 5-second intervals, rotate home/away scores and period rapidly (every 350ms).
       let key = 'clock';
-      const phase = ocrLoopCount % 6;
-      if (phase === 1) key = 'home';
-      else if (phase === 3) key = 'away';
-      else if (phase === 5) key = 'period';
+      const now = Date.now();
+      const needsClock = (now - (window.lastClockScanTime || 0)) >= 5000;
+
+      if (needsClock) {
+        key = 'clock';
+        window.lastClockScanTime = now;
+      } else {
+        const activeSubKeys = ['home', 'away', 'period'];
+        key = activeSubKeys[ocrLoopCount % 3];
+      }
 
       try {
         const frame = frames[key];
