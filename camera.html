@@ -690,11 +690,40 @@
       try {
         const frame = frames[key];
         if (frame) {
-          // Map screen coordinates relative to actual video resolution
-          const cropX = (frame.offsetLeft / viewW) * videoW;
-          const cropY = (frame.offsetTop / viewH) * videoH;
-          const cropW = (frame.offsetWidth / viewW) * videoW;
-          const cropH = (frame.offsetHeight / viewH) * videoH;
+          // Map screen coordinates relative to actual video resolution under object-fit: cover
+          const streamRatio = videoW / videoH;
+          const viewRatio = viewW / viewH;
+
+          let scaledWidth, scaledHeight;
+          let offsetX = 0, offsetY = 0;
+
+          if (viewRatio > streamRatio) {
+            // Video scaled to match container width; height is cropped top/bottom
+            scaledWidth = viewW;
+            scaledHeight = viewW / streamRatio;
+            offsetY = (scaledHeight - viewH) / 2;
+          } else {
+            // Video scaled to match container height; width is cropped left/right
+            scaledWidth = viewH * streamRatio;
+            scaledHeight = viewH;
+            offsetX = (scaledWidth - viewW) / 2;
+          }
+
+          // Screen box boundaries
+          const boxX = frame.offsetLeft;
+          const boxY = frame.offsetTop;
+          const boxW = frame.offsetWidth;
+          const boxH = frame.offsetHeight;
+
+          // Convert to scaled video space
+          const xInScaled = boxX + offsetX;
+          const yInScaled = boxY + offsetY;
+
+          // Project to physical video resolution
+          const cropX = (xInScaled / scaledWidth) * videoW;
+          const cropY = (yInScaled / scaledHeight) * videoH;
+          const cropW = (boxW / scaledWidth) * videoW;
+          const cropH = (boxH / scaledHeight) * videoH;
 
           canvas.width = cropW * 2.0; // 2.0x scaling is perfectly sharp for digital digits and saves 36% CPU vs 2.5x!
           canvas.height = cropH * 2.0;
