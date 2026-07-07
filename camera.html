@@ -123,6 +123,7 @@
       padding: 10px 16px;
       border-radius: 8px;
       border: 1px solid var(--border);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .bottom-bar {
@@ -135,6 +136,7 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .title {
@@ -257,24 +259,11 @@
       background: rgba(232, 67, 10, 0.1);
     }
 
-    @media (orientation: landscape) {
-      body {
-        overflow: hidden;
-      }
-      .top-bar {
-        transform: translateY(calc(-100% - 20px));
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      .bottom-bar {
-        transform: translateY(calc(100% + 40px));
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      body.show-controls-landscape .top-bar {
-        transform: translateY(0);
-      }
-      body.show-controls-landscape .bottom-bar {
-        transform: translateY(0);
-      }
+    body.controls-hidden .top-bar {
+      transform: translateY(calc(-100% - 25px)) !important;
+    }
+    body.controls-hidden .bottom-bar {
+      transform: translateY(calc(100% + 45px)) !important;
     }
     @keyframes pulseSaver {
       0%, 100% { opacity: 0.6; }
@@ -1078,19 +1067,57 @@
         toggleHelp();
       }
 
-      // Landscape tap-to-toggle overlay controls
+      // Auto-hide control overlays on inactivity (makes calibration feed full-screen on iPhone landscape/portrait)
+      let hideControlsTimeout = null;
+
+      function resetHideControlsTimer() {
+        showControls();
+        clearTimeout(hideControlsTimeout);
+        hideControlsTimeout = setTimeout(hideControls, 4000); // 4 seconds of idle inactivity
+      }
+
+      function hideControls() {
+        const helpOverlay = document.getElementById('help-overlay');
+        if (helpOverlay && helpOverlay.style.display !== 'none') return;
+        if (activeDragFrame || activeResizeFrame) return;
+
+        // Keep controls visible if user is currently typing/focusing an input or select
+        const activeEl = document.activeElement;
+        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'SELECT')) {
+          clearTimeout(hideControlsTimeout);
+          hideControlsTimeout = setTimeout(hideControls, 4000);
+          return;
+        }
+
+        document.body.classList.add('controls-hidden');
+      }
+
+      function showControls() {
+        document.body.classList.remove('controls-hidden');
+      }
+
+      // Tap background to toggle/show controls
       window.addEventListener('click', (e) => {
-        if (window.innerWidth > window.innerHeight) {
-          const isOverlay = e.target.closest('.controls-overlay') || e.target.closest('.crop-frame') || e.target.closest('#help-overlay');
-          if (!isOverlay) {
-            document.body.classList.toggle('show-controls-landscape');
+        const isOverlay = e.target.closest('.controls-overlay') || e.target.closest('.crop-frame') || e.target.closest('#help-overlay');
+        if (!isOverlay) {
+          if (document.body.classList.contains('controls-hidden')) {
+            resetHideControlsTimer();
+          } else {
+            hideControls();
           }
         }
+      });
+
+      // Reset timer on user gestures/interactions
+      const resetEvents = ['mousedown', 'mousemove', 'touchstart', 'touchmove'];
+      resetEvents.forEach(evt => {
+        window.addEventListener(evt, resetHideControlsTimer, { passive: true });
       });
 
       restoreCropPositions();
       startCamera();
       initOCR();
+      resetHideControlsTimer();
     });
   </script>
   <!-- Battery Saver Blackout Overlay -->
