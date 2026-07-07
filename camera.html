@@ -554,19 +554,15 @@
     }
 
     function saveCropPositions() {
-      const winW = window.innerWidth;
-      const winH = window.innerHeight;
-      if (!winW || !winH) return;
-      
       const positions = {};
       Object.keys(frames).forEach(k => {
         const f = frames[k];
         if (f) {
           positions[k] = {
-            left: ((f.offsetLeft / winW) * 100) + '%',
-            top: ((f.offsetTop / winH) * 100) + '%',
-            width: ((f.offsetWidth / winW) * 100) + '%',
-            height: ((f.offsetHeight / winH) * 100) + '%'
+            left: f.style.left || (f.offsetLeft + 'px'),
+            top: f.style.top || (f.offsetTop + 'px'),
+            width: f.style.width || (f.offsetWidth + 'px'),
+            height: f.style.height || (f.offsetHeight + 'px')
           };
         }
       });
