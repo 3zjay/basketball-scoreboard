@@ -748,7 +748,8 @@
 
       if (target === 'firebase' && db) {
         // Direct Firebase write (Vercel serverless mode)
-        db.ref(`ocr/${user}`).update(mapped)
+        const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
+        db.ref(`ocr/${fbUser}`).update(mapped)
           .then(() => {
             document.getElementById('status-text').textContent = `Syncing (Firebase)... (${JSON.stringify(mapped)})`;
             document.getElementById('status-text').style.color = '#16c784';
