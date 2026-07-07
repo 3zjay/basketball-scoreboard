@@ -282,9 +282,6 @@ http.createServer((req, res) => {
           }
 
           if (incomingSeconds !== null) {
-            const currentSeconds = states[user].gameSeconds || 0;
-            const drift = Math.abs(currentSeconds - incomingSeconds);
-            
             // Detect clock state updates: Running or Paused
             const lastSecs = states[user].gameSeconds;
             let isRunning = states[user].gameRunning;
@@ -296,11 +293,7 @@ http.createServer((req, res) => {
               }
             }
             updated.gameRunning = isRunning;
-
-            // Only snap the clock seconds if drift is significant (> 2s) or if running state changed
-            if (drift > 2 || states[user].gameRunning !== isRunning) {
-              updated.gameSeconds = incomingSeconds;
-            }
+            updated.gameSeconds = incomingSeconds;
           }
         }
 
