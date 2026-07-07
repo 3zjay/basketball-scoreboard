@@ -513,6 +513,8 @@
       if (e.target.classList.contains('resize-handle')) return;
       e.preventDefault();
       
+      if (window.hideControls) window.hideControls();
+      
       activeDragFrame = frames[key];
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -588,6 +590,8 @@
     function startResize(e, key) {
       e.stopPropagation();
       e.preventDefault();
+
+      if (window.hideControls) window.hideControls();
 
       activeResizeFrame = frames[key];
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -1132,6 +1136,11 @@
         document.body.classList.remove('controls-hidden');
       }
 
+      // Expose globally so startDrag / startResize can trigger them immediately
+      window.hideControls = hideControls;
+      window.showControls = showControls;
+      window.resetHideControlsTimer = resetHideControlsTimer;
+
       // Tap background to toggle/show controls
       window.addEventListener('click', (e) => {
         const isOverlay = e.target.closest('.controls-overlay') || e.target.closest('.crop-frame') || e.target.closest('#help-overlay');
@@ -1144,10 +1153,14 @@
         }
       });
 
-      // Reset timer on user gestures/interactions
-      const resetEvents = ['mousedown', 'mousemove', 'touchstart', 'touchmove'];
-      resetEvents.forEach(evt => {
-        window.addEventListener(evt, resetHideControlsTimer, { passive: true });
+      // Reset timer only when interacting directly with the menu controls (prevent dragging crop boxes from popping menu up)
+      document.querySelectorAll('.controls-overlay').forEach(el => {
+        ['mousedown', 'touchstart', 'click'].forEach(evt => {
+          el.addEventListener(evt, () => {
+            clearTimeout(hideControlsTimeout);
+            hideControlsTimeout = setTimeout(hideControls, 4000);
+          }, { passive: true });
+        });
       });
 
       restoreCropPositions();
