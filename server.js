@@ -288,7 +288,7 @@ http.createServer((req, res) => {
             if (lastSecs !== undefined && lastSecs !== null) {
               if (incomingSeconds < lastSecs) {
                 isRunning = true;
-              } else if (incomingSeconds === lastSecs) {
+              } else {
                 isRunning = false;
               }
             }
@@ -330,7 +330,7 @@ http.createServer((req, res) => {
           if (lastShotSecs !== undefined && lastShotSecs !== null) {
             if (incomingShotSeconds < lastShotSecs) {
               isShotRunning = true;
-            } else if (incomingShotSeconds === lastShotSecs) {
+            } else {
               isShotRunning = false;
             }
           }

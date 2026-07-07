@@ -1900,7 +1900,7 @@ function connectSSE(){
             if (window.lastAISeconds !== undefined) {
               if (incomingSeconds < window.lastAISeconds) {
                 isRunning = true;
-              } else if (incomingSeconds === window.lastAISeconds) {
+              } else {
                 isRunning = false;
               }
             }
@@ -1937,7 +1937,7 @@ function connectSSE(){
           if (window.lastAIShotSeconds !== undefined) {
             if (incomingShotSeconds < window.lastAIShotSeconds) {
               isShotRunning = true;
-            } else if (incomingShotSeconds === window.lastAIShotSeconds) {
+            } else {
               isShotRunning = false;
             }
           }
