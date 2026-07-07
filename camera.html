@@ -296,6 +296,7 @@
     let syncActive = false;
     let ocrWorker = null;
     let activeCrop = 'clock';
+    let ocrLoopCount = 0;
 
     // Initialize Firebase if configured
     let db = null;
@@ -467,14 +468,29 @@
       const viewH = video.offsetHeight;
 
       if (!videoW || !videoH) {
-        setTimeout(captureAndOCR, 500);
+        setTimeout(captureAndOCR, 1000);
         return;
       }
 
       const payload = {};
+      ocrLoopCount++;
 
-      for (let key of Object.keys(frames)) {
+      // Smart Scheduling:
+      // Clock is scanned on every tick (fast updates).
+      // Home & Away scores are scanned every 2nd tick (roughly every 2s).
+      // Period/Quarter is scanned every 4th tick (roughly every 4s).
+      const scanList = ['clock'];
+      if (ocrLoopCount % 2 === 0) {
+        scanList.push('home');
+        scanList.push('away');
+      }
+      if (ocrLoopCount % 4 === 0) {
+        scanList.push('period');
+      }
+
+      for (let key of scanList) {
         const frame = frames[key];
+        if (!frame) continue;
         
         // Map screen coordinates relative to actual video resolution
         const cropX = (frame.offsetLeft / viewW) * videoW;
@@ -482,8 +498,8 @@
         const cropW = (frame.offsetWidth / viewW) * videoW;
         const cropH = (frame.offsetHeight / viewH) * videoH;
 
-        canvas.width = cropW * 2.5; // Scale up for text clarity
-        canvas.height = cropH * 2.5;
+        canvas.width = cropW * 2.0; // 2.0x scaling is perfectly sharp for digital digits and saves 36% CPU vs 2.5x!
+        canvas.height = cropH * 2.0;
 
         // Draw crop area on helper canvas
         ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
@@ -498,14 +514,17 @@
             payload[key === 'period' ? 'period' : key] = cleanText;
           }
         } catch(err) {}
+
+        // Crucial: Yield control to the browser for 40ms to let it paint the video feed
+        await new Promise(resolve => setTimeout(resolve, 40));
       }
 
       if (Object.keys(payload).length > 0) {
         sendUpdate(payload);
       }
 
-      // Repeat loop
-      setTimeout(captureAndOCR, 600);
+      // Repeat loop every 1000ms (1 second) to prevent mobile thermal throttle & system lag
+      setTimeout(captureAndOCR, 1000);
     }
 
     // Transmit state to cloud
