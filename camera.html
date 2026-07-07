@@ -553,10 +553,50 @@
       activeDragFrame.style.top = `${dragStartTop + dy}px`;
     }
 
+    function saveCropPositions() {
+      const winW = window.innerWidth;
+      const winH = window.innerHeight;
+      if (!winW || !winH) return;
+      
+      const positions = {};
+      Object.keys(frames).forEach(k => {
+        const f = frames[k];
+        if (f) {
+          positions[k] = {
+            left: ((f.offsetLeft / winW) * 100) + '%',
+            top: ((f.offsetTop / winH) * 100) + '%',
+            width: ((f.offsetWidth / winW) * 100) + '%',
+            height: ((f.offsetHeight / winH) * 100) + '%'
+          };
+        }
+      });
+      localStorage.setItem('hc_ocr_crop_positions', JSON.stringify(positions));
+    }
+
+    function restoreCropPositions() {
+      const saved = localStorage.getItem('hc_ocr_crop_positions');
+      if (saved) {
+        try {
+          const positions = JSON.parse(saved);
+          Object.keys(positions).forEach(k => {
+            const f = frames[k];
+            const p = positions[k];
+            if (f && p) {
+              if (p.left) f.style.left = p.left;
+              if (p.top) f.style.top = p.top;
+              if (p.width) f.style.width = p.width;
+              if (p.height) f.style.height = p.height;
+            }
+          });
+        } catch(e) {}
+      }
+    }
+
     function endDrag() {
       activeDragFrame = null;
       document.removeEventListener('mousemove', onDrag);
       document.removeEventListener('touchmove', onDrag);
+      saveCropPositions();
     }
 
     // Resize mechanics
@@ -597,6 +637,7 @@
       activeResizeFrame = null;
       document.removeEventListener('mousemove', onResize);
       document.removeEventListener('touchmove', onResize);
+      saveCropPositions();
     }
 
     // Canvas pre-processing for binarization
@@ -1055,6 +1096,7 @@
         }
       });
 
+      restoreCropPositions();
       startCamera();
       initOCR();
     });
