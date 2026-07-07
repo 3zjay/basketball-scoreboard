@@ -1,5 +1,5 @@
 // Service Worker — enables PWA install on Android & iOS
-const CACHE = 'scoreboard-v1';
+const CACHE = 'scoreboard-v2';
 const ASSETS = [
   '/control',
   '/shotclock',
@@ -25,6 +25,11 @@ self.addEventListener('activate', e => {
 
 // Network first — always get fresh data, fall back to cache if offline
 self.addEventListener('fetch', e => {
+  // Only intercept same-origin GET requests
+  if (e.request.method !== 'GET' || !e.request.url.startsWith(self.location.origin)) {
+    return;
+  }
+  
   e.respondWith(
     fetch(e.request).catch(() => caches.match(e.request))
   );
