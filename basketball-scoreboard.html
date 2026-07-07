@@ -1898,7 +1898,8 @@ function connectSSE(){
           if (incomingSeconds !== null) {
             let isRunning = S.gameRunning;
             if (window.lastAISeconds !== undefined) {
-              if (incomingSeconds < window.lastAISeconds) {
+              const drop = window.lastAISeconds - incomingSeconds;
+              if (drop > 0 && drop <= 3) {
                 isRunning = true;
               } else {
                 isRunning = false;
@@ -1935,7 +1936,8 @@ function connectSSE(){
 
           let isShotRunning = S.shotRunning;
           if (window.lastAIShotSeconds !== undefined) {
-            if (incomingShotSeconds < window.lastAIShotSeconds) {
+            const shotDrop = window.lastAIShotSeconds - incomingShotSeconds;
+            if (shotDrop > 0 && shotDrop <= 3) {
               isShotRunning = true;
             } else {
               isShotRunning = false;

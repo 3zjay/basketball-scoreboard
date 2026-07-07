@@ -286,7 +286,8 @@ http.createServer((req, res) => {
             const lastSecs = states[user].gameSeconds;
             let isRunning = states[user].gameRunning;
             if (lastSecs !== undefined && lastSecs !== null) {
-              if (incomingSeconds < lastSecs) {
+              const drop = lastSecs - incomingSeconds;
+              if (drop > 0 && drop <= 3) {
                 isRunning = true;
               } else {
                 isRunning = false;
@@ -328,7 +329,8 @@ http.createServer((req, res) => {
           const lastShotSecs = states[user].shotSeconds;
           let isShotRunning = states[user].shotRunning;
           if (lastShotSecs !== undefined && lastShotSecs !== null) {
-            if (incomingShotSeconds < lastShotSecs) {
+            const shotDrop = lastShotSecs - incomingShotSeconds;
+            if (shotDrop > 0 && shotDrop <= 3) {
               isShotRunning = true;
             } else {
               isShotRunning = false;
