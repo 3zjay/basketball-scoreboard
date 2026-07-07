@@ -626,24 +626,20 @@
         return;
       }
 
-      const payload = {};
       ocrLoopCount++;
 
-      // Smart Scheduling: Clock (every loop), Scores (every 2nd loop), Period (every 4th loop)
-      const scanList = ['clock'];
-      if (ocrLoopCount % 2 === 0) {
-        scanList.push('home');
-        scanList.push('away');
-      }
-      if (ocrLoopCount % 4 === 0) {
-        scanList.push('period');
-      }
+      // Interleaved Single-Scan Scheduling:
+      // Scan one item at a time (Clock 50% of the time, Scores/Period spread out)
+      // This reduces CPU spike and keeps the video stream butter-smooth on mobile!
+      let key = 'clock';
+      const phase = ocrLoopCount % 6;
+      if (phase === 1) key = 'home';
+      else if (phase === 3) key = 'away';
+      else if (phase === 5) key = 'period';
 
       try {
-        for (let key of scanList) {
-          const frame = frames[key];
-          if (!frame) continue;
-          
+        const frame = frames[key];
+        if (frame) {
           // Map screen coordinates relative to actual video resolution
           const cropX = (frame.offsetLeft / viewW) * videoW;
           const cropY = (frame.offsetTop / viewH) * videoH;
@@ -670,77 +666,70 @@
             }
           }
 
-          if (!isValidFrame) {
-            console.log(`Skipping solid/empty frame for ${key} to prevent WebAssembly hangs.`);
-            continue;
-          }
-
-          try {
-            // Race Tesseract recognize with a 1500ms timeout to prevent permanent thread hangs
-            const ocrPromise = ocrWorker.recognize(canvas);
-            const timeoutPromise = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Scan Timeout')), 1500)
-            );
-            
-            const { data: { text } } = await Promise.race([ocrPromise, timeoutPromise]);
-            const mappedText = mapLettersToDigits(text);
-            const cleanText = mappedText.replace(/[^0-9:]/g, '').trim();
-            if (cleanText) {
-              let isVal = false;
-              if (key === 'clock') {
-                isVal = isValidClock(cleanText);
-              } else if (key === 'home' || key === 'away') {
-                isVal = /^[0-9]{1,3}$/.test(cleanText);
-              } else if (key === 'period') {
-                isVal = /^[1-4]$/.test(cleanText);
-              }
-
-              if (isVal) {
-                payload[key === 'period' ? 'period' : key] = cleanText;
-                
-                // Flash value green in visual readings panel
-                const displayKey = key === 'period' ? 'period' : key;
-                const previewEl = document.getElementById(`read-${displayKey}`);
-                if (previewEl) {
-                  previewEl.textContent = cleanText;
-                  previewEl.style.color = '#16c784';
-                  setTimeout(() => {
-                    if (previewEl) {
-                      if (displayKey === 'clock') previewEl.style.color = 'var(--orange2)';
-                      else if (displayKey === 'home') previewEl.style.color = '#f5c842';
-                      else if (displayKey === 'away') previewEl.style.color = '#ef4444';
-                      else if (displayKey === 'period') previewEl.style.color = '#a855f7';
-                    }
-                  }, 300);
+          if (isValidFrame) {
+            try {
+              // Race Tesseract recognize with a 1500ms timeout to prevent permanent thread hangs
+              const ocrPromise = ocrWorker.recognize(canvas);
+              const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Scan Timeout')), 1500)
+              );
+              
+              const { data: { text } } = await Promise.race([ocrPromise, timeoutPromise]);
+              const mappedText = mapLettersToDigits(text);
+              const cleanText = mappedText.replace(/[^0-9:]/g, '').trim();
+              if (cleanText) {
+                let isVal = false;
+                if (key === 'clock') {
+                  isVal = isValidClock(cleanText);
+                } else if (key === 'home' || key === 'away') {
+                  isVal = /^[0-9]{1,3}$/.test(cleanText);
+                } else if (key === 'period') {
+                  isVal = /^[1-4]$/.test(cleanText);
                 }
-              } else {
-                console.log(`Discarded noisy/invalid scan for ${key}: "${cleanText}"`);
+
+                if (isVal) {
+                  const payload = {};
+                  payload[key === 'period' ? 'period' : key] = cleanText;
+                  sendUpdate(payload);
+                  
+                  // Flash value green in visual readings panel
+                  const displayKey = key === 'period' ? 'period' : key;
+                  const previewEl = document.getElementById(`read-${displayKey}`);
+                  if (previewEl) {
+                    previewEl.textContent = cleanText;
+                    previewEl.style.color = '#16c784';
+                    setTimeout(() => {
+                      if (previewEl) {
+                        if (displayKey === 'clock') previewEl.style.color = 'var(--orange2)';
+                        else if (displayKey === 'home') previewEl.style.color = '#f5c842';
+                        else if (displayKey === 'away') previewEl.style.color = '#ef4444';
+                        else if (displayKey === 'period') previewEl.style.color = '#a855f7';
+                      }
+                    }, 300);
+                  }
+                } else {
+                  console.log(`Discarded noisy/invalid scan for ${key}: "${cleanText}"`);
+                }
+              }
+            } catch(err) {
+              console.warn(`OCR scan failed for ${key}:`, err.message || err);
+              if (err.message === 'Scan Timeout') {
+                console.warn("Worker hung. Restarting OCR engine...");
+                document.getElementById('engine-status').textContent = 'Restarting...';
+                document.getElementById('engine-status').style.color = '#ff9800';
+                initOCR(); // Terminate and spin up fresh worker
               }
             }
-          } catch(err) {
-            console.warn(`OCR scan failed for ${key}:`, err.message || err);
-            if (err.message === 'Scan Timeout') {
-              console.warn("Worker hung. Restarting OCR engine...");
-              document.getElementById('engine-status').textContent = 'Restarting...';
-              document.getElementById('engine-status').style.color = '#ff9800';
-              initOCR(); // Terminate and spin up fresh worker
-              break; // Halt the current scan loop
-            }
+          } else {
+            console.log(`Skipping solid/empty frame for ${key} to prevent WebAssembly hangs.`);
           }
-
-          // Crucial: Yield control to the browser for 40ms to let it paint the video feed
-          await new Promise(resolve => setTimeout(resolve, 40));
-        }
-
-        if (Object.keys(payload).length > 0) {
-          sendUpdate(payload);
         }
       } catch (globalErr) {
         console.error("Global capture error:", globalErr);
       } finally {
         // ALWAYS schedule the next scan, even if loop threw an exception or locked up
         if (syncActive) {
-          setTimeout(captureAndOCR, 1000);
+          setTimeout(captureAndOCR, 350);
         }
       }
     }
