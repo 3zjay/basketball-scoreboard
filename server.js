@@ -174,6 +174,7 @@ http.createServer((req, res) => {
     readBody(req).then(b => {
       try {
         const { cmd, seconds } = JSON.parse(b);
+        states[user].lastManualTime = Date.now();
 
         if (cmd === 'game_start') {
           if (!states[user].gameRunning) startGameClock(user);
@@ -255,6 +256,13 @@ http.createServer((req, res) => {
         states[user].aiSyncEnabled = true;
           
         const incoming = JSON.parse(b);
+        
+        // Guard manual actions from being overwritten by delayed OCR updates
+        if (states[user].lastManualTime && (Date.now() - states[user].lastManualTime) < 5000) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, ignored: true }));
+          return;
+        }
         let updated = {};
 
         // 1. Parse Clock (e.g., "10:00", "09:58", "58.4", or colon-less "0831" / "831")

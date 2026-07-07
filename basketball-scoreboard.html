@@ -1063,6 +1063,7 @@ function cmd(command, seconds){
 }
 
 function handleLocalCommand(command, seconds) {
+  window.lastManualActionTime = Date.now();
   if (command === 'game_start') {
     S.gameRunning = true;
     startLocalGameTick();
@@ -1869,6 +1870,9 @@ function connectSSE(){
     });
 
     db.ref(`ocr/${fbUser}`).on('value', snapshot => {
+      // Guard manual actions from being overwritten by delayed OCR updates
+      if (window.lastManualActionTime && (Date.now() - window.lastManualActionTime) < 5000) return;
+      
       if (S.aiSyncEnabled) {
         const incoming = snapshot.val();
         if (!incoming) return;
