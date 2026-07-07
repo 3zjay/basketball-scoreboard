@@ -159,7 +159,7 @@ function readBody(req) {
   });
 }
 
-http.createServer((req, res) => {
+const requestHandler = (req, res) => {
   const reqUrl = new URL(req.url, 'http://localhost');
   const pathname = reqUrl.pathname;
   const user = getOrCreateUser(reqUrl.searchParams.get('user') || 'default');
@@ -459,7 +459,27 @@ http.createServer((req, res) => {
   }
 
   res.writeHead(404); res.end('Not found');
+};
 
-}).listen(PORT, () => {
-  console.log('Scoreboard server running on port ' + PORT);
-});
+// HTTP or HTTPS Server Boot
+const keyPath = path.join(__dirname, 'key.pem');
+const certPath = path.join(__dirname, 'cert.pem');
+const https = require('https');
+
+if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+  const options = {
+    key: fs.readFileSync(keyPath),
+    cert: fs.readFileSync(certPath)
+  };
+  https.createServer(options, requestHandler).listen(PORT, () => {
+    console.log('Secure HTTPS Scoreboard server running on https://localhost:' + PORT);
+  });
+} else {
+  http.createServer(requestHandler).listen(PORT, () => {
+    console.log('Scoreboard server running on http://localhost:' + PORT);
+    console.log('\nTo run securely over local IP (allowing phone camera access offline):');
+    console.log('1. Run this command on your laptop to generate self-signed SSL certs:');
+    console.log('   openssl req -nodes -new -x509 -keyout key.pem -out cert.pem -days 365 -subj "/CN=localhost"');
+    console.log('2. Restart this server (npm run dev). It will automatically run over https://');
+  });
+}
