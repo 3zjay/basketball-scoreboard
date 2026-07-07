@@ -391,9 +391,16 @@
     }
 
     // Initialize Tesseract.js Worker
+    let isInitializing = false;
     async function initOCR() {
+      if (isInitializing) return;
+      isInitializing = true;
       document.getElementById('engine-status').textContent = 'Initializing...';
       try {
+        if (ocrWorker) {
+          try { await ocrWorker.terminate(); } catch(e) {}
+          ocrWorker = null;
+        }
         // Use lightweight 4.0.0_best_int model (~2.9MB) which is fully supported and stable on mobile
         ocrWorker = await Tesseract.createWorker('eng', 1, {
           langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int/'
@@ -406,6 +413,8 @@
       } catch (e) {
         document.getElementById('engine-status').textContent = 'Error Loading';
         document.getElementById('engine-status').style.color = '#ef4444';
+      } finally {
+        isInitializing = false;
       }
     }
 
@@ -499,6 +508,9 @@
     function preprocess(ctx, w, h) {
       const imgData = ctx.getImageData(0, 0, w, h);
       const data = imgData.data;
+      let blackCount = 0;
+      const totalPixels = w * h;
+
       for (let i = 0; i < data.length; i += 4) {
         const brightness = 0.34 * data[i] + 0.5 * data[i + 1] + 0.16 * data[i + 2];
         // Binarize (Threshold)
@@ -506,8 +518,16 @@
         data[i] = v;
         data[i+1] = v;
         data[i+2] = v;
+        if (v === 0) blackCount++;
       }
       ctx.putImageData(imgData, 0, 0);
+
+      // Solid Area Guard: If image is > 99% white or > 99% black, skip OCR to prevent WebAssembly hangs
+      const blackRatio = blackCount / totalPixels;
+      if (blackRatio < 0.01 || blackRatio > 0.99) {
+        return false; // Solid frame, unsafe for Tesseract
+      }
+      return true; // Valid frame
     }
 
     // Run OCR Loop
@@ -559,7 +579,11 @@
           ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
           
           // Binarize for high-contrast OCR
-          preprocess(ctx, canvas.width, canvas.height);
+          const isValidFrame = preprocess(ctx, canvas.width, canvas.height);
+          if (!isValidFrame) {
+            console.log(`Skipping solid/empty frame for ${key} to prevent WebAssembly hangs.`);
+            continue;
+          }
 
           try {
             // Race Tesseract recognize with a 1500ms timeout to prevent permanent thread hangs
@@ -575,6 +599,13 @@
             }
           } catch(err) {
             console.warn(`OCR scan failed for ${key}:`, err.message || err);
+            if (err.message === 'Scan Timeout') {
+              console.warn("Worker hung. Restarting OCR engine...");
+              document.getElementById('engine-status').textContent = 'Restarting...';
+              document.getElementById('engine-status').style.color = '#ff9800';
+              initOCR(); // Terminate and spin up fresh worker
+              break; // Halt the current scan loop
+            }
           }
 
           // Crucial: Yield control to the browser for 40ms to let it paint the video feed
