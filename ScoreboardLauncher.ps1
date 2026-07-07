@@ -187,6 +187,12 @@ function Start-Server {
         return
     }
     Append-Log "Starting server..."
+    $keyPath = "$REPO_PATH\key.pem"
+    $certPath = "$REPO_PATH\cert.pem"
+    if ((Test-Path $keyPath) -and (Test-Path $certPath)) {
+        $portHttps = [int]$PORT + 1
+        Append-Log "Secure Port (Camera) : https://localhost:$portHttps/camera"
+    }
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName               = "node"
     $psi.Arguments              = $SERVER_FILE
