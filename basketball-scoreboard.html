@@ -1867,11 +1867,19 @@ function connectSSE(){
         let updated = {};
 
         if (incoming.clock != null) {
-          const clockStr = String(incoming.clock).trim();
+          const clockStr = String(incoming.clock).replace(/\s/g, '').trim();
           if (clockStr.includes(':')) {
             const parts = clockStr.split(':');
             const mins = parseInt(parts[0], 10) || 0;
             const secs = parseInt(parts[1], 10) || 0;
+            updated.gameSeconds = mins * 60 + secs;
+          } else if (clockStr.length === 3) {
+            const mins = parseInt(clockStr.substring(0, 1), 10) || 0;
+            const secs = parseInt(clockStr.substring(1), 10) || 0;
+            updated.gameSeconds = mins * 60 + secs;
+          } else if (clockStr.length === 4) {
+            const mins = parseInt(clockStr.substring(0, 2), 10) || 0;
+            const secs = parseInt(clockStr.substring(2), 10) || 0;
             updated.gameSeconds = mins * 60 + secs;
           } else {
             const parsedVal = parseFloat(clockStr) || 0;
