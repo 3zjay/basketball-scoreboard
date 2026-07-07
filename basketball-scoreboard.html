@@ -1443,6 +1443,9 @@ function startLocalGameTick(){
     if(S.gameRunning && S.gameSeconds > 0){ 
       S.gameSeconds--; 
       renderGameClock(); 
+      if (useFirebase && db) {
+        db.ref(`states/${fbUser}`).update({ gameSeconds: S.gameSeconds });
+      }
       broadcastState();
     }
     else { 
@@ -1460,6 +1463,9 @@ function startLocalShotTick(){
     if(S.shotRunning && S.shotSeconds > 0){ 
       S.shotSeconds--; 
       renderShotClock(); 
+      if (useFirebase && db) {
+        db.ref(`states/${fbUser}`).update({ shotSeconds: S.shotSeconds });
+      }
       broadcastState();
     }
     else { 
@@ -1844,13 +1850,21 @@ function connectSSE(){
       const prevHomeLogo    = S.homeLogo;
       const prevAwayLogo    = S.awayLogo;
 
+      const runGameChanged = d.gameRunning !== S.gameRunning;
+      const runShotChanged = d.shotRunning !== S.shotRunning;
+
       S = {...DEF, ...d};
       if(!S.homeLogo && prevHomeLogo) S.homeLogo = prevHomeLogo;
       if(!S.awayLogo && prevAwayLogo) S.awayLogo = prevAwayLogo;
       
-      stopLocalGameTick(); stopLocalShotTick();
-      if(S.gameRunning) startLocalGameTick();
-      if(S.shotRunning) startLocalShotTick();
+      if (runGameChanged) {
+        if (S.gameRunning) startLocalGameTick();
+        else stopLocalGameTick();
+      }
+      if (runShotChanged) {
+        if (S.shotRunning) startLocalShotTick();
+        else stopLocalShotTick();
+      }
       renderAll();
     });
 
