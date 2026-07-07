@@ -2,6 +2,28 @@
 <html lang="en">
 <head>
 <script>
+  // Redirect Loop Buster Safeguard
+  try {
+    const redirectCount = parseInt(sessionStorage.getItem('hc_redirect_loop_count') || '0', 10);
+    if (redirectCount > 4) {
+      console.warn("Redirect loop detected. Clearing session to stabilize.");
+      localStorage.removeItem('hc_session_user');
+      sessionStorage.setItem('hc_redirect_loop_count', '0');
+    } else {
+      sessionStorage.setItem('hc_redirect_loop_count', (redirectCount + 1).toString());
+      setTimeout(() => {
+        try { sessionStorage.setItem('hc_redirect_loop_count', '0'); } catch(e) {}
+      }, 6000);
+    }
+  } catch (e) {}
+
+  let hasUserSession = false;
+  try {
+    hasUserSession = !!localStorage.getItem('hc_session_user');
+  } catch (e) {
+    console.warn("Storage access failed:", e);
+  }
+
   const isLocal = window.location.hostname === 'localhost' ||
                   window.location.hostname === '127.0.0.1' ||
                   !window.location.hostname.includes('.') ||
@@ -9,7 +31,7 @@
                   window.location.hostname.startsWith('10.') ||
                   window.location.hostname.startsWith('172.') ||
                   window.location.hostname.endsWith('.local');
-  if (!isLocal && !localStorage.getItem('hc_session_user')) {
+  if (!isLocal && !hasUserSession) {
     const currentPath = window.location.pathname + window.location.search;
     window.location.href = '/login?redirect=' + encodeURIComponent(currentPath);
   }

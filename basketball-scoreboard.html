@@ -2,6 +2,21 @@
 <html lang="en">
 <head>
 <script>
+  // Redirect Loop Buster Safeguard
+  try {
+    const redirectCount = parseInt(sessionStorage.getItem('hc_redirect_loop_count') || '0', 10);
+    if (redirectCount > 4) {
+      console.warn("Redirect loop detected. Clearing session to stabilize.");
+      localStorage.removeItem('hc_session_user');
+      sessionStorage.setItem('hc_redirect_loop_count', '0');
+    } else {
+      sessionStorage.setItem('hc_redirect_loop_count', (redirectCount + 1).toString());
+      setTimeout(() => {
+        try { sessionStorage.setItem('hc_redirect_loop_count', '0'); } catch(e) {}
+      }, 6000);
+    }
+  } catch (e) {}
+
   let hasUserSession = false;
   try {
     hasUserSession = !!localStorage.getItem('hc_session_user');

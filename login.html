@@ -340,6 +340,22 @@
   </div>
 
   <script>
+    // Redirect Loop Buster Safeguard
+    try {
+      const redirectCount = parseInt(sessionStorage.getItem('hc_redirect_loop_count') || '0', 10);
+      if (redirectCount > 4) {
+        console.warn("Redirect loop detected. Clearing session to stabilize.");
+        localStorage.removeItem('hc_session_user');
+        sessionStorage.setItem('hc_redirect_loop_count', '0');
+      } else {
+        sessionStorage.setItem('hc_redirect_loop_count', (redirectCount + 1).toString());
+        // Reset after 6 seconds of stability
+        setTimeout(() => {
+          try { sessionStorage.setItem('hc_redirect_loop_count', '0'); } catch(e) {}
+        }, 6000);
+      }
+    } catch (e) {}
+
     // Auto-bypass login in local offline mode
     const isLocalHost = window.location.hostname === 'localhost' ||
                         window.location.hostname === '127.0.0.1' ||
