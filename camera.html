@@ -561,6 +561,16 @@
       return true; // Valid frame
     }
 
+    function isValidClock(str) {
+      if (!/[0-9]/.test(str)) return false;
+      if (str.includes(':')) {
+        const parts = str.split(':');
+        if (parts.length !== 2) return false;
+        if (parts[1].length !== 2) return false;
+      }
+      return true;
+    }
+
     // Run OCR Loop
     async function captureAndOCR() {
       if (!syncActive || !ocrWorker) return;
@@ -638,22 +648,35 @@
             const { data: { text } } = await Promise.race([ocrPromise, timeoutPromise]);
             const cleanText = text.replace(/[^0-9:]/g, '').trim();
             if (cleanText) {
-              payload[key === 'period' ? 'period' : key] = cleanText;
-              
-              // Flash value green in visual readings panel
-              const displayKey = key === 'period' ? 'period' : key;
-              const previewEl = document.getElementById(`read-${displayKey}`);
-              if (previewEl) {
-                previewEl.textContent = cleanText;
-                previewEl.style.color = '#16c784';
-                setTimeout(() => {
-                  if (previewEl) {
-                    if (displayKey === 'clock') previewEl.style.color = 'var(--orange2)';
-                    else if (displayKey === 'home') previewEl.style.color = '#f5c842';
-                    else if (displayKey === 'away') previewEl.style.color = '#ef4444';
-                    else if (displayKey === 'period') previewEl.style.color = '#a855f7';
-                  }
-                }, 300);
+              let isVal = false;
+              if (key === 'clock') {
+                isVal = isValidClock(cleanText);
+              } else if (key === 'home' || key === 'away') {
+                isVal = /^[0-9]{1,3}$/.test(cleanText);
+              } else if (key === 'period') {
+                isVal = /^[1-4]$/.test(cleanText);
+              }
+
+              if (isVal) {
+                payload[key === 'period' ? 'period' : key] = cleanText;
+                
+                // Flash value green in visual readings panel
+                const displayKey = key === 'period' ? 'period' : key;
+                const previewEl = document.getElementById(`read-${displayKey}`);
+                if (previewEl) {
+                  previewEl.textContent = cleanText;
+                  previewEl.style.color = '#16c784';
+                  setTimeout(() => {
+                    if (previewEl) {
+                      if (displayKey === 'clock') previewEl.style.color = 'var(--orange2)';
+                      else if (displayKey === 'home') previewEl.style.color = '#f5c842';
+                      else if (displayKey === 'away') previewEl.style.color = '#ef4444';
+                      else if (displayKey === 'period') previewEl.style.color = '#a855f7';
+                    }
+                  }, 300);
+                }
+              } else {
+                console.log(`Discarded noisy/invalid scan for ${key}: "${cleanText}"`);
               }
             }
           } catch(err) {
