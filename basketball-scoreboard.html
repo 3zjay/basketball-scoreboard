@@ -1923,7 +1923,19 @@ function connectSSE(){
 
         if (incoming.shotClock != null) {
           const scStr = String(incoming.shotClock).trim();
-          updated.shotSeconds = parseInt(scStr, 10) || 24;
+          const incomingShotSeconds = parseInt(scStr, 10) || 24;
+          updated.shotSeconds = incomingShotSeconds;
+
+          let isShotRunning = S.shotRunning;
+          if (window.lastAIShotSeconds !== undefined) {
+            if (incomingShotSeconds < window.lastAIShotSeconds) {
+              isShotRunning = true;
+            } else if (incomingShotSeconds === window.lastAIShotSeconds) {
+              isShotRunning = false;
+            }
+          }
+          window.lastAIShotSeconds = incomingShotSeconds;
+          updated.shotRunning = isShotRunning;
         }
 
         const hasChanges = Object.keys(updated).some(k => S[k] !== updated[k]);

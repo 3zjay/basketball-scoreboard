@@ -183,6 +183,7 @@
     .crop-frame.home { border-color: #f5c842; box-shadow: 0 0 10px rgba(245,200,66,0.3); }
     .crop-frame.away { border-color: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.3); }
     .crop-frame.period { border-color: #a855f7; box-shadow: 0 0 10px rgba(168,85,247,0.3); }
+    .crop-frame.shot { border-color: #00d2ff; box-shadow: 0 0 10px rgba(0,210,255,0.3); }
 
     .crop-label {
       position: absolute;
@@ -201,6 +202,7 @@
     .crop-frame.home .crop-label { background: #f5c842; }
     .crop-frame.away .crop-label { background: #ef4444; }
     .crop-frame.period .crop-label { background: #a855f7; }
+    .crop-frame.shot .crop-label { background: #00d2ff; }
 
     /* Touch Resize Handles */
     .resize-handle {
@@ -308,6 +310,11 @@
     <div class="resize-handle" onmousedown="startResize(event, 'period')" ontouchstart="startResize(event, 'period')"></div>
   </div>
 
+  <div class="crop-frame shot" id="frame-shot" style="top: 45%; left: 45%; width: 80px; height: 50px;">
+    <div class="crop-label">SHOT</div>
+    <div class="resize-handle" onmousedown="startResize(event, 'shot')" ontouchstart="startResize(event, 'shot')"></div>
+  </div>
+
   <!-- Top bar status controls -->
   <div class="controls-overlay top-bar">
     <div style="display:flex;align-items:center;gap:8px;">
@@ -329,6 +336,7 @@
       <div class="config-tab" onclick="selectCrop('home')">Home Score</div>
       <div class="config-tab" onclick="selectCrop('away')">Away Score</div>
       <div class="config-tab" onclick="selectCrop('period')">Period</div>
+      <div class="config-tab" onclick="selectCrop('shot')">Shot Clock</div>
     </div>
     
     <!-- Binarization slider and preview monitor -->
@@ -366,6 +374,7 @@
           <div>🏠 <span id="read-home" style="color:#f5c842; font-weight:bold;">--</span></div>
           <div>✈️ <span id="read-away" style="color:#ef4444; font-weight:bold;">--</span></div>
           <div>⏱️ <span id="read-period" style="color:#a855f7; font-weight:bold;">--</span></div>
+          <div>🚨 <span id="read-shot" style="color:#00d2ff; font-weight:bold;">--</span></div>
         </div>
       </div>
     </div>
@@ -379,7 +388,7 @@
         <li style="margin-bottom:8px;">Position your phone on a tripod facing the gym's physical scoreboard.</li>
         <li style="margin-bottom:8px;">Grant camera permissions when prompted to load the rear camera feed.</li>
         <li style="margin-bottom:8px;">Drag and resize the colored boxes on the screen to frame only the scoreboard digits.</li>
-        <li style="margin-bottom:8px;">Tap the selection buttons (<strong>Clock, Home Score, Away Score, Period</strong>) at the bottom to calibrate each box individually:
+        <li style="margin-bottom:8px;">Tap the selection buttons (<strong>Clock, Home Score, Away Score, Period, Shot Clock</strong>) at the bottom to calibrate each box individually:
           <ul style="margin-left:16px; margin-top:4px; font-size:12px; color:var(--grey);">
             <li>Adjust the <strong>Binarization Filter Slider</strong> for each box until its digits display as clean, solid black shapes on a white background in the preview monitor.</li>
             <li>Yellow/bright digits need a higher filter threshold (~150-180), while red/darker digits need a lower threshold (~60-90).</li>
@@ -421,7 +430,8 @@
       clock: document.getElementById('frame-clock'),
       home: document.getElementById('frame-home'),
       away: document.getElementById('frame-away'),
-      period: document.getElementById('frame-period')
+      period: document.getElementById('frame-period'),
+      shot: document.getElementById('frame-shot')
     };
 
     // Initialize Camera Stream
@@ -443,7 +453,7 @@
       }
     }
     
-    let thresholds = { clock: 120, home: 120, away: 120, period: 120 };
+    let thresholds = { clock: 120, home: 120, away: 120, period: 120, shot: 120 };
     let thresholdValue = 120;
     
     function updateThreshold(val) {
@@ -671,8 +681,8 @@
         key = 'clock';
         window.lastClockScanTime = now;
       } else {
-        const activeSubKeys = ['home', 'away', 'period'];
-        key = activeSubKeys[ocrLoopCount % 3];
+        const activeSubKeys = ['home', 'away', 'period', 'shot'];
+        key = activeSubKeys[ocrLoopCount % 4];
       }
 
       try {
@@ -723,15 +733,17 @@
                   isVal = /^[0-9]{1,3}$/.test(cleanText);
                 } else if (key === 'period') {
                   isVal = /^[1-4]$/.test(cleanText);
+                } else if (key === 'shot') {
+                  isVal = /^[0-9]{1,2}$/.test(cleanText) && parseInt(cleanText, 10) <= 45;
                 }
 
                 if (isVal) {
                   const payload = {};
-                  payload[key === 'period' ? 'period' : key] = cleanText;
+                  payload[key === 'period' ? 'period' : (key === 'shot' ? 'shotClock' : key)] = cleanText;
                   sendUpdate(payload);
                   
                   // Flash value green in visual readings panel
-                  const displayKey = key === 'period' ? 'period' : key;
+                  const displayKey = key === 'period' ? 'period' : (key === 'shot' ? 'shot' : key);
                   
                   // Update battery saver dashboard
                   const saverReadEl = document.getElementById(`saver-read-${displayKey}`);
@@ -755,6 +767,7 @@
                         else if (displayKey === 'home') previewEl.style.color = '#f5c842';
                         else if (displayKey === 'away') previewEl.style.color = '#ef4444';
                         else if (displayKey === 'period') previewEl.style.color = '#a855f7';
+                        else if (displayKey === 'shot') previewEl.style.color = '#00d2ff';
                       }
                     }, 300);
                   }
@@ -1027,9 +1040,13 @@
         <span style="color:var(--grey); font-size:10px; text-transform:uppercase;">Away Score</span>
         <div id="saver-read-away" style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">--</div>
       </div>
-      <div style="grid-column: span 2; text-align:center; border-top:1px solid #1a1a1a; padding-top:8px; margin-top:4px;">
+      <div style="text-align:center; border-right:1px solid #1a1a1a; padding-right:10px; border-top:1px solid #1a1a1a; padding-top:8px; margin-top:4px;">
         <span style="color:var(--grey); font-size:10px; text-transform:uppercase;">Period</span>
-        <div id="saver-read-period" style="font-size:20px; font-weight:bold; color:#a855f7; margin-top:4px;">--</div>
+        <div id="saver-read-period" style="font-size:24px; font-weight:bold; color:#a855f7; margin-top:4px;">--</div>
+      </div>
+      <div style="text-align:center; border-top:1px solid #1a1a1a; padding-top:8px; margin-top:4px;">
+        <span style="color:var(--grey); font-size:10px; text-transform:uppercase;">Shot Clock</span>
+        <div id="saver-read-shot" style="font-size:24px; font-weight:bold; color:#00d2ff; margin-top:4px;">--</div>
       </div>
     </div>
 

@@ -315,7 +315,19 @@ http.createServer((req, res) => {
         // 4. Parse Shot Clock (if present)
         if (incoming.shotClock != null) {
           const scStr = String(incoming.shotClock).trim();
-          updated.shotSeconds = parseInt(scStr, 10) || 24;
+          const incomingShotSeconds = parseInt(scStr, 10) || 24;
+          updated.shotSeconds = incomingShotSeconds;
+          
+          const lastShotSecs = states[user].shotSeconds;
+          let isShotRunning = states[user].shotRunning;
+          if (lastShotSecs !== undefined && lastShotSecs !== null) {
+            if (incomingShotSeconds < lastShotSecs) {
+              isShotRunning = true;
+            } else if (incomingShotSeconds === lastShotSecs) {
+              isShotRunning = false;
+            }
+          }
+          updated.shotRunning = isShotRunning;
         }
 
         // Since camera is running the clock, make sure local server ticker doesn't overlap
