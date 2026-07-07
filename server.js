@@ -324,7 +324,6 @@ http.createServer((req, res) => {
         if (incoming.shotClock != null) {
           const scStr = String(incoming.shotClock).trim();
           const incomingShotSeconds = parseInt(scStr, 10) || 24;
-          updated.shotSeconds = incomingShotSeconds;
           
           const lastShotSecs = states[user].shotSeconds;
           let isShotRunning = states[user].shotRunning;
@@ -336,6 +335,15 @@ http.createServer((req, res) => {
             }
           }
           updated.shotRunning = isShotRunning;
+
+          // Lag compensation (offsetting cloud sync latency)
+          const compensatedShotSeconds = isShotRunning ? Math.max(0, incomingShotSeconds - 1) : incomingShotSeconds;
+          const shotDrift = Math.abs((states[user].shotSeconds || 0) - compensatedShotSeconds);
+
+          // Only snap local shot clock if drift is significant (> 2s) or if running state changed
+          if (shotDrift > 2 || states[user].shotRunning !== isShotRunning) {
+            updated.shotSeconds = compensatedShotSeconds;
+          }
         }
 
         // Since camera is running the clock, make sure local server ticker doesn't overlap

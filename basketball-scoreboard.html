@@ -1932,7 +1932,6 @@ function connectSSE(){
         if (incoming.shotClock != null) {
           const scStr = String(incoming.shotClock).trim();
           const incomingShotSeconds = parseInt(scStr, 10) || 24;
-          updated.shotSeconds = incomingShotSeconds;
 
           let isShotRunning = S.shotRunning;
           if (window.lastAIShotSeconds !== undefined) {
@@ -1944,6 +1943,15 @@ function connectSSE(){
           }
           window.lastAIShotSeconds = incomingShotSeconds;
           updated.shotRunning = isShotRunning;
+
+          // Lag compensation (offsetting cloud sync latency)
+          const compensatedShotSeconds = isShotRunning ? Math.max(0, incomingShotSeconds - 1) : incomingShotSeconds;
+          const shotDrift = Math.abs(S.shotSeconds - compensatedShotSeconds);
+
+          // Only snap local shot clock if drift is significant (> 2s) or if running state changed
+          if (shotDrift > 2 || S.shotRunning !== isShotRunning) {
+            updated.shotSeconds = compensatedShotSeconds;
+          }
         }
 
         const hasChanges = Object.keys(updated).some(k => S[k] !== updated[k]);
