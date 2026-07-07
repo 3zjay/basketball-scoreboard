@@ -254,6 +254,26 @@
       border-color: var(--orange2);
       background: rgba(232, 67, 10, 0.1);
     }
+
+    @media (orientation: landscape) {
+      body {
+        overflow: hidden;
+      }
+      .top-bar {
+        transform: translateY(calc(-100% - 20px));
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .bottom-bar {
+        transform: translateY(calc(100% + 40px));
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      body.show-controls-landscape .top-bar {
+        transform: translateY(0);
+      }
+      body.show-controls-landscape .bottom-bar {
+        transform: translateY(0);
+      }
+    }
   </style>
 </head>
 <body>
@@ -295,6 +315,7 @@
 
   <!-- Bottom bar configuration settings -->
   <div class="controls-overlay bottom-bar">
+    <div style="font-size:9px; color:var(--grey); font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;">Select Box to Calibrate:</div>
     <div class="config-tabs">
       <div class="config-tab active" onclick="selectCrop('clock')">Clock</div>
       <div class="config-tab" onclick="selectCrop('home')">Home Score</div>
@@ -314,11 +335,8 @@
       </div>
     </div>
 
+    <input type="hidden" id="session-input" value="default">
     <div style="display:flex;flex-direction:column;gap:10px;width:100%;">
-      <div style="display:flex;gap:10px;width:100%;">
-        <input type="text" id="session-input" placeholder="User Session" value="default" style="flex:1;background:#0d0906;border:1px solid var(--border);color:#fff;border-radius:4px;padding:6px 10px;font-size:12px;">
-        <button class="btn" onclick="saveSession()">Save Session</button>
-      </div>
       <div style="display:flex;align-items:center;gap:10px;width:100%;">
         <span style="font-size:11px;color:var(--grey);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Sync Target:</span>
         <select id="sync-target-select" onchange="updateSyncTarget()" style="flex:1;background:#0d0906;border:1px solid var(--border);color:#fff;border-radius:4px;padding:6px 10px;font-size:12px;font-family:sans-serif;cursor:pointer;outline:none;">
@@ -351,11 +369,17 @@
       <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--orange2);margin-bottom:16px;text-transform:uppercase;letter-spacing:1px;text-align:center;">How to Use the Scanner 📱</h3>
       <ol style="margin-left:16px;margin-bottom:20px;font-size:13px;line-height:1.6;color:#dfd5cb;">
         <li style="margin-bottom:8px;">Position your phone on a tripod facing the gym's physical scoreboard.</li>
-        <li style="margin-bottom:8px;">Grant camera permissions when prompted. The rear camera will load.</li>
+        <li style="margin-bottom:8px;">Grant camera permissions when prompted to load the rear camera feed.</li>
         <li style="margin-bottom:8px;">Drag and resize the colored boxes on the screen to frame only the scoreboard digits.</li>
-        <li style="margin-bottom:8px;">Enter a unique session name (e.g., <code>court_1</code>) at the bottom and click <strong>Save Session</strong>.</li>
+        <li style="margin-bottom:8px;">Tap the selection buttons (<strong>Clock, Home Score, Away Score, Period</strong>) at the bottom to calibrate each box individually:
+          <ul style="margin-left:16px; margin-top:4px; font-size:12px; color:var(--grey);">
+            <li>Adjust the <strong>Binarization Filter Slider</strong> for each box until its digits display as clean, solid black shapes on a white background in the preview monitor.</li>
+            <li>Yellow/bright digits need a higher filter threshold (~150-180), while red/darker digits need a lower threshold (~60-90).</li>
+          </ul>
+        </li>
         <li style="margin-bottom:8px;">Tap <strong>Start Sync</strong>. The status will update to green.</li>
         <li style="margin-bottom:8px;">Go to your controller console page on your operator tablet, and toggle <strong>AI Sync</strong> to <strong>ON</strong>.</li>
+        <li style="margin-bottom:8px;"><strong>Landscape Full-Screen:</strong> Turn your phone landscape to enter full-screen mode. Tapping any empty space on the screen will auto-hide or show the control overlays.</li>
       </ol>
       <button class="btn" onclick="toggleHelp()" style="width:100%;border-color:var(--orange);color:var(--orange);padding:10px;">Close Guide</button>
     </div>
@@ -895,6 +919,16 @@
       if (!helpShown) {
         toggleHelp();
       }
+
+      // Landscape tap-to-toggle overlay controls
+      window.addEventListener('click', (e) => {
+        if (window.innerWidth > window.innerHeight) {
+          const isOverlay = e.target.closest('.controls-overlay') || e.target.closest('.crop-frame') || e.target.closest('#help-overlay');
+          if (!isOverlay) {
+            document.body.classList.toggle('show-controls-landscape');
+          }
+        }
+      });
 
       startCamera();
       initOCR();
