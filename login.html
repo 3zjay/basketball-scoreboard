@@ -362,7 +362,7 @@
                         window.location.hostname.includes('onrender.com');
 
     try {
-      if (typeof firebase !== 'undefined' && isFirebaseConfigured) {
+      if (typeof firebase !== 'undefined' && typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured) {
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         db = firebase.database();
         auth = firebase.auth();
@@ -372,7 +372,7 @@
     }
 
     // Toggle Google button visibility based on environment/config
-    if (isFirebaseConfigured) {
+    if (typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured) {
       document.getElementById('googleLoginArea').style.display = 'block';
       document.getElementById('dividerLine').style.display = 'flex';
     }
