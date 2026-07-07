@@ -713,19 +713,15 @@
 
       ocrLoopCount++;
 
-      // 5-Second Clock Sync & High-Speed Scores Sync Scheduler
-      // Scan clock strictly every 5 seconds so local time countdown remains smooth.
-      // During the 5-second intervals, rotate home/away scores and period rapidly (every 350ms).
-      let key = 'clock';
-      const now = Date.now();
-      const needsClock = (now - (window.lastClockScanTime || 0)) >= 5000;
-
-      if (needsClock) {
-        key = 'clock';
-        window.lastClockScanTime = now;
+      // Interleaved Active-Crop Scheduler:
+      // Alternately scan the currently active calibration crop tab for instant preview feedback,
+      // and rotate through all other fields on the off-ticks.
+      let key = activeCrop || 'clock';
+      if (ocrLoopCount % 2 === 0) {
+        key = activeCrop || 'clock';
       } else {
-        const activeSubKeys = ['home', 'away', 'period', 'shot'];
-        key = activeSubKeys[ocrLoopCount % 4];
+        const rotateKeys = ['clock', 'home', 'away', 'period', 'shot'];
+        key = rotateKeys[Math.floor(ocrLoopCount / 2) % rotateKeys.length];
       }
 
       try {
