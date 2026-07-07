@@ -195,7 +195,7 @@
       border: none;
       cursor: pointer;
       border-radius: 4px;
-      background: linear-gradient(90deg, var(--fire1), var(--fire2), var(--ember), var(--fire2), var(--fire1));
+      background: linear-gradient(90deg, var(--fire1), var(--fire2), var(--fire3), var(--fire2), var(--fire1));
       color: #fff;
       box-shadow: 0 4px 15px rgba(232, 67, 10, 0.3);
       transition: all 0.2s;
@@ -215,7 +215,7 @@
     .login-footer {
       margin-top: 2rem;
       font-size: 11px;
-      color: var(--mid);
+      color: var(--grey);
       font-family: 'Barlow Condensed', sans-serif;
       letter-spacing: 1px;
       text-transform: uppercase;
@@ -377,8 +377,16 @@
       document.getElementById('dividerLine').style.display = 'flex';
     }
 
+    // Safe localStorage wrappers to prevent iOS incognito/private mode crashes
+    function safeGetItem(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function safeSetItem(key, val) {
+      try { localStorage.setItem(key, val); } catch (e) {}
+    }
+
     // Auto-redirect if session already exists
-    if (localStorage.getItem('hc_session_user')) {
+    if (safeGetItem('hc_session_user')) {
       const urlParams = new URLSearchParams(window.location.search);
       const redirectUrl = urlParams.get('redirect') || '/control';
       window.location.href = redirectUrl;
@@ -398,7 +406,7 @@
           
           // Super-admin bypass: always allow admin@hoopculture.ca
           if (email === 'admin@hoopculture.ca') {
-            localStorage.setItem('hc_session_user', email);
+            safeSetItem('hc_session_user', email);
             const urlParams = new URLSearchParams(window.location.search);
             const redirectUrl = urlParams.get('redirect') || '/control';
             window.location.href = redirectUrl;
@@ -410,7 +418,7 @@
           db.ref(`authorized_users/${safeKey}`).once('value')
             .then((snapshot) => {
               if (snapshot.exists()) {
-                localStorage.setItem('hc_session_user', email);
+                safeSetItem('hc_session_user', email);
                 const urlParams = new URLSearchParams(window.location.search);
                 const redirectUrl = urlParams.get('redirect') || '/control';
                 window.location.href = redirectUrl;
@@ -443,7 +451,7 @@
 
       if (email === validEmail && password === validPassword) {
         // Save session locally to authorise routing guards
-        localStorage.setItem('hc_session_user', email);
+        safeSetItem('hc_session_user', email);
         
         // Redirect to original target if provided, otherwise control panel
         const urlParams = new URLSearchParams(window.location.search);
