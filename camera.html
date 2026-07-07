@@ -261,9 +261,20 @@
       <div class="config-tab" onclick="selectCrop('period')">Period</div>
     </div>
 
-    <div style="display:flex;gap:10px;">
-      <input type="text" id="session-input" placeholder="User Session" value="default" style="flex:1;background:#0d0906;border:1px solid var(--border);color:#fff;border-radius:4px;padding:6px 10px;font-size:12px;">
-      <button class="btn" onclick="saveSession()">Save Session</button>
+    <div style="display:flex;flex-direction:column;gap:10px;width:100%;">
+      <div style="display:flex;gap:10px;width:100%;">
+        <input type="text" id="session-input" placeholder="User Session" value="default" style="flex:1;background:#0d0906;border:1px solid var(--border);color:#fff;border-radius:4px;padding:6px 10px;font-size:12px;">
+        <button class="btn" onclick="saveSession()">Save Session</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;width:100%;">
+        <span style="font-size:11px;color:var(--grey);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Sync Target:</span>
+        <select id="sync-target-select" onchange="updateSyncTarget()" style="flex:1;background:#0d0906;border:1px solid var(--border);color:#fff;border-radius:4px;padding:6px 10px;font-size:12px;font-family:sans-serif;cursor:pointer;outline:none;">
+          <option value="auto">Auto-Detect Environment</option>
+          <option value="firebase">Vercel + Firebase Cloud Sync</option>
+          <option value="api-onrender">OnRender Cloud Sync (API)</option>
+          <option value="api-local">Local Offline Sync (API)</option>
+        </select>
+      </div>
     </div>
 
     <div class="status-panel">
@@ -297,6 +308,7 @@
     let ocrWorker = null;
     let activeCrop = 'clock';
     let ocrLoopCount = 0;
+    let syncTarget = 'auto';
 
     // Initialize Firebase if configured
     let db = null;
@@ -475,10 +487,7 @@
       const payload = {};
       ocrLoopCount++;
 
-      // Smart Scheduling:
-      // Clock is scanned on every tick (fast updates).
-      // Home & Away scores are scanned every 2nd tick (roughly every 2s).
-      // Period/Quarter is scanned every 4th tick (roughly every 4s).
+      // Smart Scheduling: Clock (every loop), Scores (every 2nd loop), Period (every 4th loop)
       const scanList = ['clock'];
       if (ocrLoopCount % 2 === 0) {
         scanList.push('home');
@@ -488,51 +497,78 @@
         scanList.push('period');
       }
 
-      for (let key of scanList) {
-        const frame = frames[key];
-        if (!frame) continue;
-        
-        // Map screen coordinates relative to actual video resolution
-        const cropX = (frame.offsetLeft / viewW) * videoW;
-        const cropY = (frame.offsetTop / viewH) * videoH;
-        const cropW = (frame.offsetWidth / viewW) * videoW;
-        const cropH = (frame.offsetHeight / viewH) * videoH;
+      try {
+        for (let key of scanList) {
+          const frame = frames[key];
+          if (!frame) continue;
+          
+          // Map screen coordinates relative to actual video resolution
+          const cropX = (frame.offsetLeft / viewW) * videoW;
+          const cropY = (frame.offsetTop / viewH) * videoH;
+          const cropW = (frame.offsetWidth / viewW) * videoW;
+          const cropH = (frame.offsetHeight / viewH) * videoH;
 
-        canvas.width = cropW * 2.0; // 2.0x scaling is perfectly sharp for digital digits and saves 36% CPU vs 2.5x!
-        canvas.height = cropH * 2.0;
+          canvas.width = cropW * 2.0; // 2.0x scaling is perfectly sharp for digital digits and saves 36% CPU vs 2.5x!
+          canvas.height = cropH * 2.0;
 
-        // Draw crop area on helper canvas
-        ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
-        
-        // Binarize for high-contrast OCR
-        preprocess(ctx, canvas.width, canvas.height);
+          // Draw crop area on helper canvas
+          ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+          
+          // Binarize for high-contrast OCR
+          preprocess(ctx, canvas.width, canvas.height);
 
-        try {
-          const { data: { text } } = await ocrWorker.recognize(canvas);
-          const cleanText = text.replace(/[^0-9:]/g, '').trim();
-          if (cleanText) {
-            payload[key === 'period' ? 'period' : key] = cleanText;
+          try {
+            // Race Tesseract recognize with a 1500ms timeout to prevent permanent thread hangs
+            const ocrPromise = ocrWorker.recognize(canvas);
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Scan Timeout')), 1500)
+            );
+            
+            const { data: { text } } = await Promise.race([ocrPromise, timeoutPromise]);
+            const cleanText = text.replace(/[^0-9:]/g, '').trim();
+            if (cleanText) {
+              payload[key === 'period' ? 'period' : key] = cleanText;
+            }
+          } catch(err) {
+            console.warn(`OCR scan failed for ${key}:`, err.message || err);
           }
-        } catch(err) {}
 
-        // Crucial: Yield control to the browser for 40ms to let it paint the video feed
-        await new Promise(resolve => setTimeout(resolve, 40));
+          // Crucial: Yield control to the browser for 40ms to let it paint the video feed
+          await new Promise(resolve => setTimeout(resolve, 40));
+        }
+
+        if (Object.keys(payload).length > 0) {
+          sendUpdate(payload);
+        }
+      } catch (globalErr) {
+        console.error("Global capture error:", globalErr);
+      } finally {
+        // ALWAYS schedule the next scan, even if loop threw an exception or locked up
+        if (syncActive) {
+          setTimeout(captureAndOCR, 1000);
+        }
       }
-
-      if (Object.keys(payload).length > 0) {
-        sendUpdate(payload);
-      }
-
-      // Repeat loop every 1000ms (1 second) to prevent mobile thermal throttle & system lag
-      setTimeout(captureAndOCR, 1000);
     }
 
     // Transmit state to cloud
     function sendUpdate(payload) {
       const user = document.getElementById('session-input').value || 'default';
 
-      if (db) {
-        // Direct Firebase write for serverless cloud setup
+      // Determine target environment
+      let target = syncTarget;
+      if (target === 'auto') {
+        const host = window.location.hostname;
+        if ((host.includes('vercel.app') || host.includes('vercel.sh')) && db) {
+          target = 'firebase';
+        } else if (host.includes('onrender.com')) {
+          target = 'api-onrender';
+        } else {
+          target = 'api-local';
+        }
+      }
+
+      if (target === 'firebase' && db) {
+        // Direct Firebase write (Vercel serverless mode)
         db.ref(`ocr/${user}`).update(payload)
           .then(() => {
             document.getElementById('status-text').textContent = `Syncing (Firebase)... (${JSON.stringify(payload)})`;
@@ -545,8 +581,12 @@
         return;
       }
 
-      // Local/OnRender HTTP POST fallback
-      const url = `/api/ocr?user=${encodeURIComponent(user)}`;
+      // API POST targeting (Local Offline or OnRender Cloud)
+      let url = `/api/ocr?user=${encodeURIComponent(user)}`;
+      if (target === 'api-onrender') {
+        url = `https://basketball-scoreboard-o0c7.onrender.com/api/ocr?user=${encodeURIComponent(user)}`;
+      }
+
       fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -554,11 +594,11 @@
       })
       .then(res => res.json())
       .then(d => {
-        document.getElementById('status-text').textContent = `Syncing (API)... (${JSON.stringify(payload)})`;
+        document.getElementById('status-text').textContent = `Syncing (${target === 'api-onrender' ? 'OnRender' : 'API'})... (${JSON.stringify(payload)})`;
         document.getElementById('status-text').style.color = '#16c784';
       })
       .catch(() => {
-        document.getElementById('status-text').textContent = 'Connection Error';
+        document.getElementById('status-text').textContent = 'API Connection Error';
         document.getElementById('status-text').style.color = '#ef4444';
       });
     }
@@ -592,6 +632,12 @@
       alert(`Session saved as: ${user}`);
     }
 
+    function updateSyncTarget() {
+      const select = document.getElementById('sync-target-select');
+      syncTarget = select.value;
+      localStorage.setItem('hc_ocr_sync_target', syncTarget);
+    }
+
     function toggleHelp() {
       const overlay = document.getElementById('help-overlay');
       const isVisible = overlay.style.display === 'flex';
@@ -608,6 +654,13 @@
         document.getElementById('session-input').value = savedSession;
       }
       
+      const savedTarget = localStorage.getItem('hc_ocr_sync_target');
+      if (savedTarget) {
+        syncTarget = savedTarget;
+        const select = document.getElementById('sync-target-select');
+        if (select) select.value = savedTarget;
+      }
+
       // Auto-show help guide on first visit
       const helpShown = localStorage.getItem('hc_ocr_help_shown');
       if (!helpShown) {
