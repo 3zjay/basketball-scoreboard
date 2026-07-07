@@ -321,6 +321,15 @@
     <div class="status-panel">
       <div class="status-item">Status: <span id="status-text" style="color:#f5c842;">Configuring...</span></div>
       <div class="status-item">Engine: <span id="engine-status">Loading OCR...</span></div>
+      <div class="status-item" style="grid-column: span 2; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px;">
+        <span style="color:var(--grey); font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase;">AI Readings (Live Preview):</span>
+        <div style="display:flex; justify-content:space-between; margin-top: 6px; font-size:12px;">
+          <div>🕒 <span id="read-clock" style="color:var(--orange2); font-weight:bold;">--</span></div>
+          <div>🏠 <span id="read-home" style="color:#f5c842; font-weight:bold;">--</span></div>
+          <div>✈️ <span id="read-away" style="color:#ef4444; font-weight:bold;">--</span></div>
+          <div>⏱️ <span id="read-period" style="color:#a855f7; font-weight:bold;">--</span></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -596,6 +605,22 @@
             const cleanText = text.replace(/[^0-9:]/g, '').trim();
             if (cleanText) {
               payload[key === 'period' ? 'period' : key] = cleanText;
+              
+              // Flash value green in visual readings panel
+              const displayKey = key === 'period' ? 'period' : key;
+              const previewEl = document.getElementById(`read-${displayKey}`);
+              if (previewEl) {
+                previewEl.textContent = cleanText;
+                previewEl.style.color = '#16c784';
+                setTimeout(() => {
+                  if (previewEl) {
+                    if (displayKey === 'clock') previewEl.style.color = 'var(--orange2)';
+                    else if (displayKey === 'home') previewEl.style.color = '#f5c842';
+                    else if (displayKey === 'away') previewEl.style.color = '#ef4444';
+                    else if (displayKey === 'period') previewEl.style.color = '#a855f7';
+                  }
+                }, 300);
+              }
             }
           } catch(err) {
             console.warn(`OCR scan failed for ${key}:`, err.message || err);
