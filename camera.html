@@ -736,6 +736,15 @@
         if (select) select.value = savedTarget;
       }
 
+      // Allow URL target override (e.g. ?target=api-onrender)
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryTarget = urlParams.get('target');
+      if (queryTarget) {
+        syncTarget = queryTarget;
+        const select = document.getElementById('sync-target-select');
+        if (select) select.value = queryTarget;
+      }
+
       // Auto-show help guide on first visit
       const helpShown = localStorage.getItem('hc_ocr_help_shown');
       if (!helpShown) {
