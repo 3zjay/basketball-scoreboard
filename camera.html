@@ -653,6 +653,34 @@
       return true; // Valid frame
     }
 
+    function isImageUnchanged(ctx, w, h, key) {
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const data = imgData.data;
+      
+      if (!window.lastBinarizedPixels) {
+        window.lastBinarizedPixels = {};
+      }
+      
+      const lastPixels = window.lastBinarizedPixels[key];
+      if (!lastPixels || lastPixels.length !== data.length) {
+        window.lastBinarizedPixels[key] = new Uint8Array(data);
+        return false;
+      }
+      
+      let diffs = 0;
+      const threshold = data.length * 0.005; // 0.5% tolerance threshold for noise/flicker
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i] !== lastPixels[i]) {
+          diffs++;
+          if (diffs > threshold) {
+            window.lastBinarizedPixels[key] = new Uint8Array(data);
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
     function mapLettersToDigits(text) {
       if (!text) return '';
       return text
@@ -768,6 +796,11 @@
           }
 
           if (isValidFrame) {
+            // Skip OCR scan if the crop frame binarization remains identical to save GPU/CPU cycles
+            if (isImageUnchanged(ctx, canvas.width, canvas.height, key)) {
+              return;
+            }
+
             try {
               // Race Tesseract recognize with a 1500ms timeout to prevent permanent thread hangs
               const ocrPromise = ocrWorker.recognize(canvas);
@@ -846,7 +879,7 @@
       } finally {
         // ALWAYS schedule the next scan, even if loop threw an exception or locked up
         if (syncActive) {
-          setTimeout(captureAndOCR, 350);
+          setTimeout(captureAndOCR, 1000);
         }
       }
     }
