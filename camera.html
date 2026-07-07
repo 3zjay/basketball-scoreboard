@@ -932,7 +932,14 @@
       
       const videoContainer = document.getElementById('video-container');
       if (videoContainer) {
-        videoContainer.style.display = batterySaverActive ? 'none' : 'block';
+        if (batterySaverActive) {
+          // Move off-screen instead of display: none to keep iOS Safari/WebKit video decoding active!
+          videoContainer.style.position = 'absolute';
+          videoContainer.style.left = '-9999px';
+        } else {
+          videoContainer.style.position = '';
+          videoContainer.style.left = '';
+        }
       }
       
       Object.keys(frames).forEach(k => {
