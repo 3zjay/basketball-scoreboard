@@ -729,12 +729,26 @@
       }
     }
 
+    function getLoggedInUser() {
+      try {
+        const localUser = localStorage.getItem('hc_session_user');
+        if (localUser) return localUser;
+        const match = document.cookie.match(new RegExp('(^| )hc_session_user=([^;]+)'));
+        return match ? decodeURIComponent(match[2]) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
     // Initial setups
     window.addEventListener('load', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryUser = urlParams.get('user');
       const savedSession = localStorage.getItem('hc_ocr_session');
-      if (savedSession) {
-        document.getElementById('session-input').value = savedSession;
-      }
+      const loggedInUser = getLoggedInUser();
+
+      const activeUser = queryUser || savedSession || loggedInUser || 'default';
+      document.getElementById('session-input').value = activeUser;
       
       const savedTarget = localStorage.getItem('hc_ocr_sync_target');
       if (savedTarget) {
@@ -744,7 +758,6 @@
       }
 
       // Allow URL target override (e.g. ?target=api-onrender)
-      const urlParams = new URLSearchParams(window.location.search);
       const queryTarget = urlParams.get('target');
       if (queryTarget) {
         syncTarget = queryTarget;
