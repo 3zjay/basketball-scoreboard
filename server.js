@@ -257,13 +257,23 @@ http.createServer((req, res) => {
         const incoming = JSON.parse(b);
         let updated = {};
 
-        // 1. Parse Clock (e.g., "10:00", "09:58", "58.4", or integer seconds)
+        // 1. Parse Clock (e.g., "10:00", "09:58", "58.4", or colon-less "0831" / "831")
         if (incoming.clock != null) {
-          const clockStr = String(incoming.clock).trim();
+          const clockStr = String(incoming.clock).replace(/\s/g, '').trim(); // Remove all spaces
           if (clockStr.includes(':')) {
             const parts = clockStr.split(':');
             const mins = parseInt(parts[0], 10) || 0;
             const secs = parseInt(parts[1], 10) || 0;
+            updated.gameSeconds = mins * 60 + secs;
+          } else if (clockStr.length === 3) {
+            // e.g. "831" -> 8 mins, 31 secs
+            const mins = parseInt(clockStr.substring(0, 1), 10) || 0;
+            const secs = parseInt(clockStr.substring(1), 10) || 0;
+            updated.gameSeconds = mins * 60 + secs;
+          } else if (clockStr.length === 4) {
+            // e.g. "0831" -> 8 mins, 31 secs
+            const mins = parseInt(clockStr.substring(0, 2), 10) || 0;
+            const secs = parseInt(clockStr.substring(2), 10) || 0;
             updated.gameSeconds = mins * 60 + secs;
           } else {
             const parsedVal = parseFloat(clockStr) || 0;
