@@ -1882,17 +1882,22 @@ function connectSSE(){
           }
 
           if (incomingSeconds !== null) {
-            updated.gameSeconds = incomingSeconds;
+            const drift = Math.abs(S.gameSeconds - incomingSeconds);
+            let isRunning = S.gameRunning;
             if (window.lastAISeconds !== undefined) {
               if (incomingSeconds < window.lastAISeconds) {
-                updated.gameRunning = true;
+                isRunning = true;
               } else if (incomingSeconds === window.lastAISeconds) {
-                updated.gameRunning = false;
+                isRunning = false;
               }
-            } else {
-              updated.gameRunning = S.gameRunning;
             }
             window.lastAISeconds = incomingSeconds;
+            updated.gameRunning = isRunning;
+
+            // Only snap local clock if drift is significant (> 2s) or if running state changed
+            if (drift > 2 || S.gameRunning !== isRunning) {
+              updated.gameSeconds = incomingSeconds;
+            }
           }
         }
 
