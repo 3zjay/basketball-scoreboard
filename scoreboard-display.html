@@ -473,10 +473,11 @@ function connectSSE(){
       if (Date.now() - _lastLocalMsgTime < 2000) return;
       const d = snapshot.val();
       if (!d) return;
-      stopLocalTick();
+      
+      const runChanged = d.gameRunning !== S.gameRunning || d.shotRunning !== S.shotRunning;
       S = {...DEF, ...d};
       render();
-      syncLocalTick();
+      if (runChanged) syncLocalTick();
     });
     db.ref(`buzz/${fbUser}`).on('value', snapshot => {
       if (Date.now() - _lastLocalMsgTime < 2000) return;
@@ -499,7 +500,11 @@ function connectSSE(){
       }
       else if(msg.type==='state'){
         if (Date.now() - _lastLocalMsgTime < 2000) return;
-        stopLocalTick(); S={...DEF,...msg.data}; render(); syncLocalTick();
+        const d = msg.data;
+        const runChanged = d.gameRunning !== S.gameRunning || d.shotRunning !== S.shotRunning;
+        S={...DEF,...d}; 
+        render(); 
+        if (runChanged) syncLocalTick();
       }
     } catch(err){}
   };

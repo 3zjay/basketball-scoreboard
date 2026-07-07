@@ -1443,9 +1443,6 @@ function startLocalGameTick(){
     if(S.gameRunning && S.gameSeconds > 0){ 
       S.gameSeconds--; 
       renderGameClock(); 
-      if (useFirebase && db) {
-        db.ref(`states/${fbUser}`).update({ gameSeconds: S.gameSeconds });
-      }
       broadcastState();
     }
     else { 
@@ -1463,9 +1460,6 @@ function startLocalShotTick(){
     if(S.shotRunning && S.shotSeconds > 0){ 
       S.shotSeconds--; 
       renderShotClock(); 
-      if (useFirebase && db) {
-        db.ref(`states/${fbUser}`).update({ shotSeconds: S.shotSeconds });
-      }
       broadcastState();
     }
     else { 
