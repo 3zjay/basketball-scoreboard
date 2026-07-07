@@ -642,11 +642,18 @@
         }
       }
 
+      // Map local camera OCR keys (clock, home, away, period) to standard database/API schema keys (clock, homeScore, awayScore, period)
+      const mapped = {};
+      if (payload.clock != null) mapped.clock = payload.clock;
+      if (payload.home != null) mapped.homeScore = payload.home;
+      if (payload.away != null) mapped.awayScore = payload.away;
+      if (payload.period != null) mapped.period = payload.period;
+
       if (target === 'firebase' && db) {
         // Direct Firebase write (Vercel serverless mode)
-        db.ref(`ocr/${user}`).update(payload)
+        db.ref(`ocr/${user}`).update(mapped)
           .then(() => {
-            document.getElementById('status-text').textContent = `Syncing (Firebase)... (${JSON.stringify(payload)})`;
+            document.getElementById('status-text').textContent = `Syncing (Firebase)... (${JSON.stringify(mapped)})`;
             document.getElementById('status-text').style.color = '#16c784';
           })
           .catch(() => {
@@ -665,11 +672,11 @@
       fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(mapped)
       })
       .then(res => res.json())
       .then(d => {
-        document.getElementById('status-text').textContent = `Syncing (${target === 'api-onrender' ? 'OnRender' : 'API'})... (${JSON.stringify(payload)})`;
+        document.getElementById('status-text').textContent = `Syncing (${target === 'api-onrender' ? 'OnRender' : 'API'})... (${JSON.stringify(mapped)})`;
         document.getElementById('status-text').style.color = '#16c784';
       })
       .catch(() => {

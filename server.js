@@ -248,8 +248,10 @@ http.createServer((req, res) => {
   if (req.method === 'POST' && pathname === '/api/ocr') {
     readBody(req).then(b => {
       try {
-        // Gatekeeper check: only apply if AI Sync is enabled in this session's state
-        if (states[user] && states[user].aiSyncEnabled) {
+        if (states[user]) {
+          // Auto-enable AI Sync on the server if we receive an OCR payload
+          states[user].aiSyncEnabled = true;
+          
           const incoming = JSON.parse(b);
           let updated = {};
 
@@ -267,12 +269,14 @@ http.createServer((req, res) => {
             }
           }
 
-          // 2. Parse Scores
-          if (incoming.homeScore != null) {
-            updated.homeScore = parseInt(incoming.homeScore, 10) || 0;
+          // 2. Parse Scores (Accept both homeScore/awayScore and raw home/away keys)
+          const hScore = incoming.homeScore !== undefined ? incoming.homeScore : incoming.home;
+          if (hScore != null) {
+            updated.homeScore = parseInt(hScore, 10) || 0;
           }
-          if (incoming.awayScore != null) {
-            updated.awayScore = parseInt(incoming.awayScore, 10) || 0;
+          const aScore = incoming.awayScore !== undefined ? incoming.awayScore : incoming.away;
+          if (aScore != null) {
+            updated.awayScore = parseInt(aScore, 10) || 0;
           }
 
           // 3. Parse Period/Quarter
