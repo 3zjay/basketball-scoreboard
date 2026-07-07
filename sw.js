@@ -1,5 +1,5 @@
 // Service Worker — enables PWA install on Android & iOS
-const CACHE = 'scoreboard-v2';
+const CACHE = 'scoreboard-v3';
 const ASSETS = [
   '/control',
   '/shotclock',
@@ -31,6 +31,16 @@ self.addEventListener('fetch', e => {
   }
   
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    fetch(e.request).catch(() => {
+      return caches.match(e.request, { ignoreSearch: true }).then(cachedResponse => {
+        if (cachedResponse) return cachedResponse;
+        // Return a valid response instead of undefined to prevent WebKit process crashes
+        return new Response("Connection lost — offline.", {
+          status: 503,
+          statusText: "Service Unavailable",
+          headers: new Headers({ 'Content-Type': 'text/plain' })
+        });
+      });
+    })
   );
 });
