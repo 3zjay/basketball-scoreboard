@@ -248,59 +248,60 @@ http.createServer((req, res) => {
   if (req.method === 'POST' && pathname === '/api/ocr') {
     readBody(req).then(b => {
       try {
-        if (states[user]) {
-          // Auto-enable AI Sync on the server if we receive an OCR payload
-          states[user].aiSyncEnabled = true;
+        // Ensure the session state is initialized on the server
+        getOrCreateUser(user);
+        
+        // Auto-enable AI Sync on the server if we receive an OCR payload
+        states[user].aiSyncEnabled = true;
           
-          const incoming = JSON.parse(b);
-          let updated = {};
+        const incoming = JSON.parse(b);
+        let updated = {};
 
-          // 1. Parse Clock (e.g., "10:00", "09:58", "58.4", or integer seconds)
-          if (incoming.clock != null) {
-            const clockStr = String(incoming.clock).trim();
-            if (clockStr.includes(':')) {
-              const parts = clockStr.split(':');
-              const mins = parseInt(parts[0], 10) || 0;
-              const secs = parseInt(parts[1], 10) || 0;
-              updated.gameSeconds = mins * 60 + secs;
-            } else {
-              const parsedVal = parseFloat(clockStr) || 0;
-              updated.gameSeconds = Math.round(parsedVal);
-            }
+        // 1. Parse Clock (e.g., "10:00", "09:58", "58.4", or integer seconds)
+        if (incoming.clock != null) {
+          const clockStr = String(incoming.clock).trim();
+          if (clockStr.includes(':')) {
+            const parts = clockStr.split(':');
+            const mins = parseInt(parts[0], 10) || 0;
+            const secs = parseInt(parts[1], 10) || 0;
+            updated.gameSeconds = mins * 60 + secs;
+          } else {
+            const parsedVal = parseFloat(clockStr) || 0;
+            updated.gameSeconds = Math.round(parsedVal);
           }
-
-          // 2. Parse Scores (Accept both homeScore/awayScore and raw home/away keys)
-          const hScore = incoming.homeScore !== undefined ? incoming.homeScore : incoming.home;
-          if (hScore != null) {
-            updated.homeScore = parseInt(hScore, 10) || 0;
-          }
-          const aScore = incoming.awayScore !== undefined ? incoming.awayScore : incoming.away;
-          if (aScore != null) {
-            updated.awayScore = parseInt(aScore, 10) || 0;
-          }
-
-          // 3. Parse Period/Quarter
-          if (incoming.period != null) {
-            updated.quarter = parseInt(incoming.period, 10) || 1;
-          }
-
-          // 4. Parse Shot Clock (if present)
-          if (incoming.shotClock != null) {
-            const scStr = String(incoming.shotClock).trim();
-            updated.shotSeconds = parseInt(scStr, 10) || 24;
-          }
-
-          // Since camera is running the clock, make sure local server ticker doesn't overlap
-          if (states[user].gameRunning) {
-            stopGameClock(user);
-          }
-          if (states[user].shotRunning) {
-            stopShotClock(user);
-          }
-
-          states[user] = { ...states[user], ...updated };
-          pushToAll(user, { type: 'state', data: fullState(user) });
         }
+
+        // 2. Parse Scores (Accept both homeScore/awayScore and raw home/away keys)
+        const hScore = incoming.homeScore !== undefined ? incoming.homeScore : incoming.home;
+        if (hScore != null) {
+          updated.homeScore = parseInt(hScore, 10) || 0;
+        }
+        const aScore = incoming.awayScore !== undefined ? incoming.awayScore : incoming.away;
+        if (aScore != null) {
+          updated.awayScore = parseInt(aScore, 10) || 0;
+        }
+
+        // 3. Parse Period/Quarter
+        if (incoming.period != null) {
+          updated.quarter = parseInt(incoming.period, 10) || 1;
+        }
+
+        // 4. Parse Shot Clock (if present)
+        if (incoming.shotClock != null) {
+          const scStr = String(incoming.shotClock).trim();
+          updated.shotSeconds = parseInt(scStr, 10) || 24;
+        }
+
+        // Since camera is running the clock, make sure local server ticker doesn't overlap
+        if (states[user].gameRunning) {
+          stopGameClock(user);
+        }
+        if (states[user].shotRunning) {
+          stopShotClock(user);
+        }
+
+        states[user] = { ...states[user], ...updated };
+        pushToAll(user, { type: 'state', data: fullState(user) });
       } catch(e) {}
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end('{"ok":true}');
