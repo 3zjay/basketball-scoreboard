@@ -394,9 +394,9 @@
     async function initOCR() {
       document.getElementById('engine-status').textContent = 'Initializing...';
       try {
-        // Use lightweight 4.0.0_fast model (4.5MB instead of 15.5MB) to prevent memory crashes on iOS Safari/Chrome
+        // Use lightweight 4.0.0_best_int model (~2.9MB) which is fully supported and stable on mobile
         ocrWorker = await Tesseract.createWorker('eng', 1, {
-          langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_fast/'
+          langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int/'
         });
         await ocrWorker.setParameters({
           tessedit_char_whitelist: '0123456789:',
