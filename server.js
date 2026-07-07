@@ -461,25 +461,30 @@ const requestHandler = (req, res) => {
   res.writeHead(404); res.end('Not found');
 };
 
-// HTTP or HTTPS Server Boot
+// HTTP and HTTPS Dual Server Boot
 const keyPath = path.join(__dirname, 'key.pem');
 const certPath = path.join(__dirname, 'cert.pem');
 const https = require('https');
 
+// 1. Always boot the HTTP server on PORT (3000) so local Control Panel and OBS don't break with SSL issues
+http.createServer(requestHandler).listen(PORT, () => {
+  console.log('Scoreboard HTTP server running on http://localhost:' + PORT);
+});
+
+// 2. If SSL certs are present, also boot the HTTPS server on PORT + 1 (3001) for the Phone Camera Scanner
 if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
   const options = {
     key: fs.readFileSync(keyPath),
     cert: fs.readFileSync(certPath)
   };
-  https.createServer(options, requestHandler).listen(PORT, () => {
-    console.log('Secure HTTPS Scoreboard server running on https://localhost:' + PORT);
+  const PORT_HTTPS = parseInt(PORT, 10) + 1;
+  https.createServer(options, requestHandler).listen(PORT_HTTPS, () => {
+    console.log('Secure HTTPS server (for phone camera) running on https://localhost:' + PORT_HTTPS);
+    console.log('Phone camera URL: https://[your-laptop-ip]:' + PORT_HTTPS + '/camera');
   });
 } else {
-  http.createServer(requestHandler).listen(PORT, () => {
-    console.log('Scoreboard server running on http://localhost:' + PORT);
-    console.log('\nTo run securely over local IP (allowing phone camera access offline):');
-    console.log('1. Run this command on your laptop to generate self-signed SSL certs:');
-    console.log('   openssl req -nodes -new -x509 -keyout key.pem -out cert.pem -days 365 -subj "/CN=localhost"');
-    console.log('2. Restart this server (npm run dev). It will automatically run over https://');
-  });
+  console.log('\nTo run securely over local IP (allowing phone camera access offline):');
+  console.log('1. Run this command on your laptop to generate self-signed SSL certs:');
+  console.log('   openssl req -nodes -new -x509 -keyout key.pem -out cert.pem -days 365 -subj "/CN=localhost"');
+  console.log('2. Restart this server (npm run dev). It will open a secure port 3001 for your phone camera.');
 }
