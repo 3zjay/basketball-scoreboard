@@ -471,10 +471,11 @@
       activeCrop = key;
       document.querySelectorAll('.config-tab').forEach(tab => {
         const txt = tab.textContent.toLowerCase();
-        const isMatch = (key === 'clock' && txt.includes('clock')) ||
+        const isMatch = (key === 'clock' && txt.includes('clock') && !txt.includes('shot')) ||
                         (key === 'home' && txt.includes('home')) ||
                         (key === 'away' && txt.includes('away')) ||
-                        (key === 'period' && txt.includes('period'));
+                        (key === 'period' && txt.includes('period')) ||
+                        (key === 'shot' && txt.includes('shot'));
         tab.classList.toggle('active', isMatch);
       });
       const savedT = thresholds[key] || 120;
@@ -663,8 +664,9 @@
       const viewW = video.offsetWidth;
       const viewH = video.offsetHeight;
 
-      if (!videoW || !videoH) {
-        setTimeout(captureAndOCR, 1000);
+      // Layout protection check to prevent NaN division during render cycles
+      if (!videoW || !videoH || !viewW || !viewH) {
+        setTimeout(captureAndOCR, 500);
         return;
       }
 
@@ -815,12 +817,13 @@
         }
       }
 
-      // Map local camera OCR keys (clock, home, away, period) to standard database/API schema keys (clock, homeScore, awayScore, period)
+      // Map local camera OCR keys to standard database/API schema keys
       const mapped = {};
       if (payload.clock != null) mapped.clock = payload.clock;
       if (payload.home != null) mapped.homeScore = payload.home;
       if (payload.away != null) mapped.awayScore = payload.away;
       if (payload.period != null) mapped.period = payload.period;
+      if (payload.shotClock != null) mapped.shotClock = payload.shotClock;
 
       if (target === 'firebase' && db) {
         // Direct Firebase write (Vercel serverless mode)
