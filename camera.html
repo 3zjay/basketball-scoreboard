@@ -561,6 +561,20 @@
       return true; // Valid frame
     }
 
+    function mapLettersToDigits(text) {
+      if (!text) return '';
+      return text
+        .replace(/[Oo]/g, '0')
+        .replace(/[Ii|l]/g, '1')
+        .replace(/[Bb]/g, '8')
+        .replace(/[Ss]/g, '5')
+        .replace(/[Gg]/g, '9')
+        .replace(/[Qq]/g, '9')
+        .replace(/[Zz]/g, '2')
+        .replace(/[Tt]/g, '7')
+        .replace(/[Aa]/g, '4');
+    }
+
     function isValidClock(str) {
       if (!/[0-9]/.test(str)) return false;
       if (str.includes(':')) {
@@ -646,7 +660,8 @@
             );
             
             const { data: { text } } = await Promise.race([ocrPromise, timeoutPromise]);
-            const cleanText = text.replace(/[^0-9:]/g, '').trim();
+            const mappedText = mapLettersToDigits(text);
+            const cleanText = mappedText.replace(/[^0-9:]/g, '').trim();
             if (cleanText) {
               let isVal = false;
               if (key === 'clock') {
