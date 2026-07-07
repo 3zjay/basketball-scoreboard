@@ -474,10 +474,19 @@ function connectSSE(){
       const d = snapshot.val();
       if (!d) return;
       
-      const runChanged = d.gameRunning !== S.gameRunning || d.shotRunning !== S.shotRunning;
-      S = {...DEF, ...d};
+      const runGameChanged = d.gameRunning !== S.gameRunning;
+      const runShotChanged = d.shotRunning !== S.shotRunning;
+
+      // Only update seconds if drift is significant (> 2s) or if running state changed
+      const gameDrift = Math.abs(S.gameSeconds - d.gameSeconds);
+      const shotDrift = Math.abs(S.shotSeconds - d.shotSeconds);
+
+      const targetGameSeconds = (gameDrift > 2 || runGameChanged) ? d.gameSeconds : S.gameSeconds;
+      const targetShotSeconds = (shotDrift > 2 || runShotChanged) ? d.shotSeconds : S.shotSeconds;
+
+      S = {...DEF, ...d, gameSeconds: targetGameSeconds, shotSeconds: targetShotSeconds};
       render();
-      if (runChanged) syncLocalTick();
+      if (runGameChanged || runShotChanged) syncLocalTick();
     });
     db.ref(`buzz/${fbUser}`).on('value', snapshot => {
       if (Date.now() - _lastLocalMsgTime < 2000) return;
@@ -501,10 +510,18 @@ function connectSSE(){
       else if(msg.type==='state'){
         if (Date.now() - _lastLocalMsgTime < 2000) return;
         const d = msg.data;
-        const runChanged = d.gameRunning !== S.gameRunning || d.shotRunning !== S.shotRunning;
-        S={...DEF,...d}; 
-        render(); 
-        if (runChanged) syncLocalTick();
+        const runGameChanged = d.gameRunning !== S.gameRunning;
+        const runShotChanged = d.shotRunning !== S.shotRunning;
+
+        const gameDrift = Math.abs(S.gameSeconds - d.gameSeconds);
+        const shotDrift = Math.abs(S.shotSeconds - d.shotSeconds);
+
+        const targetGameSeconds = (gameDrift > 2 || runGameChanged) ? d.gameSeconds : S.gameSeconds;
+        const targetShotSeconds = (shotDrift > 2 || runShotChanged) ? d.shotSeconds : S.shotSeconds;
+
+        S = {...DEF, ...d, gameSeconds: targetGameSeconds, shotSeconds: targetShotSeconds};
+        render();
+        if (runGameChanged || runShotChanged) syncLocalTick();
       }
     } catch(err){}
   };
