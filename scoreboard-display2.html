@@ -345,16 +345,7 @@ const DEF = {
 let S = {...DEF};
 let lastHome = -1, lastAway = -1;
 
-let localTick = null;
-function startLocalTick(){
-  if(localTick) return;
-  localTick = setInterval(()=>{
-    if(S.gameRunning && S.gameSeconds > 0){ S.gameSeconds--; renderClocks(); }
-    if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; renderClocks(); }
-  }, 1000);
-}
-function stopLocalTick(){ clearInterval(localTick); localTick = null; }
-function syncLocalTick(){ if(S.gameRunning || S.shotRunning){ startLocalTick(); } else { stopLocalTick(); } }
+function syncLocalTick(){}
 
 function renderClocks(){
   const m = Math.floor(S.gameSeconds/60), sec = S.gameSeconds%60;
@@ -461,19 +452,8 @@ function connectSSE(){
       const d = snapshot.val();
       if (!d) return;
       
-      const runGameChanged = d.gameRunning !== S.gameRunning;
-      const runShotChanged = d.shotRunning !== S.shotRunning;
-
-      // Only update seconds if drift is significant (> 2s) or if running state changed
-      const gameDrift = Math.abs(S.gameSeconds - d.gameSeconds);
-      const shotDrift = Math.abs(S.shotSeconds - d.shotSeconds);
-
-      const targetGameSeconds = (gameDrift > 2 || runGameChanged) ? d.gameSeconds : S.gameSeconds;
-      const targetShotSeconds = (shotDrift > 2 || runShotChanged) ? d.shotSeconds : S.shotSeconds;
-
-      S = {...DEF, ...d, gameSeconds: targetGameSeconds, shotSeconds: targetShotSeconds};
+      S = {...DEF, ...d};
       render();
-      if (runGameChanged || runShotChanged) syncLocalTick();
     });
     db.ref(`buzz/${fbUser}`).on('value', snapshot => {
       if (Date.now() - _lastLocalMsgTime < 2000) return;
@@ -495,18 +475,8 @@ function connectSSE(){
       else if(msg.type==='state'){
         if (Date.now() - _lastLocalMsgTime < 2000) return;
         const d = msg.data;
-        const runGameChanged = d.gameRunning !== S.gameRunning;
-        const runShotChanged = d.shotRunning !== S.shotRunning;
-
-        const gameDrift = Math.abs(S.gameSeconds - d.gameSeconds);
-        const shotDrift = Math.abs(S.shotSeconds - d.shotSeconds);
-
-        const targetGameSeconds = (gameDrift > 2 || runGameChanged) ? d.gameSeconds : S.gameSeconds;
-        const targetShotSeconds = (shotDrift > 2 || runShotChanged) ? d.shotSeconds : S.shotSeconds;
-
-        S = {...DEF, ...d, gameSeconds: targetGameSeconds, shotSeconds: targetShotSeconds};
+        S = {...DEF, ...d};
         render();
-        if (runGameChanged || runShotChanged) syncLocalTick();
       }
     } catch(err){}
   };
