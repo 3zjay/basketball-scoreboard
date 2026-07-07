@@ -580,7 +580,7 @@ body.light .reset-btn:hover { background:#fee2e2; }
       <input type="checkbox" id="aiSyncToggle" onchange="toggleAiSync(this.checked)" style="accent-color:var(--orange);cursor:pointer;width:14px;height:14px;margin:0;">
       🤖 AI Sync
     </label>
-    <a href="/camera" id="scannerLink" target="_blank" class="mode-toggle" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:4px;border-color:#16c784;color:#16c784;">
+    <a href="#" id="scannerLink" onclick="openScannerModal(event)" class="mode-toggle" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:4px;border-color:#16c784;color:#16c784;">
       📱 Scanner
     </a>
     <div class="live-badge connecting" id="liveBadge">
@@ -2171,6 +2171,66 @@ function toggleMode(){
     document.getElementById('modeToggle').textContent = '🌙 Dark Mode';
   }
 })();
+// Fetch server network IP for phone camera QR matching
+let serverNetworkIp = '';
+fetch('/api/ip')
+  .then(res => res.json())
+  .then(data => {
+    if (data && data.ip) {
+      serverNetworkIp = data.ip;
+    }
+  })
+  .catch(() => {});
+
+// QR Scanner Connect Modal Handlers
+function openScannerModal(e) {
+  if (e) e.preventDefault();
+  const suffix = `?user=${encodeURIComponent(currentUser)}`;
+  let scannerUrl = '';
+  
+  if (location.protocol === 'http:' && (location.port === '3000' || location.port === '')) {
+    let host = location.hostname;
+    // Fallback to resolved local network IP if on localhost
+    if ((host === 'localhost' || host === '127.0.0.1') && serverNetworkIp) {
+      host = serverNetworkIp;
+    }
+    scannerUrl = `https://${host}:3001/camera${suffix}`;
+  } else {
+    scannerUrl = `${window.location.origin}/camera${suffix}`;
+  }
+
+  document.getElementById('scannerCopyUrl').value = scannerUrl;
+  document.getElementById('scannerOpenBtn').href = scannerUrl;
+  document.getElementById('scannerQrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(scannerUrl)}`;
+  
+  document.getElementById('scannerModal').style.display = 'flex';
+}
+
+function closeScannerModal() {
+  document.getElementById('scannerModal').style.display = 'none';
+}
 </script>
+
+<!-- Scanner Connect Modal -->
+<div id="scannerModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:11000; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#080605; border:1px solid var(--border); border-radius:12px; max-width:400px; width:100%; padding:24px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+    <div style="font-family:'Barlow Condensed', sans-serif; font-size:20px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:var(--orange2); margin-bottom:12px;">📱 Connect AI Scanner</div>
+    <div style="font-size:12px; color:var(--grey); margin-bottom:20px; font-family:sans-serif; line-height:1.5;">Scan this QR code with your iPhone camera to launch the scanner automatically over secure HTTPS (Offline Port 3001).</div>
+    
+    <div style="background:#fff; padding:15px; border-radius:8px; display:inline-block; margin-bottom:20px; box-shadow:0 4px 15px rgba(0,0,0,0.2);">
+      <img id="scannerQrImage" src="" alt="QR Code" style="width:180px; height:180px; display:block;">
+    </div>
+
+    <div style="margin-bottom:24px;">
+      <span style="display:block; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--grey); margin-bottom:6px;">Scanner URL:</span>
+      <input type="text" id="scannerCopyUrl" readonly style="width:100%; background:#100b08; border:1px solid var(--border); color:#fff; padding:8px 12px; border-radius:6px; font-size:11px; text-align:center; outline:none; font-family:monospace;" onclick="this.select()">
+    </div>
+
+    <div style="display:flex; gap:12px; justify-content:center;">
+      <a id="scannerOpenBtn" href="" target="_blank" class="mode-toggle" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center; border-color:var(--orange); color:var(--orange); padding:8px 16px; border-radius:6px;">Open in Tab</a>
+      <button class="mode-toggle" onclick="closeScannerModal()" style="border-color:var(--grey); color:var(--grey); padding:8px 16px; border-radius:6px;">Close</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

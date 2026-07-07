@@ -438,6 +438,28 @@ const requestHandler = (req, res) => {
     return;
   }
 
+  // GET /api/ip — returns server local network IP for phone camera QR code matching
+  if (pathname === '/api/ip') {
+    const { networkInterfaces } = require('os');
+    const nets = networkInterfaces();
+    let ip = '127.0.0.1';
+    
+    // Look for active WiFi, Ethernet, or Hotspot network interfaces
+    for (const name of Object.keys(nets)) {
+      for (const net of nets[name]) {
+        if (net.family === 'IPv4' && !net.internal) {
+          // Prioritize standard local subnet ranges (192.168.x.x, 10.x.x.x, 172.x.x.x)
+          if (net.address.startsWith('192.168.') || net.address.startsWith('10.') || net.address.startsWith('172.')) {
+            ip = net.address;
+          }
+        }
+      }
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ip }));
+    return;
+  }
+
   // GET /state — initial snapshot
   if (pathname === '/state') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
