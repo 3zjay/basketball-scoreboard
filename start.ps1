@@ -50,7 +50,7 @@ Write-Host "Local browser access links:" -ForegroundColor White
 Write-Host "  Scoreboard Control  -> " -NoNewline; Write-Host "http://localhost:3000" -ForegroundColor Cyan
 Write-Host "  Venue Display       -> " -NoNewline; Write-Host "http://localhost:3000/display" -ForegroundColor Cyan
 Write-Host "  Shot Clock Display  -> " -NoNewline; Write-Host "http://localhost:3000/shotclock-display" -ForegroundColor Cyan
-Write-Host "  OBS Overlay         -> " -NoNewline; Write-Host "http://localhost:3000/overlay" -ForegroundColor Cyan
+Write-Host "  OBS Overlay         -> " -NoNewline; Write-Host "http://localhost:3000/fullscreen" -ForegroundColor Cyan
 Write-Host
 
 Write-Host "Press Ctrl+C in this window to stop the server." -ForegroundColor Yellow

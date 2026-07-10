@@ -57,8 +57,7 @@ This system is built to run entirely offline on a dedicated local network. Your 
 | **Venue Display 2** | `/display2` | Secondary Monitor / Gym Projector (Alternate Theme) |
 | **Shot Clock Display** | `/shotclock-display` | Primary court-side Shot Clock display monitor |
 | **Shot Clock Control** | `/shotclock` | Dedicated tablet or phone for the shot clock operator |
-| **OBS Bar Overlay** | `/overlay` | Lower-third scoreboard overlay for OBS Studio (1920 × 160) |
-| **OBS Fullscreen** | `/fullscreen` | Full-screen broadcast scoreboard graphic |
+| **OBS Fullscreen** | `/fullscreen` | Full-screen broadcast scoreboard graphic (or OBS Overlay) |
 | **NBA Scorebug** | `/nbaoverlay` | ESPN/NBA floating scoreboard bug (Bottom-right) |
 | **NBA Scorebug 2** | `/nbaoverlay2` | Alternate ESPN/NBA style floating scoreboard bug |
 
@@ -68,7 +67,7 @@ This system is built to run entirely offline on a dedicated local network. Your 
 
 To use the live scoreboard graphics on your stream:
 1. In OBS under **Sources**, click **`+`** and choose **`Browser`**.
-2. Set the **URL** to your local scoreboard link (e.g., `http://localhost:3000/overlay` or `http://localhost:3000/nbaoverlay`).
+2. Set the **URL** to your local scoreboard link (e.g., `http://localhost:3000/fullscreen` or `http://localhost:3000/nbaoverlay`).
 3. Set the **Width** to `1920` and **Height** to `1080` (or matching your canvas resolution).
 4. Click **OK**.
 

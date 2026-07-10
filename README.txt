@@ -96,8 +96,7 @@ The ecosystem contains **9 fully-functional web pages** communicating in real ti
 | **Venue Display 2** | `/display2` | Secondary Monitor / Gym Projector (Alternate Theme) |
 | **Shot Clock Display** | `/shotclock-display` | Primary court-side Shot Clock display monitor |
 | **Shot Clock Control** | `/shotclock` | Dedicated tablet or phone for the shot clock operator |
-| **OBS Bar Overlay** | `/overlay` | Lower-third scoreboard overlay for OBS Studio (1920 × 160) |
-| **OBS Fullscreen** | `/fullscreen` | Full-screen broadcast scoreboard graphic |
+| **OBS Fullscreen** | `/fullscreen` | Full-screen broadcast scoreboard graphic (or OBS Overlay) |
 | **NBA Scorebug** | `/nbaoverlay` | ESPN/NBA floating scoreboard bug (Bottom-right) |
 | **NBA Scorebug 2** | `/nbaoverlay2` | Alternate ESPN/NBA style floating scoreboard bug |
 
@@ -107,7 +106,7 @@ The ecosystem contains **9 fully-functional web pages** communicating in real ti
 
 To use the live scoreboard graphics on your stream:
 1. In OBS under **Sources**, click **`+`** and choose **`Browser`**.
-2. Set the **URL** to your deployment link (e.g. `http://localhost:3000/overlay` for local, or `https://your-app.vercel.app/overlay` for Vercel mode).
+2. Set the **URL** to your deployment link (e.g. `http://localhost:3000/fullscreen` for local, or `https://your-app.vercel.app/fullscreen` for Vercel mode).
 3. Set the **Width** to `1920` and **Height** to `1080` (or matching your canvas resolution).
 4. Click **OK**.
 

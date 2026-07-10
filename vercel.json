@@ -13,7 +13,7 @@
     { "source": "/display2", "destination": "/scoreboard-display2.html" },
     { "source": "/shotclock", "destination": "/shotclock-control.html" },
     { "source": "/shotclock-display", "destination": "/shotclock-display.html" },
-    { "source": "/overlay", "destination": "/basketball-overlay.html" },
+    { "source": "/overlay", "destination": "/basketball-fullscreen.html" },
     { "source": "/fullscreen", "destination": "/basketball-fullscreen.html" },
     { "source": "/nbaoverlay", "destination": "/basketball-nbaoverlay.html" },
     { "source": "/nbaoverlay2", "destination": "/basketball-nbaoverlay2.html" },
