@@ -1028,8 +1028,8 @@ function saveNow(){
 }
 // Push non-clock state to server. Clock state is server-owned — never sent here.
 function pushState(){
-  // Full logos stay local (too large for SSE). Thumbnails (~3-6KB) travel via state.
-  const toSend = {...S, homeLogo: null, awayLogo: null};
+  // Send full high-quality 200x200 PNG logos to overlays via database/SSE sync
+  const toSend = {...S};
   // homeLogoThumb / awayLogoThumb remain in toSend — they flow to all devices via SSE
   delete toSend.gameRunning; delete toSend.shotRunning;
   delete toSend.gameSeconds; delete toSend.shotSeconds;
