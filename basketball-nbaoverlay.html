@@ -30,18 +30,44 @@ html, body {
 .top-bar {
   display:flex;
   align-items:center;
+  justify-content:center;
   background:#0d1117;
   border-top:0.18vw solid #c8102e;
   border-radius:0.42vw 0.42vw 0 0;
   height:1.82vw;
   overflow:hidden;
 }
-.top-seg {
-  display:flex; align-items:center; justify-content:center;
-  height:100%; padding:0 0.78vw;
-  border-right:1px solid rgba(255,255,255,0.07);
+.top-text-centered{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:0.75vw;
+  font-weight:900;
+  color:rgba(255,255,255,0.85);
+  text-transform:uppercase;
+  letter-spacing:0.08vw;
+  text-shadow:0 0.05vw 0.1vw rgba(0,0,0,0.85);
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
-.top-seg:last-child { border-right:none; flex:1; }
+.live-dot-pulse{
+  width:0.5vw;
+  height:0.5vw;
+  background-color:#ff3b30;
+  border-radius:50%;
+  display:inline-block;
+  margin-right:0.4vw;
+  flex-shrink:0;
+  box-shadow:0 0 0.2vw #ff3b30;
+  animation:pulse-live 1.0s infinite alternate;
+}
+@keyframes pulse-live{
+  0%{opacity:0.35;transform:scale(0.85)}
+  100%{opacity:1;transform:scale(1.15);box-shadow:0 0 0.35vw #ff3b30}
+}
+.venue-highlight{
+  color:#ffae00;
+  text-shadow:0 0 0.3vw rgba(255,174,0,0.25);
+}
 .period-lbl {
   font-size:0.52vw; font-weight:800;
   letter-spacing:0.16vw; color:rgba(255,255,255,0.45);
@@ -182,17 +208,9 @@ html, body {
 
   <!-- TOP: Live · Broadcast · Venue -->
   <div class="top-bar">
-    <div class="top-seg live-seg">
-      <div class="live-dot"></div>
-      <div class="live-text">LIVE</div>
-    </div>
-    <div class="top-seg" style="flex:1; justify-content:flex-start;">
-      <div class="period-lbl" style="margin-right:0.4vw;" id="rp1TOv">BROADCAST</div>
-      <div class="game-clock" style="font-size:0.9vw;" id="rp1VOv">—</div>
-    </div>
-    <div class="top-seg" style="flex:1; justify-content:flex-start; border-right:none;">
-      <div class="period-lbl" style="margin-right:0.4vw;" id="rp2TOv">VENUE</div>
-      <div class="game-clock" style="font-size:0.9vw;" id="rp2VOv">—</div>
+    <div id="top-content" class="top-text-centered">
+      <span id="live-dot-pulse" class="live-dot-pulse" style="display:none;"></span>
+      <span id="top-text">HOOP CULTURE NETWORK</span>
     </div>
   </div>
 
@@ -349,10 +367,34 @@ function render(){
   s('periodCenterOv2', qL);
 
   // Broadcast & venue in top bar
-  s('rp1TOv', S.rp1Title||'BROADCAST');
-  s('rp1VOv', S.rp1Value||'—');
-  s('rp2TOv', S.rp2Title||'VENUE');
-  s('rp2VOv', S.rp2Value||'—');
+  const bcVal = (S.rp1Value || '').trim();
+  const vnLabel = (S.rp2Title || 'VENUE').trim();
+  const vnVal = (S.rp2Value || '').trim();
+
+  // Filter out empty or none values like '—'
+  const cleanBc = (bcVal === '—' || bcVal === '-') ? '' : bcVal;
+  const cleanVn = (vnVal === '—' || vnVal === '-') ? '' : vnVal;
+
+  const dotEl = document.getElementById('live-dot-pulse');
+  const txtEl = document.getElementById('top-text');
+
+  if (txtEl) {
+    if (cleanBc) {
+      if (dotEl) dotEl.style.display = 'inline-block';
+      let html = `LIVE: ${cleanBc}`;
+      if (cleanVn) {
+        html += ` &nbsp;&nbsp;&bull;&nbsp;&nbsp; ${vnLabel}: <span class="venue-highlight">${cleanVn}</span>`;
+      }
+      txtEl.innerHTML = html;
+    } else {
+      if (dotEl) dotEl.style.display = 'none';
+      if (cleanVn) {
+        txtEl.innerHTML = `${vnLabel}: <span class="venue-highlight">${cleanVn}</span>`;
+      } else {
+        txtEl.textContent = 'HOOP CULTURE NETWORK';
+      }
+    }
+  }
 
   // Score with bump animation
   const hEl = document.getElementById('homeScoreOv2');
