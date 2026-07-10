@@ -151,9 +151,12 @@ html, body {
 .team-seg.away .team-text { align-items:flex-end; padding-right:0.52vw; }
 .team-abbrev {
   font-family:'Teko',sans-serif; font-size:1.3vw; font-weight:700;
-  color:#fff; letter-spacing:0.05vw; line-height:1;
-  text-transform:uppercase; white-space:nowrap;
+  color:#fff; letter-spacing:0.05vw; line-height:0.95;
+  text-transform:uppercase; white-space:normal;
+  word-wrap:break-word;
 }
+.team-seg.home .team-abbrev { text-align:left; }
+.team-seg.away .team-abbrev { text-align:right; }
 .team-record {
   font-size:0.52vw; font-weight:700;
   color:#8a95a8; letter-spacing:0.03vw; white-space:nowrap;
