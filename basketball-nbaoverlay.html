@@ -122,9 +122,10 @@ html, body {
   display:flex; align-items:center;
   width:12.5vw; flex-shrink:0;
   box-sizing:border-box;
+  height:100%;
 }
-.team-seg.home { flex-direction:row; padding-left:0.52vw; justify-content:flex-start; }
-.team-seg.away { flex-direction:row; padding-right:0.52vw; justify-content:flex-end; }
+.team-seg.home { flex-direction:row; padding-left:0.52vw; justify-content:flex-start; border-bottom-left-radius:0.42vw; }
+.team-seg.away { flex-direction:row; padding-right:0.52vw; justify-content:flex-end; border-bottom-right-radius:0.42vw; }
 
 .logo-wrap {
   width:5.73vw; height:5.73vw; flex-shrink:0;
@@ -159,7 +160,7 @@ html, body {
 .team-seg.away .team-abbrev { text-align:right; }
 .team-record {
   font-size:0.52vw; font-weight:700;
-  color:#8a95a8; letter-spacing:0.03vw; white-space:nowrap;
+  color:rgba(255,255,255,0.7); letter-spacing:0.03vw; white-space:nowrap;
 }
 
 /* Score blocks */
@@ -223,7 +224,7 @@ html, body {
   <div class="main-row">
 
     <!-- HOME -->
-    <div class="team-seg home">
+    <div class="team-seg home" id="homeSegOv2">
       <div class="logo-wrap">
         <div class="logo-circle" id="homeLogoOv2"><div class="logo-ph">LOGO</div></div>
       </div>
@@ -276,7 +277,7 @@ html, body {
     </div>
 
     <!-- AWAY -->
-    <div class="team-seg away">
+    <div class="team-seg away" id="awaySegOv2">
       <div class="team-text" style="align-items:flex-end;">
         <div class="team-abbrev" id="awayAbbrOv2">AWAY</div>
         <div class="team-record" id="awayRecOv2">0-0</div>
@@ -429,6 +430,16 @@ function render(){
   const aSB = document.getElementById('awayScoreBlock');
   if(hSB) hSB.style.background = hc;
   if(aSB) aSB.style.background = ac;
+
+  const hSeg = document.getElementById('homeSegOv2');
+  const aSeg = document.getElementById('awaySegOv2');
+  if(hSeg) hSeg.style.background = hc;
+  if(aSeg) aSeg.style.background = ac;
+
+  const hArrow = document.getElementById('possArrowHomeOv2');
+  const aArrow = document.getElementById('possArrowAwayOv2');
+  if(hArrow) hArrow.style.background = hc;
+  if(aArrow) aArrow.style.background = ac;
 
   const hL = document.getElementById('homeLogoOv2');
   const aL = document.getElementById('awayLogoOv2');
