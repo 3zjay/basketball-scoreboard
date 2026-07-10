@@ -253,36 +253,30 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
 #strip{
   display:flex;
   align-items:center;
-  justify-content:center;
+  justify-content:space-between;
   height:1.25vw;
   background:linear-gradient(to bottom, #181818 0%, #0c0c0c 50%, #020202 100%);
   border-top:0.06vw solid rgba(255,255,255,0.18);
   box-shadow:inset 0 0.05vw 0.1vw rgba(255,255,255,0.05);
+  padding:0 1.2vw;
+  box-sizing:border-box;
 }
-#strip-content{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:0.4vw;
-}
-#strip-logo{
-  width:0.7vw;
-  height:0.7vw;
-  object-fit:contain;
-  border-radius:50%;
-  box-shadow:0 0 0.1vw rgba(255,255,255,0.6);
-  flex-shrink:0;
-}
-#strip-text{
+.strip-text{
   font-family:'Barlow Condensed',sans-serif;
   font-size:0.58vw;
   font-weight:900;
-  letter-spacing:0.18vw;
-  color:rgba(255,255,255,0.8);
+  color:rgba(255,255,255,0.7);
   text-transform:uppercase;
-  white-space:nowrap;
-  font-style:italic;
+  letter-spacing:0.05vw;
   text-shadow:0 0.05vw 0.1vw rgba(0,0,0,0.8);
+}
+#strip-left{
+  color:#fff;
+  text-shadow:0 0 0.4vw rgba(255,255,255,0.2);
+}
+#strip-right{
+  color:#ffae00; /* Gold venue accent to pop */
+  text-shadow:0 0 0.4vw rgba(255,174,0,0.2);
 }
 </style>
 </head>
@@ -356,9 +350,8 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
 
   <!-- BOTTOM STRIP — Clean Centered Broadcast Info -->
   <div id="strip">
-    <div id="strip-content">
-      <span id="strip-text">HOOP CULTURE NETWORK</span>
-    </div>
+    <div id="strip-left" class="strip-text">HOOP CULTURE NETWORK</div>
+    <div id="strip-right" class="strip-text"></div>
   </div>
 
 </div>
@@ -567,15 +560,26 @@ function draw(){
   /* ── BOTTOM STRIP ──
      Dynamic display of Broadcast (rp1Value) & Venue (rp2Value) from controlboard
   */
+  const bcLabel = (S.rp1Title || 'BROADCAST').trim();
   const bcVal = (S.rp1Value || '').trim();
+  const vnLabel = (S.rp2Title || 'VENUE').trim();
   const vnVal = (S.rp2Value || '').trim();
 
   // Filter out empty or none values like '—'
   const cleanBc = (bcVal === '—' || bcVal === '-') ? '' : bcVal;
   const cleanVn = (vnVal === '—' || vnVal === '-') ? '' : vnVal;
 
-  const combined = [cleanBc, cleanVn].filter(Boolean).join('  •  ');
-  tx('strip-text', combined || 'HOOP CULTURE NETWORK');
+  if (cleanBc) {
+    tx('strip-left', `${bcLabel}: ${cleanBc}`);
+  } else {
+    tx('strip-left', 'HOOP CULTURE NETWORK');
+  }
+
+  if (cleanVn) {
+    tx('strip-right', `${vnLabel}: ${cleanVn}`);
+  } else {
+    tx('strip-right', '');
+  }
 }
 
 /* ══ AUDIO ══ */
