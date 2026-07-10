@@ -891,12 +891,12 @@ body.light .reset-btn:hover { background:#fee2e2; }
         📱 Shot Clock Ctrl
       </button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px;">
-      <button class="btn" onclick="window.open('/overlay?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
-        📡 OBS Bar Overlay
-      </button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
       <button class="btn" onclick="window.open('/fullscreen?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
         📡 OBS Fullscreen
+      </button>
+      <button class="btn" onclick="window.open('/nbc?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
+        📺 NBA – NBC Overlay
       </button>
       <button class="btn" onclick="window.open('/nbaoverlay?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
         📡 NBA Scorebug
@@ -904,16 +904,13 @@ body.light .reset-btn:hover { background:#fee2e2; }
       <button class="btn" onclick="window.open('/nbaoverlay2?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
         📡 NBA Scorebug 2
       </button>
-      <button class="btn" onclick="window.open('/nbc?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
-        📺 NBA – NBC Overlay
-      </button>
     </div>
   </div>
 
 </div>
 
 <div class="footer">
-  OBS Bar → <a id="obsBarLink" href="https://basketball-scoreboard-o0c7.onrender.com/overlay" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/overlay</a> → 1920 × 160
+  OBS Fullscreen → <a id="obsBarLink" href="https://basketball-scoreboard-o0c7.onrender.com/fullscreen" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/fullscreen</a>
   &nbsp;·&nbsp;
   Venue Display → <a id="venueDisplayLink" href="https://basketball-scoreboard-o0c7.onrender.com/display" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/display</a>
   <br style="margin-top:8px;">
@@ -973,7 +970,7 @@ window.addEventListener('DOMContentLoaded', () => {
   
   const obsLink = document.getElementById('obsBarLink');
   if (obsLink) {
-    const url = `${origin}/overlay${suffix}`;
+    const url = `${origin}/fullscreen${suffix}`;
     obsLink.href = url;
     obsLink.textContent = url;
   }
