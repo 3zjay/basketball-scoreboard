@@ -207,13 +207,17 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
   border-right:1px solid rgba(255,255,255,.08);
   gap:.04vw;
 }
+#clk-row{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0.45vw;
+}
 #hcLogo{
-  width:1.1vw;height:1.1vw;
+  width:1.75vw;height:1.75vw;
   object-fit:contain;
   border-radius:50%;
-  margin-bottom:.04vw;
   flex-shrink:0;
-  /* clip to circle so the square white bg of the PNG doesn't show */
   overflow:hidden;
 }
 #clk{
@@ -323,8 +327,10 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
 
     <!-- ④ CENTER -->
     <div id="ctr">
-      <img id="hcLogo" src="/hoop-culture-logo.png" alt="HC">
-      <div id="clk">10:00</div>
+      <div id="clk-row">
+        <img id="hcLogo" src="/hoop-culture-logo.png" alt="HC">
+        <div id="clk">10:00</div>
+      </div>
       <div id="prow">
         <span id="per">1ST</span>
         <span id="sc">24</span>
@@ -358,7 +364,6 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
   <!-- BOTTOM STRIP — Clean Centered Broadcast Info -->
   <div id="strip">
     <div id="strip-content">
-      <img id="strip-logo" src="/hoop-culture-logo.png" alt="HC">
       <span id="strip-text">HOOP CULTURE NETWORK</span>
     </div>
   </div>
