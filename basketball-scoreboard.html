@@ -1338,18 +1338,30 @@ function setLogo(team, input){
   r.onload = e => {
     const img = new Image();
     img.onload = () => {
+      // Helper to draw image while maintaining aspect ratio (contain fitting)
+      const drawContain = (canvas, targetSize) => {
+        canvas.width = targetSize;
+        canvas.height = targetSize;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, targetSize, targetSize);
+        const ratio = Math.min(targetSize / img.width, targetSize / img.height);
+        const nw = img.width * ratio;
+        const nh = img.height * ratio;
+        const x = (targetSize - nw) / 2;
+        const y = (targetSize - nh) / 2;
+        ctx.drawImage(img, x, y, nw, nh);
+      };
+
       // Full-size copy — stored in localStorage for high-quality local display
       const canvas = document.createElement('canvas');
-      canvas.width = 200; canvas.height = 200;
-      canvas.getContext('2d').drawImage(img, 0, 0, 200, 200);
+      drawContain(canvas, 200);
       const resized = canvas.toDataURL('image/png');
       S[team+'Logo'] = resized;
 
       // Compressed thumbnail (~3-6 KB) — included in state so it syncs to all
       // devices via the server's SSE broadcast without bloating the payload
       const thumb = document.createElement('canvas');
-      thumb.width = 72; thumb.height = 72;
-      thumb.getContext('2d').drawImage(img, 0, 0, 72, 72);
+      drawContain(thumb, 72);
       S[team+'LogoThumb'] = thumb.toDataURL('image/jpeg', 0.65);
 
       applyLogo(team, resized);
