@@ -846,7 +846,12 @@ body.light .reset-btn:hover { background:#fee2e2; }
           <div class="sec-label">Venue</div>
           <div style="display:flex;gap:6px;margin-top:4px;">
             <select class="inp" id="rp2VIn" onchange="updateRP()" style="flex:1;">
-              <option value="—" selected>— None —</option>
+              <option value="—">— None —</option>
+              <option value="DMC">DMC</option>
+              <option value="Willowood">Willowood</option>
+              <option value="TAT Stadium">TAT Stadium</option>
+              <option value="La Liga">La Liga</option>
+              <option value="Audley" selected>Audley</option>
             </select>
             <button class="btn r" style="padding:0 10px;font-size:13px;" onclick="deleteCustomOption('rp2VIn','custom_rp2VIn')" title="Delete selected">🗑</button>
           </div>
@@ -1022,7 +1027,7 @@ const DEF = {
   gameRunning:false, shotRunning:false,
   timerPresetSeconds: 600,
   rp1Title:'BROADCAST', rp1Value:'Facebook',
-  rp2Title:'VENUE', rp2Value:'—',
+  rp2Title:'VENUE', rp2Value:'Audley',
   barColor:'#0d1117',
   possession:null,
   aiSyncEnabled:false
@@ -1623,7 +1628,7 @@ function deleteCustomOption(selectId, storageKey){
     'homeAbbrIn': ['HARINA','KUY\'S RYAN','FREEDOM','BARBERCUTZ'],
     'awayAbbrIn': ['HARINA','KUY\'S RYAN','FREEDOM','BARBERCUTZ'],
     'rp1VIn': ['—','YouTube','Facebook'],
-    'rp2VIn': ['—'],
+    'rp2VIn': ['—','DMC','Willowood','TAT Stadium','La Liga','Audley'],
   };
   if((builtIn[selectId]||[]).includes(val)){
     alert('Built-in options cannot be deleted.');
