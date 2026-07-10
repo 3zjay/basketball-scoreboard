@@ -194,16 +194,19 @@ html, body {
 /* Possession arrows */
 .poss-arrow-ov {
   display:flex; align-items:center; justify-content:center;
-  width:1.46vw; flex-shrink:0; opacity:0;
+  width:1.46vw; flex-shrink:0; height:100%;
+}
+.poss-arrow-ov svg {
+  width:1.15vw; height:0.83vw;
+  opacity:0;
   transition:opacity 0.3s, filter 0.3s;
 }
-.poss-arrow-ov svg { width:1.15vw; height:0.83vw; }
-.poss-arrow-ov.on {
+.poss-arrow-ov.on svg {
   opacity:1;
   filter:drop-shadow(0 0 0.26vw #ff8800) drop-shadow(0 0 0.52vw #ff6600) drop-shadow(0 0 1vw #ff4400);
 }
-.poss-arrow-ov.home.on { animation:arrowLeft  0.8s ease-in-out infinite alternate; }
-.poss-arrow-ov.away.on { animation:arrowRight 0.8s ease-in-out infinite alternate; }
+.poss-arrow-ov.home.on svg { animation:arrowLeft  0.8s ease-in-out infinite alternate; }
+.poss-arrow-ov.away.on svg { animation:arrowRight 0.8s ease-in-out infinite alternate; }
 @keyframes arrowLeft  { from{transform:translateX(0)} to{transform:translateX(-0.18vw)} }
 @keyframes arrowRight { from{transform:translateX(0)} to{transform:translateX( 0.18vw)} }
 </style>
