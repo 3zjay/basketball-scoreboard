@@ -70,6 +70,7 @@ class ScoreboardLauncherApp:
         self.root.after(100, self.trigger_refresh_ips)
         
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.root.after(200, self.force_redraw)
 
     def setup_ui(self):
         # ── HEADER ──
@@ -321,6 +322,17 @@ class ScoreboardLauncherApp:
         if self.running:
             self.stop_server()
         self.root.destroy()
+
+    def force_redraw(self):
+        try:
+            w = self.root.winfo_width()
+            h = self.root.winfo_height()
+            if w > 1 and h > 1:
+                self.root.geometry(f"{w+1}x{h}")
+                self.root.update_idletasks()
+                self.root.geometry(f"{w}x{h}")
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
