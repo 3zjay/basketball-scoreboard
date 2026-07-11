@@ -69,7 +69,7 @@ class ScoreboardLauncherApp:
         self.running = False
 
         self.setup_ui()
-        self.refresh_ips()
+        self.trigger_refresh_ips()
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
@@ -161,7 +161,7 @@ class ScoreboardLauncherApp:
         # Refresh Addresses Button
         self.btn_refresh_ip = FlatButton(
             content_frame, text="Refresh Network Addresses", bg=COLOR_CARD, fg=COLOR_TEXT_MUTED, hover_bg=COLOR_BORDER,
-            font=("Helvetica", 9, "bold"), command=self.refresh_ips, height=1, border_color=COLOR_BORDER
+            font=("Helvetica", 9, "bold"), command=self.trigger_refresh_ips, height=1, border_color=COLOR_BORDER
         )
         self.btn_refresh_ip.pack(fill="x", pady=(0, 20))
 
@@ -288,15 +288,20 @@ class ScoreboardLauncherApp:
         self.log_area.see("end")
         self.log_area.configure(state="disabled")
 
-    def refresh_ips(self):
+    def trigger_refresh_ips(self):
+        self.lbl_net_ip.configure(text="Local Network: discovering...")
+        threading.Thread(target=self._run_ip_discovery, daemon=True).start()
+
+    def _run_ip_discovery(self):
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.settimeout(0.5)
             s.connect(("8.8.8.8", 80))
             ip = s.getsockname()[0]
             s.close()
-            self.lbl_net_ip.configure(text=f"Local Network: http://{ip}:3000")
+            self.root.after(0, lambda: self.lbl_net_ip.configure(text=f"Local Network: http://{ip}:3000"))
         except Exception:
-            self.lbl_net_ip.configure(text="Local Network: No Network/Offline")
+            self.root.after(0, lambda: self.lbl_net_ip.configure(text="Local Network: No Network/Offline"))
 
     def open_browser(self, path):
         url = f"http://localhost:3000/{path}"
