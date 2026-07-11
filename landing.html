@@ -1512,6 +1512,16 @@
         </div>
         <a href="#" onclick="openDoc(event, 'setup')" class="screen-link">View Setup ➔</a>
       </div>
+
+      <!-- Card 4: Gym Scoreboard Setup -->
+      <div class="screen-card">
+        <div>
+          <div class="screen-icon">🏫</div>
+          <h3 class="screen-name">Gym Scoreboard Setup</h3>
+          <p class="screen-desc">Step-by-step instructions for dual monitors, docking stations, OBS streaming, and remote tablet control via ngrok.</p>
+        </div>
+        <a href="#" onclick="openDoc(event, 'gym')" class="screen-link" style="color: var(--orange2);">View Gym Guide ➔</a>
+      </div>
     </div>
   </section>
 
@@ -1523,6 +1533,7 @@
           <button class="doc-tab-btn" onclick="switchTab('manual')">🎮 Manual Guide</button>
           <button class="doc-tab-btn" onclick="switchTab('ai')">🤖 AI Sync Guide</button>
           <button class="doc-tab-btn" onclick="switchTab('setup')">🎥 OBS Setup</button>
+          <button class="doc-tab-btn" onclick="switchTab('gym')">🏫 Gym Guide</button>
         </div>
         <button class="doc-close-btn" onclick="closeDoc()">&times;</button>
       </div>
@@ -1535,6 +1546,9 @@
         </div>
         <div class="doc-view" id="doc-view-setup">
           <div style="text-align:center;padding:40px 0;font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--grey);">Loading OBS stream setup guide...</div>
+        </div>
+        <div class="doc-view" id="doc-view-gym">
+          <div style="text-align:center;padding:40px 0;font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--grey);">Loading Gym Scoreboard Setup Guide...</div>
         </div>
       </div>
     </div>
@@ -1610,7 +1624,8 @@
         // Toggle active tab button styling
         const isCurrent = (docId === 'manual' && btn.textContent.includes('Manual')) ||
                           (docId === 'ai' && btn.textContent.includes('AI')) ||
-                          (docId === 'setup' && btn.textContent.includes('OBS'));
+                          (docId === 'setup' && btn.textContent.includes('OBS')) ||
+                          (docId === 'gym' && btn.textContent.includes('Gym'));
         btn.classList.toggle('active', isCurrent);
       });
       document.querySelectorAll('.doc-view').forEach(view => {
@@ -1621,7 +1636,12 @@
         activeView.classList.add('active');
         // Fetch and parse the guide file dynamically if not loaded yet
         if (!activeView.dataset.loaded) {
-          const files = { manual: 'LOCAL_SETUP.txt', ai: 'AI_SCOREBOARD_GUIDE.txt', setup: 'README.txt' };
+          const files = { 
+            manual: 'LOCAL_SETUP.txt', 
+            ai: 'AI_SCOREBOARD_GUIDE.txt', 
+            setup: 'README.txt',
+            gym: 'quick_start_operator_guide.md'
+          };
           const filePath = files[docId] || 'README.txt';
           fetch('/' + filePath)
             .then(res => {
@@ -1771,6 +1791,8 @@
     }
 
     function parseInlineMarkdown(text) {
+      // Markdown Images
+      text = text.replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" style="max-width:100%;height:auto;border-radius:8px;border:1px solid var(--border2);margin:1.5rem 0;display:block;">');
       // Bold text formatting
       text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
       // Inline code blocks
