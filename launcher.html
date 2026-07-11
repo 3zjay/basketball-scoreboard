@@ -318,14 +318,7 @@
           <span class="label">Network</span>
           <span id="netIp">discovering...</span>
         </div>
-        <div class="ip-row" style="margin-top:4px;border-top:1px solid rgba(255,255,255,0.05);padding-top:8px;">
-          <span class="label">Bluetooth</span>
-          <span id="panStatus" style="font-weight:600;color:var(--muted)">checking...</span>
-        </div>
-        <div style="display:flex;gap:6px;margin-top:10px;">
-          <button class="btn-outline" style="flex:1;margin-top:0;font-size:11px;" onclick="refreshIPs()">↻ Refresh IPs</button>
-          <button class="btn-outline" style="flex:1;margin-top:0;font-size:11px;" id="btnTogglePan" onclick="togglePan()">Enable PAN</button>
-        </div>
+        <button class="btn-outline" onclick="refreshIPs()">↻ Refresh Network Addresses</button>
       </div>
 
       <!-- Quick Launch -->
@@ -446,98 +439,15 @@
       const res = await fetch('/api/ip');
       const data = await res.json();
       
-      let wifiAddress = null;
-      let bluetoothAddress = null;
-      
-      if (data.interfaces && Array.isArray(data.interfaces)) {
-        for (const iface of data.interfaces) {
-          const name = iface.name.toLowerCase();
-          const addr = iface.address;
-          // bridge interfaces are used for NAT Sharing, e.g. bridge100 for Bluetooth PAN
-          if (name.includes('bridge') || addr.startsWith('192.168.2.') || addr.startsWith('192.168.3.')) {
-            bluetoothAddress = addr;
-          } else if (addr.startsWith('192.168.') || addr.startsWith('10.') || addr.startsWith('172.')) {
-            wifiAddress = addr;
-          }
-        }
-      }
-      
-      if (!wifiAddress && data.ip && data.ip !== '127.0.0.1') {
-        wifiAddress = data.ip;
-      }
-      
-      if (wifiAddress) {
-        const url = `http://${wifiAddress}:3000`;
+      if (data.ip) {
+        const url = `http://${data.ip}:3000`;
         netIpEl.innerHTML = `<a href="${url}/control" target="_blank" style="color:#58a6ff">${url}</a>`;
+        appendLog(`Network IP: ${url}`, 'info');
       } else {
         netIpEl.textContent = '(no network)';
       }
-      
-      if (bluetoothAddress) {
-        const url = `http://${bluetoothAddress}:3000`;
-        panStatusEl.innerHTML = `<a href="${url}/control" target="_blank" style="color:#58a6ff">${url}</a>`;
-        panStatusEl.style.color = 'var(--green)';
-      } else {
-        if (panEnabled) {
-          panStatusEl.textContent = 'Active (no clients)';
-          panStatusEl.style.color = 'var(--green)';
-        } else {
-          panStatusEl.textContent = 'Inactive';
-          panStatusEl.style.color = 'var(--muted)';
-        }
-      }
     } catch (e) {
       netIpEl.textContent = '(offline)';
-    }
-  }
-
-  let panEnabled = false;
-  const panStatusEl = document.getElementById('panStatus');
-  const btnTogglePan = document.getElementById('btnTogglePan');
-
-  async function checkPanStatus() {
-    try {
-      const res = await fetch('/api/bluetooth/status');
-      const data = await res.json();
-      panEnabled = data.enabled;
-      if (panEnabled) {
-        panStatusEl.textContent = 'Active';
-        panStatusEl.style.color = 'var(--green)';
-        btnTogglePan.textContent = 'Disable PAN';
-      } else {
-        panStatusEl.textContent = 'Inactive';
-        panStatusEl.style.color = 'var(--muted)';
-        btnTogglePan.textContent = 'Enable PAN';
-      }
-    } catch (e) {
-      panStatusEl.textContent = 'unknown';
-    }
-  }
-
-  async function togglePan() {
-    btnTogglePan.disabled = true;
-    btnTogglePan.textContent = 'toggling...';
-    try {
-      appendLog(`Requesting macOS administrator authorization to ${panEnabled ? 'disable' : 'enable'} Bluetooth PAN...`, 'info');
-      const res = await fetch('/api/bluetooth/toggle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enable: !panEnabled })
-      });
-      const data = await res.json();
-      if (data.success) {
-        appendLog(`Bluetooth PAN ${!panEnabled ? 'enabled' : 'disabled'} successfully.`, 'info');
-        await checkPanStatus();
-      } else {
-        alert('Failed to toggle Bluetooth PAN: ' + (data.error || 'Authorization cancelled'));
-        appendLog('Bluetooth PAN authorization failed or cancelled.', 'err');
-        await checkPanStatus();
-      }
-    } catch (e) {
-      alert('Error toggling Bluetooth PAN.');
-      await checkPanStatus();
-    } finally {
-      btnTogglePan.disabled = false;
     }
   }
 
@@ -549,12 +459,10 @@
   setOnline();
   appendLog('Server is online.', 'info');
   refreshIPs();
-  checkPanStatus();
 
   // Keep checking server health every 5s
   pollInterval = setInterval(async () => {
     await checkServer();
-    await checkPanStatus();
   }, 5000);
 </script>
 </body>
