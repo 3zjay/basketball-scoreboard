@@ -557,6 +557,56 @@ const requestHandler = (req, res) => {
     return;
   }
 
+  // GET /api/bluetooth/status — returns whether macOS Internet Sharing is enabled
+  if (pathname === '/api/bluetooth/status') {
+    const { exec } = require('child_process');
+    exec('plutil -extract NAT.Enabled xml1 -o - /Library/Preferences/SystemConfiguration/com.apple.nat.plist', (err, stdout) => {
+      let enabled = false;
+      if (!err && stdout.includes('<integer>1</integer>')) {
+        enabled = true;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ enabled }));
+    });
+    return;
+  }
+
+  // POST /api/bluetooth/toggle — enables or disables macOS Internet Sharing (Bluetooth PAN)
+  if (req.method === 'POST' && pathname === '/api/bluetooth/toggle') {
+    const isLocalRequest = req.socket.localAddress === req.socket.remoteAddress || 
+                           req.socket.remoteAddress === '127.0.0.1' || 
+                           req.socket.remoteAddress === '::1';
+    if (!isLocalRequest) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'System modifications are only allowed locally.' }));
+      return;
+    }
+
+    readBody(req).then((body) => {
+      try {
+        const { enable } = JSON.parse(body);
+        const cmd = enable 
+          ? `osascript -e "do shell script \\"defaults write /Library/Preferences/SystemConfiguration/com.apple.nat NAT -dict-add Enabled 1 && launchctl unload -w /System/Library/LaunchDaemons/com.apple.NetworkSharing.plist && launchctl load -w /System/Library/LaunchDaemons/com.apple.NetworkSharing.plist\\" with administrator privileges"`
+          : `osascript -e "do shell script \\"defaults write /Library/Preferences/SystemConfiguration/com.apple.nat NAT -dict-add Enabled 0 && launchctl unload -w /System/Library/LaunchDaemons/com.apple.NetworkSharing.plist\\" with administrator privileges"`;
+
+        const { exec } = require('child_process');
+        exec(cmd, (err) => {
+          if (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: err.message }));
+          } else {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true }));
+          }
+        });
+      } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid request body' }));
+      }
+    });
+    return;
+  }
+
   // GET /state — initial snapshot
   if (pathname === '/state') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
