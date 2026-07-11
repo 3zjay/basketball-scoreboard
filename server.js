@@ -151,6 +151,9 @@ const ROUTES = {
   '/LOCAL_SETUP.txt': 'LOCAL_SETUP.txt',
   '/AI_SCOREBOARD_GUIDE.txt': 'AI_SCOREBOARD_GUIDE.txt',
   '/README.txt': 'README.txt',
+  '/quick_start_operator_guide.md': 'quick_start_operator_guide.md',
+  '/clean_gym_operator_guide.jpg': 'clean_gym_operator_guide.jpg',
+  '/docking_station_wifi_setup_diagram.jpg': 'docking_station_wifi_setup_diagram.jpg',
 };
 
 function pushToAll(u, payload) {
@@ -572,7 +575,7 @@ const requestHandler = (req, res) => {
     const filePath = path.join(__dirname, fileName);
     if (fs.existsSync(filePath)) {
       const ext = path.extname(fileName);
-      const types = { '.html':'text/html', '.json':'application/json', '.js':'application/javascript', '.png':'image/png', '.jpg':'image/jpeg', '.mp3':'audio/mpeg' };
+      const types = { '.html':'text/html', '.json':'application/json', '.js':'application/javascript', '.png':'image/png', '.jpg':'image/jpeg', '.mp3':'audio/mpeg', '.md':'text/markdown' };
       res.writeHead(200, { 'Content-Type': types[ext] || 'text/plain' });
       res.end(fs.readFileSync(filePath));
       return;
