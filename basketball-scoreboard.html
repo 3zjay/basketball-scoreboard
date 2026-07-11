@@ -93,7 +93,9 @@
                   window.location.hostname.startsWith('192.168.') ||
                   window.location.hostname.startsWith('10.') ||
                   window.location.hostname.startsWith('172.') ||
-                  window.location.hostname.endsWith('.local');
+                  window.location.hostname.endsWith('.local') ||
+                  window.location.hostname.endsWith('.ngrok.io') ||
+                  window.location.hostname.endsWith('.ngrok-free.dev');
   if (!isLocal && !hasUserSession && !stopRedirect) {
     const currentPath = window.location.pathname + window.location.search;
     window.location.href = '/login?redirect=' + encodeURIComponent(currentPath);
