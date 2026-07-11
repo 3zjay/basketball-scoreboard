@@ -82,12 +82,14 @@ class ScoreboardLauncherApp:
         # Load Logo Icon
         self.logo_photo = None
         try:
-            if os.path.exists("icon-192.png"):
+            if os.path.exists("icon-192.gif"):
+                full_img = tk.PhotoImage(file="icon-192.gif")
+                self.logo_photo = full_img.subsample(3, 3)
+            elif os.path.exists("icon-192.png"):
                 full_img = tk.PhotoImage(file="icon-192.png")
-                # Subsample 192x192 down to 64x64
                 self.logo_photo = full_img.subsample(3, 3)
         except Exception as e:
-            print("Failed to load logo photo:", e)
+            pass
 
         if self.logo_photo:
             logo_lbl = tk.Label(header, image=self.logo_photo, bg=COLOR_SIDEBAR)
