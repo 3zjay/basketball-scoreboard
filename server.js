@@ -588,7 +588,7 @@ const requestHandler = (req, res) => {
       try {
         const { enable } = JSON.parse(body);
         const cmd = enable 
-          ? `osascript -e "do shell script \\"defaults write /Library/Preferences/SystemConfiguration/com.apple.nat NAT -dict-add Enabled 1 && launchctl unload -w /System/Library/LaunchDaemons/com.apple.NetworkSharing.plist && launchctl load -w /System/Library/LaunchDaemons/com.apple.NetworkSharing.plist\\" with administrator privileges"`
+          ? `osascript -e "do shell script \\"/usr/libexec/PlistBuddy -c 'Delete :NAT:SharingDevices' /Library/Preferences/SystemConfiguration/com.apple.nat.plist; /usr/libexec/PlistBuddy -c 'Add :NAT:SharingDevices array' /Library/Preferences/SystemConfiguration/com.apple.nat.plist; /usr/libexec/PlistBuddy -c 'Add :NAT:SharingDevices: string pan0' /Library/Preferences/SystemConfiguration/com.apple.nat.plist; defaults write /Library/Preferences/SystemConfiguration/com.apple.nat NAT -dict-add Enabled 1; launchctl unload -w /System/Library/LaunchDaemons/com.apple.NetworkSharing.plist; launchctl load -w /System/Library/LaunchDaemons/com.apple.NetworkSharing.plist\\" with administrator privileges"`
           : `osascript -e "do shell script \\"defaults write /Library/Preferences/SystemConfiguration/com.apple.nat NAT -dict-add Enabled 0 && launchctl unload -w /System/Library/LaunchDaemons/com.apple.NetworkSharing.plist\\" with administrator privileges"`;
 
         const { exec } = require('child_process');
