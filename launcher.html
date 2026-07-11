@@ -417,7 +417,7 @@
 
   async function checkServer() {
     try {
-      const res = await fetch('/local-ip', { signal: AbortSignal.timeout(2000) });
+      const res = await fetch('/api/ip', { signal: AbortSignal.timeout(2000) });
       if (res.ok) {
         if (!serverOnline) {
           setOnline();
@@ -436,7 +436,7 @@
   async function refreshIPs() {
     netIpEl.textContent = 'discovering...';
     try {
-      const res = await fetch('/local-ip');
+      const res = await fetch('/api/ip');
       const data = await res.json();
       if (data.ip) {
         const url = `http://${data.ip}:3000`;

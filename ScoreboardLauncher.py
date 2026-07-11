@@ -44,7 +44,7 @@ def main():
     )
 
     # Wait for the server to be ready (up to 8 seconds)
-    url = "http://localhost:3000/local-ip"
+    url = "http://localhost:3000/api/ip"
     ready = False
     for i in range(16):
         time.sleep(0.5)
