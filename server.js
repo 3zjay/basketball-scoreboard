@@ -564,7 +564,7 @@ const requestHandler = (req, res) => {
     const { exec } = require('child_process');
     exec('plutil -extract NAT.Enabled xml1 -o - /Library/Preferences/SystemConfiguration/com.apple.nat.plist', (err, stdout) => {
       let enabled = false;
-      if (!err && stdout.includes('<integer>1</integer>')) {
+      if (!err && (stdout.includes('<integer>1</integer>') || stdout.includes('<string>1</string>'))) {
         enabled = true;
       }
       res.writeHead(200, { 'Content-Type': 'application/json' });
