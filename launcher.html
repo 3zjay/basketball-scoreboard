@@ -392,10 +392,10 @@
     statusText.textContent = 'SERVER RUNNING';
     btnToggle.className = 'btn-server stop';
     btnIcon.textContent = '■';
-    btnLabel.textContent = 'Server Running';
-    btnToggle.disabled = true;
-    btnToggle.style.opacity = '0.7';
-    btnToggle.style.cursor = 'default';
+    btnLabel.textContent = 'Stop Server';
+    btnToggle.disabled = false;
+    btnToggle.style.opacity = '1';
+    btnToggle.style.cursor = 'pointer';
   }
 
   function setOffline() {
@@ -404,15 +404,28 @@
     statusText.textContent = 'SERVER STOPPED';
     btnToggle.className = 'btn-server start';
     btnIcon.textContent = '▶';
-    btnLabel.textContent = 'Start Server';
+    btnLabel.textContent = 'Server Stopped';
     btnToggle.disabled = true;
-    btnToggle.style.opacity = '0.7';
+    btnToggle.style.opacity = '0.5';
     btnToggle.style.cursor = 'default';
   }
 
-  function toggleServer() {
-    // The server is managed by the app bundle launcher script.
-    // This button is informational only — the server starts automatically.
+  async function toggleServer() {
+    if (!serverOnline) return;
+    if (!confirm('Are you sure you want to stop the scoreboard server?')) return;
+    
+    appendLog('Sending shutdown request to server...', 'info');
+    btnToggle.disabled = true;
+    btnLabel.textContent = 'Stopping...';
+    btnToggle.style.opacity = '0.5';
+    btnToggle.style.cursor = 'default';
+    
+    try {
+      await fetch('/api/server/stop', { method: 'POST' });
+      appendLog('Shutdown signal sent successfully.', 'info');
+    } catch (e) {
+      appendLog('Server closed the connection.', 'info');
+    }
   }
 
   async function checkServer() {

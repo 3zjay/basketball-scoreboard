@@ -557,6 +557,16 @@ const requestHandler = (req, res) => {
     }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ip }));
+  }
+
+  // POST /api/server/stop — shuts down the server process
+  if (pathname === '/api/server/stop' && req.method === 'POST') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, message: 'Server is shutting down...' }));
+    console.log('Shutdown request received. Exiting server process...');
+    setTimeout(() => {
+      process.exit(0);
+    }, 1000);
     return;
   }
 
