@@ -30,9 +30,7 @@ class FlatButton(tk.Label):
         
         super().__init__(
             parent, text=text, bg=bg, fg=fg, font=font, cursor="hand2",
-            height=height, width=width, relief="flat", 
-            highlightthickness=border_width if border_color else 0,
-            highlightbackground=border_color or bg
+            height=height, width=width, relief="groove" if border_color else "flat"
         )
         self.bind("<Button-1>", self.on_click)
         self.bind("<Enter>", self.on_enter)
@@ -143,8 +141,7 @@ class ScoreboardLauncherApp:
         )
         self.btn_toggle.pack(fill="x", pady=(0, 15))
 
-        # Network Info Card (Custom Border & Background)
-        ip_card = tk.Frame(content_frame, bg=COLOR_SIDEBAR, highlightthickness=1, highlightbackground=COLOR_BORDER)
+        ip_card = tk.Frame(content_frame, bg=COLOR_SIDEBAR, bd=1, relief="groove")
         ip_card.pack(fill="x", pady=(0, 10))
 
         ip_title = tk.Label(ip_card, text="NETWORK ADDRESSES", font=("Helvetica", 8, "bold"), fg=COLOR_ACCENT, bg=COLOR_SIDEBAR)
@@ -203,8 +200,7 @@ class ScoreboardLauncherApp:
         log_lbl = tk.Label(right_panel, text="CONSOLE OUTPUT LOG", font=("Helvetica", 8, "bold"), fg=COLOR_ACCENT, bg=COLOR_BG, anchor="w")
         log_lbl.pack(fill="x", pady=(0, 8))
 
-        # Scrolled Text Box Container Frame (for flat borders)
-        text_container = tk.Frame(right_panel, bg=COLOR_BG, highlightthickness=1, highlightbackground=COLOR_BORDER)
+        text_container = tk.Frame(right_panel, bg=COLOR_BG, bd=1, relief="groove")
         text_container.pack(fill="both", expand=True)
 
         # Text area
