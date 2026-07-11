@@ -71,22 +71,6 @@ class ScoreboardLauncherApp:
         self.setup_ui()
         self.root.after(100, self.trigger_refresh_ips)
         
-        # Force window layout calculations to flush macOS Aqua Tk rendering pipeline
-        self.root.update_idletasks()
-        self.root.update()
-
-        try:
-            with open("gui_debug.log", "w") as f:
-                f.write(f"Root geometry: {self.root.geometry()}\n")
-                f.write(f"Root children: {self.root.winfo_children()}\n")
-                for child in self.root.winfo_children():
-                    f.write(f"Child {child}: geometry={child.winfo_geometry()}, visible={child.winfo_viewable()}\n")
-                    f.write(f"Sub-children: {child.winfo_children()}\n")
-                    for sub in child.winfo_children():
-                        f.write(f"  Sub {sub}: geometry={sub.winfo_geometry()}, visible={sub.winfo_viewable()}\n")
-        except Exception as e:
-            pass
-
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def setup_ui(self):
@@ -306,18 +290,30 @@ class ScoreboardLauncherApp:
 
     def trigger_refresh_ips(self):
         self.lbl_net_ip.configure(text="Local Network: discovering...")
+        self.discovered_ip = None
+        self.discovery_done = False
         threading.Thread(target=self._run_ip_discovery, daemon=True).start()
+        self.root.after(100, self._check_discovery_result)
 
     def _run_ip_discovery(self):
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.settimeout(0.5)
             s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
+            self.discovered_ip = s.getsockname()[0]
             s.close()
-            self.root.after(0, lambda: self.lbl_net_ip.configure(text=f"Local Network: http://{ip}:3000"))
         except Exception:
-            self.root.after(0, lambda: self.lbl_net_ip.configure(text="Local Network: No Network/Offline"))
+            self.discovered_ip = "offline"
+        self.discovery_done = True
+
+    def _check_discovery_result(self):
+        if self.discovery_done:
+            if self.discovered_ip and self.discovered_ip != "offline":
+                self.lbl_net_ip.configure(text=f"Local Network: http://{self.discovered_ip}:3000")
+            else:
+                self.lbl_net_ip.configure(text="Local Network: No Network/Offline")
+        else:
+            self.root.after(100, self._check_discovery_result)
 
     def open_browser(self, path):
         url = f"http://localhost:3000/{path}"
