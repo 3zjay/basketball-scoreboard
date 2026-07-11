@@ -193,7 +193,7 @@ const requestHandler = (req, res) => {
   if (req.method === 'POST' && pathname === '/api/tunnel/start') {
     readBody(req).then(async (body) => {
       try {
-        const { authtoken } = JSON.parse(body);
+        const { authtoken, domain } = JSON.parse(body);
         if (!ngrok) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'ngrok library is not loaded on this server.' }));
@@ -221,11 +221,16 @@ const requestHandler = (req, res) => {
           // ignore or handle if already configured
         }
 
-        // Start tunnel
-        activeTunnel = await ngrok.forward({
+        // Start tunnel options
+        const opts = {
           addr: PORT,
           authtoken: authtoken.trim()
-        });
+        };
+        if (domain && domain.trim() !== '') {
+          opts.domain = domain.trim();
+        }
+
+        activeTunnel = await ngrok.forward(opts);
         activeTunnelUrl = activeTunnel.url();
 
         console.log(`[ngrok] Secure tunnel started successfully: ${activeTunnelUrl}`);
