@@ -70,6 +70,10 @@ class ScoreboardLauncherApp:
 
         self.setup_ui()
         self.trigger_refresh_ips()
+        
+        # Force window layout calculations to flush macOS Aqua Tk rendering pipeline
+        self.root.update_idletasks()
+        self.root.update()
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
