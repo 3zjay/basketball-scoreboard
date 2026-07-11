@@ -2,6 +2,15 @@ const http = require('http');
 const fs   = require('fs');
 const path = require('path');
 
+let ngrok = null;
+try {
+  ngrok = require('@ngrok/ngrok');
+} catch (e) {
+  console.log('ngrok SDK is not installed or failed to load. Sharing will be disabled.');
+}
+let activeTunnel = null;
+let activeTunnelUrl = '';
+
 const PORT = process.env.PORT || 3000;
 
 let states = {}; // userEmail -> state
@@ -168,6 +177,88 @@ const requestHandler = (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
+  // GET /api/tunnel/status
+  if (req.method === 'GET' && pathname === '/api/tunnel/status') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      active: !!activeTunnel,
+      url: activeTunnelUrl
+    }));
+    return;
+  }
+
+  // POST /api/tunnel/start
+  if (req.method === 'POST' && pathname === '/api/tunnel/start') {
+    readBody(req).then(async (body) => {
+      try {
+        const { authtoken } = JSON.parse(body);
+        if (!ngrok) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'ngrok library is not loaded on this server.' }));
+          return;
+        }
+
+        if (activeTunnel) {
+          try {
+            await activeTunnel.close();
+          } catch(e) {}
+          activeTunnel = null;
+          activeTunnelUrl = '';
+        }
+
+        if (!authtoken || authtoken.trim() === '') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Authtoken is required to start ngrok.' }));
+          return;
+        }
+
+        // Configure authtoken
+        try {
+          await ngrok.authtoken(authtoken.trim());
+        } catch(e) {
+          // ignore or handle if already configured
+        }
+
+        // Start tunnel
+        activeTunnel = await ngrok.forward({
+          addr: PORT,
+          authtoken: authtoken.trim()
+        });
+        activeTunnelUrl = activeTunnel.url();
+
+        console.log(`[ngrok] Secure tunnel started successfully: ${activeTunnelUrl}`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ url: activeTunnelUrl }));
+      } catch (err) {
+        console.error('[ngrok] Failed to start tunnel:', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // POST /api/tunnel/stop
+  if (req.method === 'POST' && pathname === '/api/tunnel/stop') {
+    if (activeTunnel) {
+      activeTunnel.close().then(() => {
+        console.log('[ngrok] Secure tunnel stopped.');
+        activeTunnel = null;
+        activeTunnelUrl = '';
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true }));
+      }).catch(err => {
+        console.error('[ngrok] Error stopping tunnel:', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      });
+    } else {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'No active tunnel running.' }));
+    }
+    return;
+  }
 
   // POST /cmd — clock commands from the control panel
   if (req.method === 'POST' && pathname === '/cmd') {

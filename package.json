@@ -5,5 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
+  },
+  "dependencies": {
+    "@ngrok/ngrok": "^1.7.0"
   }
 }

@@ -911,6 +911,30 @@ body.light .reset-btn:hover { background:#fee2e2; }
     </div>
   </div>
 
+  <!-- ── INTERNET SHARING (NGROK) ── -->
+  <div class="card" style="margin-top:12px;" id="ngrokCard">
+    <div class="card-header">
+      <div class="card-title">🌐 Internet Sharing (ngrok)</div>
+    </div>
+    <div style="margin-top:4px;">
+      <div class="field-label" style="font-size:11px;color:var(--text3);margin-bottom:4px;">ngrok Authtoken</div>
+      <div style="display:flex;gap:6px;">
+        <input type="password" class="inp" id="ngrokTokenIn" placeholder="Paste your authtoken here..." style="flex:1;font-size:12px;">
+        <button class="btn" style="padding:0 12px;font-size:12px;" id="ngrokSaveBtn" onclick="saveNgrokToken()">Save</button>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
+        <button class="btn primary" id="ngrokToggleBtn" onclick="toggleNgrokTunnel()" style="flex:1;padding:10px;font-size:12px;letter-spacing:0.5px;">
+          Start Tunnel
+        </button>
+        <div id="ngrokStatusIndicator" style="width:12px;height:12px;border-radius:50%;background:#ef4444;box-shadow:0 0 6px #ef4444;" title="Offline"></div>
+      </div>
+      <div id="ngrokUrlContainer" style="display:none;margin-top:12px;padding:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:4px;">
+        <span style="font-size:11px;color:var(--text3);display:block;margin-bottom:2px;">Public Controller URL:</span>
+        <a id="ngrokPublicLink" href="#" target="_blank" style="color:var(--accent);font-weight:700;font-size:12px;text-decoration:none;word-break:break-all;"></a>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <div class="footer">
@@ -1010,6 +1034,18 @@ window.addEventListener('DOMContentLoaded', () => {
     banner.style.fontWeight = 'bold';
     banner.innerHTML = '⚠️ Firebase is not configured! Please set up your Firebase project credentials in <strong>firebase-config.js</strong> to enable Vercel Cloud Sync.';
     document.body.appendChild(banner);
+  }
+
+  if (useFirebase) {
+    const ngCard = document.getElementById('ngrokCard');
+    if (ngCard) ngCard.style.display = 'none';
+  } else {
+    const savedToken = localStorage.getItem('hc_ngrok_token');
+    if (savedToken) {
+      const tokenInput = document.getElementById('ngrokTokenIn');
+      if (tokenInput) tokenInput.value = savedToken;
+    }
+    checkTunnelStatus();
   }
 });
 
@@ -1237,6 +1273,114 @@ function setScoreDirect(team, val){
   S[team+'Score'] = n;
   _lastStateCmd = Date.now();
   save(); renderAll();
+}
+
+// ngrok Tunnel Management
+function saveNgrokToken() {
+  const token = document.getElementById('ngrokTokenIn').value;
+  localStorage.setItem('hc_ngrok_token', token);
+  alert('ngrok Authtoken saved!');
+}
+
+async function checkTunnelStatus() {
+  try {
+    const res = await fetch('/api/tunnel/status');
+    const data = await res.json();
+    updateNgrokUI(data.active, data.url);
+  } catch(e) {
+    console.error('Error checking tunnel status:', e);
+  }
+}
+
+function updateNgrokUI(active, url) {
+  const btn = document.getElementById('ngrokToggleBtn');
+  const indicator = document.getElementById('ngrokStatusIndicator');
+  const container = document.getElementById('ngrokUrlContainer');
+  const link = document.getElementById('ngrokPublicLink');
+
+  if (!btn || !indicator || !container || !link) return;
+
+  if (active) {
+    btn.textContent = 'Stop Tunnel';
+    btn.style.background = '#e53935';
+    btn.style.borderColor = '#d32f2f';
+    btn.style.color = '#fff';
+    indicator.style.background = '#22c55e';
+    indicator.style.boxShadow = '0 0 6px #22c55e';
+    indicator.title = 'Online';
+    container.style.display = 'block';
+    
+    const fullUrl = `${url}?user=${encodeURIComponent(currentUser)}`;
+    link.href = fullUrl;
+    link.textContent = fullUrl;
+  } else {
+    btn.textContent = 'Start Tunnel';
+    btn.style.background = 'var(--accent)';
+    btn.style.borderColor = 'var(--accent)';
+    btn.style.color = '';
+    indicator.style.background = '#ef4444';
+    indicator.style.boxShadow = '0 0 6px #ef4444';
+    indicator.title = 'Offline';
+    container.style.display = 'none';
+  }
+}
+
+let isNgrokLoading = false;
+async function toggleNgrokTunnel() {
+  if (isNgrokLoading) return;
+  const btn = document.getElementById('ngrokToggleBtn');
+  const token = document.getElementById('ngrokTokenIn').value;
+  if (!btn) return;
+
+  if (btn.textContent === 'Start Tunnel') {
+    if (!token || token.trim() === '') {
+      alert('Please enter your ngrok Authtoken first.');
+      return;
+    }
+    isNgrokLoading = true;
+    btn.textContent = 'Starting...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/tunnel/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ authtoken: token })
+      });
+      const data = await res.json();
+      if (data.error) {
+        alert('Failed to start ngrok tunnel:\n' + data.error);
+        updateNgrokUI(false);
+      } else {
+        updateNgrokUI(true, data.url);
+      }
+    } catch(e) {
+      alert('Network error starting ngrok tunnel.');
+      updateNgrokUI(false);
+    } finally {
+      isNgrokLoading = false;
+      btn.disabled = false;
+    }
+  } else {
+    isNgrokLoading = true;
+    btn.textContent = 'Stopping...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/tunnel/stop', { method: 'POST' });
+      const data = await res.json();
+      if (data.error) {
+        alert('Failed to stop ngrok tunnel:\n' + data.error);
+      } else {
+        updateNgrokUI(false);
+      }
+    } catch(e) {
+      alert('Network error stopping ngrok tunnel.');
+    } finally {
+      isNgrokLoading = false;
+      btn.disabled = false;
+    }
+  }
 }
 
 // Scores
