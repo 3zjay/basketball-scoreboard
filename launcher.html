@@ -445,12 +445,46 @@
     try {
       const res = await fetch('/api/ip');
       const data = await res.json();
-      if (data.ip) {
-        const url = `http://${data.ip}:3000`;
+      
+      let wifiAddress = null;
+      let bluetoothAddress = null;
+      
+      if (data.interfaces && Array.isArray(data.interfaces)) {
+        for (const iface of data.interfaces) {
+          const name = iface.name.toLowerCase();
+          const addr = iface.address;
+          // bridge interfaces are used for NAT Sharing, e.g. bridge100 for Bluetooth PAN
+          if (name.includes('bridge') || addr.startsWith('192.168.2.') || addr.startsWith('192.168.3.')) {
+            bluetoothAddress = addr;
+          } else if (addr.startsWith('192.168.') || addr.startsWith('10.') || addr.startsWith('172.')) {
+            wifiAddress = addr;
+          }
+        }
+      }
+      
+      if (!wifiAddress && data.ip && data.ip !== '127.0.0.1') {
+        wifiAddress = data.ip;
+      }
+      
+      if (wifiAddress) {
+        const url = `http://${wifiAddress}:3000`;
         netIpEl.innerHTML = `<a href="${url}/control" target="_blank" style="color:#58a6ff">${url}</a>`;
-        appendLog(`Network IP: ${url}`, 'info');
       } else {
         netIpEl.textContent = '(no network)';
+      }
+      
+      if (bluetoothAddress) {
+        const url = `http://${bluetoothAddress}:3000`;
+        panStatusEl.innerHTML = `<a href="${url}/control" target="_blank" style="color:#58a6ff">${url}</a>`;
+        panStatusEl.style.color = 'var(--green)';
+      } else {
+        if (panEnabled) {
+          panStatusEl.textContent = 'Active (no clients)';
+          panStatusEl.style.color = 'var(--green)';
+        } else {
+          panStatusEl.textContent = 'Inactive';
+          panStatusEl.style.color = 'var(--muted)';
+        }
       }
     } catch (e) {
       netIpEl.textContent = '(offline)';
