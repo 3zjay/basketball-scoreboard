@@ -119,6 +119,7 @@ function stopShotClock(u) {
 
 const ROUTES = {
   '/':                   'landing.html',
+  '/launcher':           'launcher.html',
   '/control':            'basketball-scoreboard.html',
   '/landing':            'landing.html',
   '/login':              'login.html',

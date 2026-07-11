@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HoopCulture Scoreboard — Launcher</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --sidebar: #161b22;
+    --card: #1c2333;
+    --border: #30363d;
+    --accent: #ff8c00;
+    --accent-glow: rgba(255, 140, 0, 0.15);
+    --green: #3fb950;
+    --green-glow: rgba(63, 185, 80, 0.15);
+    --red: #f85149;
+    --red-glow: rgba(248, 81, 73, 0.15);
+    --blue: #58a6ff;
+    --purple: #bc8cff;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ═══ HEADER ═══ */
+  .header {
+    background: var(--sidebar);
+    border-bottom: 3px solid var(--accent);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .header-logo {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    object-fit: contain;
+    background: var(--card);
+    padding: 4px;
+  }
+  .header-title {
+    font-size: 22px; font-weight: 800;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, var(--accent), #ffa940);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .status-badge {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 12px; font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+  }
+  .status-badge.online { border-color: var(--green); background: var(--green-glow); color: var(--green); }
+  .status-badge.offline { border-color: var(--red); background: var(--red-glow); color: var(--red); }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: currentColor;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ═══ MAIN LAYOUT ═══ */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ═══ LEFT SIDEBAR ═══ */
+  .sidebar {
+    width: 440px;
+    min-width: 360px;
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .sidebar-content { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+  /* Server Toggle */
+  .btn-server {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.2s ease;
+    letter-spacing: 0.5px;
+  }
+  .btn-server.start {
+    background: linear-gradient(135deg, #238636, #2ea043);
+    color: white;
+    box-shadow: 0 2px 12px rgba(46, 160, 67, 0.3);
+  }
+  .btn-server.start:hover { background: linear-gradient(135deg, #2ea043, #3fb950); transform: translateY(-1px); }
+  .btn-server.stop {
+    background: linear-gradient(135deg, #da3633, #f85149);
+    color: white;
+    box-shadow: 0 2px 12px rgba(248, 81, 73, 0.3);
+  }
+  .btn-server.stop:hover { background: linear-gradient(135deg, #f85149, #ff6e6a); transform: translateY(-1px); }
+
+  /* Network Card */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .card-title {
+    font-size: 10px; font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .ip-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    font-family: 'SF Mono', 'Menlo', 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .ip-row .label { width: 70px; font-weight: 600; color: var(--text); flex-shrink: 0; }
+  .ip-row a { color: var(--blue); text-decoration: none; }
+  .ip-row a:hover { text-decoration: underline; }
+
+  .btn-outline {
+    width: 100%;
+    padding: 8px;
+    margin-top: 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--text); background: var(--accent-glow); }
+
+  /* Section Header */
+  .section-title {
+    font-size: 10px; font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 4px 0;
+  }
+
+  /* Quick Launch Grid */
+  .launch-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .launch-btn {
+    padding: 14px 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .launch-btn:hover {
+    background: #252d3a;
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  .launch-btn .icon { font-size: 14px; }
+
+  .launch-btn.orange:hover { border-color: var(--accent); box-shadow: 0 4px 12px var(--accent-glow); }
+  .launch-btn.blue:hover { border-color: var(--blue); box-shadow: 0 4px 12px rgba(88, 166, 255, 0.15); }
+  .launch-btn.purple:hover { border-color: var(--purple); box-shadow: 0 4px 12px rgba(188, 140, 255, 0.15); }
+
+  /* ═══ RIGHT LOG PANEL ═══ */
+  .log-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    min-width: 300px;
+  }
+  .log-header {
+    padding: 10px 16px;
+    background: var(--sidebar);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .log-header-title {
+    font-size: 10px; font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .btn-clear {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+    font-family: var(--font);
+    font-size: 10px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+  .log-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    font-family: 'SF Mono', 'Menlo', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #7ee787;
+    background: var(--bg);
+  }
+  .log-body .entry { white-space: pre-wrap; word-break: break-all; }
+  .log-body .ts { color: var(--muted); }
+  .log-body .err { color: var(--red); }
+  .log-body .info { color: var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <img src="/hoop-culture-logo.png" alt="Logo" class="header-logo">
+    <div>
+      <div class="header-title">HOOP SCOREBOARD</div>
+      <div class="header-sub">Local Server &bull; Network Control &bull; Quick Launch</div>
+    </div>
+  </div>
+  <div class="status-badge offline" id="statusBadge">
+    <span class="status-dot"></span>
+    <span id="statusText">CHECKING...</span>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-content">
+
+      <!-- Server Toggle -->
+      <button class="btn-server start" id="btnToggle" onclick="toggleServer()">
+        <span id="btnIcon">▶</span>
+        <span id="btnLabel">Start Server</span>
+      </button>
+
+      <!-- Network Addresses -->
+      <div class="card">
+        <div class="card-title">Network Addresses</div>
+        <div class="ip-row">
+          <span class="label">Local</span>
+          <a href="http://localhost:3000/control" target="_blank" id="localUrl">http://localhost:3000</a>
+        </div>
+        <div class="ip-row">
+          <span class="label">Network</span>
+          <span id="netIp">discovering...</span>
+        </div>
+        <button class="btn-outline" onclick="refreshIPs()">↻ Refresh Network Addresses</button>
+      </div>
+
+      <!-- Quick Launch -->
+      <div class="section-title">Quick Launch</div>
+      <div class="launch-grid">
+        <a href="/control" target="_blank" class="launch-btn orange"><span class="icon">🎮</span> Control Board</a>
+        <a href="/display" target="_blank" class="launch-btn orange"><span class="icon">📺</span> Venue Display</a>
+        <a href="/display2" target="_blank" class="launch-btn orange"><span class="icon">📺</span> Venue Display 2</a>
+        <a href="/fullscreen" target="_blank" class="launch-btn purple"><span class="icon">🖥</span> OBS Fullscreen</a>
+        <a href="/nbc" target="_blank" class="launch-btn purple"><span class="icon">📡</span> NBC NBA Overlay</a>
+        <a href="/nbaoverlay" target="_blank" class="launch-btn purple"><span class="icon">🏀</span> NBA Scorebug</a>
+        <a href="/nbaoverlay2" target="_blank" class="launch-btn purple"><span class="icon">🏀</span> NBA Scorebug 2</a>
+        <a href="/shotclock-display" target="_blank" class="launch-btn blue"><span class="icon">⏱</span> Shot Clock</a>
+        <a href="/shotclock" target="_blank" class="launch-btn blue"><span class="icon">🕹</span> Shot Clock Ctrl</a>
+        <a href="/camera" target="_blank" class="launch-btn blue"><span class="icon">📷</span> Camera Stream</a>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- RIGHT LOG PANEL -->
+  <section class="log-panel">
+    <div class="log-header">
+      <span class="log-header-title">Server Log</span>
+      <button class="btn-clear" onclick="clearLog()">Clear</button>
+    </div>
+    <div class="log-body" id="logBody"></div>
+  </section>
+
+</div>
+
+<script>
+  const logBody = document.getElementById('logBody');
+  const statusBadge = document.getElementById('statusBadge');
+  const statusText = document.getElementById('statusText');
+  const btnToggle = document.getElementById('btnToggle');
+  const btnIcon = document.getElementById('btnIcon');
+  const btnLabel = document.getElementById('btnLabel');
+  const netIpEl = document.getElementById('netIp');
+
+  let serverOnline = false;
+  let pollInterval = null;
+
+  function ts() {
+    const d = new Date();
+    return d.toLocaleTimeString('en-US', { hour12: false });
+  }
+
+  function appendLog(msg, type) {
+    const entry = document.createElement('div');
+    entry.className = 'entry' + (type ? ' ' + type : '');
+    entry.innerHTML = `<span class="ts">[${ts()}]</span>  ${escapeHtml(msg)}`;
+    logBody.appendChild(entry);
+    logBody.scrollTop = logBody.scrollHeight;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function clearLog() {
+    logBody.innerHTML = '';
+    appendLog('Log cleared.', 'info');
+  }
+
+  function setOnline() {
+    serverOnline = true;
+    statusBadge.className = 'status-badge online';
+    statusText.textContent = 'SERVER RUNNING';
+    btnToggle.className = 'btn-server stop';
+    btnIcon.textContent = '■';
+    btnLabel.textContent = 'Server Running';
+    btnToggle.disabled = true;
+    btnToggle.style.opacity = '0.7';
+    btnToggle.style.cursor = 'default';
+  }
+
+  function setOffline() {
+    serverOnline = false;
+    statusBadge.className = 'status-badge offline';
+    statusText.textContent = 'SERVER STOPPED';
+    btnToggle.className = 'btn-server start';
+    btnIcon.textContent = '▶';
+    btnLabel.textContent = 'Start Server';
+    btnToggle.disabled = true;
+    btnToggle.style.opacity = '0.7';
+    btnToggle.style.cursor = 'default';
+  }
+
+  function toggleServer() {
+    // The server is managed by the app bundle launcher script.
+    // This button is informational only — the server starts automatically.
+  }
+
+  async function checkServer() {
+    try {
+      const res = await fetch('/local-ip', { signal: AbortSignal.timeout(2000) });
+      if (res.ok) {
+        if (!serverOnline) {
+          setOnline();
+          appendLog('Server is online and responding.', 'info');
+        }
+        return true;
+      }
+    } catch (e) {}
+    if (serverOnline) {
+      setOffline();
+      appendLog('Server went offline.', 'err');
+    }
+    return false;
+  }
+
+  async function refreshIPs() {
+    netIpEl.textContent = 'discovering...';
+    try {
+      const res = await fetch('/local-ip');
+      const data = await res.json();
+      if (data.ip) {
+        const url = `http://${data.ip}:3000`;
+        netIpEl.innerHTML = `<a href="${url}/control" target="_blank" style="color:#58a6ff">${url}</a>`;
+        appendLog(`Network IP: ${url}`, 'info');
+      } else {
+        netIpEl.textContent = '(no network)';
+      }
+    } catch (e) {
+      netIpEl.textContent = '(offline)';
+    }
+  }
+
+  // ── Init ──
+  appendLog('Launcher dashboard loaded.');
+  appendLog('Checking server status...');
+
+  // Since this page IS served by the server, the server is definitely running
+  setOnline();
+  appendLog('Server is online.', 'info');
+  refreshIPs();
+
+  // Keep checking server health every 5s
+  pollInterval = setInterval(async () => {
+    await checkServer();
+  }, 5000);
+</script>
+</body>
+</html>
