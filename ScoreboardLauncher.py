@@ -69,11 +69,23 @@ class ScoreboardLauncherApp:
         self.running = False
 
         self.setup_ui()
-        self.trigger_refresh_ips()
+        self.root.after(100, self.trigger_refresh_ips)
         
         # Force window layout calculations to flush macOS Aqua Tk rendering pipeline
         self.root.update_idletasks()
         self.root.update()
+
+        try:
+            with open("gui_debug.log", "w") as f:
+                f.write(f"Root geometry: {self.root.geometry()}\n")
+                f.write(f"Root children: {self.root.winfo_children()}\n")
+                for child in self.root.winfo_children():
+                    f.write(f"Child {child}: geometry={child.winfo_geometry()}, visible={child.winfo_viewable()}\n")
+                    f.write(f"Sub-children: {child.winfo_children()}\n")
+                    for sub in child.winfo_children():
+                        f.write(f"  Sub {sub}: geometry={sub.winfo_geometry()}, visible={sub.winfo_viewable()}\n")
+        except Exception as e:
+            pass
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
