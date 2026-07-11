@@ -1,147 +1,249 @@
 #!/usr/bin/env python3
+"""
+HoopCulture Scoreboard Launcher — macOS Native GUI
+Uses ttk themed widgets for proper dark-mode rendering on macOS Tcl/Tk 8.5+
+"""
 import os
 import sys
 import socket
 import subprocess
 import threading
 import webbrowser
+import datetime
 import tkinter as tk
+from tkinter import ttk, scrolledtext
 
-# ── Clean System Colors for macOS Aqua ──
-COLOR_BG = "#1e1e24"          # Deep Slate/Gray
-COLOR_SIDEBAR = "#121216"     # Darker Charcoal
-COLOR_ACCENT = "#ff8c00"      # Orange Accent
-COLOR_TEXT = "#ffffff"        # White Text
-COLOR_MUTED = "#aaaaaa"       # Light Gray Text
-COLOR_GREEN = "#10b981"       # Emerald Status
-COLOR_RED = "#ef4444"         # Red Status
 
 class ScoreboardLauncherApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Hoop Scoreboard Launcher")
-        self.root.geometry("1000x700")
-        self.root.minsize(800, 550)
-        self.root.configure(bg=COLOR_BG)
+        self.root.geometry("1080x720")
+        self.root.minsize(900, 600)
 
         self.server_process = None
         self.running = False
         self.discovered_ip = None
         self.discovery_done = False
 
+        self._configure_styles()
         self.setup_ui()
-        self.root.after(100, self.trigger_refresh_ips)
+        self.root.after(200, self.trigger_refresh_ips)
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.root.after(400, self._startup_log)
+
+    # ── Theme & Styles ──
+
+    def _configure_styles(self):
+        style = ttk.Style()
+        # Use 'clam' theme — it respects our custom colors on all platforms
+        style.theme_use("clam")
+
+        BG       = "#1a1a2e"
+        SIDEBAR  = "#16213e"
+        CARD     = "#0f3460"
+        ACCENT   = "#e94560"
+        TEXT     = "#eaeaea"
+        MUTED    = "#a0a0b0"
+        GREEN    = "#00d87d"
+        BORDER   = "#2a2a4a"
+
+        self._colors = {
+            "bg": BG, "sidebar": SIDEBAR, "card": CARD,
+            "accent": ACCENT, "text": TEXT, "muted": MUTED,
+            "green": GREEN, "border": BORDER,
+        }
+
+        # Root and Frame backgrounds
+        self.root.configure(bg=BG)
+        style.configure(".", background=BG, foreground=TEXT, font=("Helvetica", 10))
+
+        # Frames
+        style.configure("Sidebar.TFrame", background=SIDEBAR)
+        style.configure("Card.TFrame", background=CARD)
+        style.configure("BG.TFrame", background=BG)
+        style.configure("Accent.TFrame", background=ACCENT)
+        style.configure("Border.TFrame", background=BORDER)
+
+        # Labels
+        style.configure("Title.TLabel", background=SIDEBAR, foreground=TEXT,
+                         font=("Helvetica", 17, "bold"))
+        style.configure("Subtitle.TLabel", background=SIDEBAR, foreground=MUTED,
+                         font=("Helvetica", 10))
+        style.configure("Sidebar.TLabel", background=SIDEBAR, foreground=TEXT,
+                         font=("Helvetica", 10))
+        style.configure("SidebarMuted.TLabel", background=SIDEBAR, foreground=MUTED,
+                         font=("Helvetica", 9))
+        style.configure("Accent.TLabel", background=SIDEBAR, foreground=ACCENT,
+                         font=("Helvetica", 9, "bold"))
+        style.configure("AccentBG.TLabel", background=BG, foreground=ACCENT,
+                         font=("Helvetica", 10, "bold"))
+        style.configure("StatusOff.TLabel", background=SIDEBAR, foreground="#ef4444",
+                         font=("Helvetica", 10, "bold"))
+        style.configure("StatusOn.TLabel", background=SIDEBAR, foreground=GREEN,
+                         font=("Helvetica", 10, "bold"))
+        style.configure("IP.TLabel", background=CARD, foreground=TEXT,
+                         font=("Courier", 10))
+        style.configure("IPTitle.TLabel", background=CARD, foreground=ACCENT,
+                         font=("Helvetica", 9, "bold"))
+        style.configure("BG.TLabel", background=BG, foreground=TEXT,
+                         font=("Helvetica", 10))
+
+        # LabelFrame
+        style.configure("Card.TLabelframe", background=CARD, foreground=ACCENT,
+                         bordercolor=BORDER)
+        style.configure("Card.TLabelframe.Label", background=CARD, foreground=ACCENT,
+                         font=("Helvetica", 9, "bold"))
+
+        # Buttons
+        style.configure("Launch.TButton", background=CARD, foreground=TEXT,
+                         font=("Helvetica", 9, "bold"), bordercolor=BORDER, padding=8)
+        style.map("Launch.TButton",
+                   background=[("active", "#1a5276")],
+                   foreground=[("active", "#ffffff")])
+
+        style.configure("Start.TButton", background=GREEN, foreground="#000000",
+                         font=("Helvetica", 12, "bold"), padding=12)
+        style.map("Start.TButton",
+                   background=[("active", "#00b368")])
+
+        style.configure("Stop.TButton", background="#ef4444", foreground="#ffffff",
+                         font=("Helvetica", 12, "bold"), padding=12)
+        style.map("Stop.TButton",
+                   background=[("active", "#dc2626")])
+
+        style.configure("Outline.TButton", background=SIDEBAR, foreground=MUTED,
+                         font=("Helvetica", 9), bordercolor=BORDER, padding=4)
+        style.map("Outline.TButton",
+                   background=[("active", CARD)],
+                   foreground=[("active", TEXT)])
+
+        # Separator
+        style.configure("Accent.TSeparator", background=ACCENT)
 
     def setup_ui(self):
-        # ── HEADER ──
-        header = tk.Frame(self.root, bg=COLOR_SIDEBAR, height=80)
+        C = self._colors
+
+        # ═══════ HEADER ═══════
+        header = ttk.Frame(self.root, style="Sidebar.TFrame", height=75)
         header.pack(fill="x", side="top")
         header.pack_propagate(False)
 
-        # Title Text Layout
-        title_frame = tk.Frame(header, bg=COLOR_SIDEBAR)
-        title_frame.pack(side="left", padx=20, pady=10, fill="y")
-        
-        main_title = tk.Label(title_frame, text="🏀 HOOP SCOREBOARD", font=("Helvetica", 18, "bold"), fg=COLOR_ACCENT, bg=COLOR_SIDEBAR)
-        main_title.pack(anchor="w")
-        
-        sub_title = tk.Label(title_frame, text="macOS Local Controller Dashboard", font=("Helvetica", 10), fg=COLOR_MUTED, bg=COLOR_SIDEBAR)
-        sub_title.pack(anchor="w")
+        title_box = ttk.Frame(header, style="Sidebar.TFrame")
+        title_box.pack(side="left", padx=16, pady=10)
 
-        # Status indicator
-        status_frame = tk.Frame(header, bg=COLOR_SIDEBAR)
-        status_frame.pack(side="right", padx=20, fill="y")
-        
-        self.status_lbl = tk.Label(status_frame, text="● OFFLINE", font=("Helvetica", 12, "bold"), fg=COLOR_RED, bg=COLOR_SIDEBAR)
-        self.status_lbl.pack(side="right", pady=25)
+        ttk.Label(title_box, text="🏀 HOOP SCOREBOARD",
+                  style="Title.TLabel").pack(anchor="w")
+        ttk.Label(title_box, text="Local Server  •  Network Control  •  Quick Launch",
+                  style="Subtitle.TLabel").pack(anchor="w")
 
-        # Accent Line
-        accent = tk.Frame(self.root, bg=COLOR_ACCENT, height=2)
-        accent.pack(fill="x")
+        status_box = ttk.Frame(header, style="Sidebar.TFrame")
+        status_box.pack(side="right", padx=16)
+        self.status_lbl = ttk.Label(status_box, text="● SERVER STOPPED",
+                                     style="StatusOff.TLabel")
+        self.status_lbl.pack(pady=25)
 
-        # ── MAIN SPLIT CONTAINER ──
-        main_container = tk.Frame(self.root, bg=COLOR_BG)
-        main_container.pack(fill="both", expand=True)
+        # Accent bar
+        ttk.Frame(self.root, style="Accent.TFrame", height=3).pack(fill="x")
 
-        # Left Column (Controls)
-        left_panel = tk.Frame(main_container, bg=COLOR_SIDEBAR, width=380, padx=15, pady=15)
-        left_panel.pack(fill="y", side="left")
-        left_panel.pack_propagate(False)
+        # ═══════ MAIN SPLIT ═══════
+        main_pw = tk.PanedWindow(self.root, orient=tk.HORIZONTAL, sashwidth=3,
+                                  bg=C["border"], bd=0)
+        main_pw.pack(fill="both", expand=True)
 
-        # Right Column (Logs)
-        right_panel = tk.Frame(main_container, bg=COLOR_BG, padx=15, pady=15)
-        right_panel.pack(fill="both", expand=True, side="right")
+        # ── LEFT PANEL ──
+        left = ttk.Frame(main_pw, style="Sidebar.TFrame")
+        main_pw.add(left, minsize=350, width=420)
 
-        # ── LEFT COLUMN CONTENTS ──
-        self.btn_toggle = tk.Button(left_panel, text="Start Server", font=("Helvetica", 12, "bold"), 
-                                    fg="green", highlightbackground=COLOR_SIDEBAR, command=self.toggle_server, height=2)
-        self.btn_toggle.pack(fill="x", pady=(0, 15))
+        left_inner = ttk.Frame(left, style="Sidebar.TFrame")
+        left_inner.pack(fill="both", expand=True, padx=14, pady=10)
 
-        # IP Card Frame
-        ip_card = tk.LabelFrame(left_panel, text=" Network Addresses ", font=("Helvetica", 9, "bold"), 
-                                fg=COLOR_ACCENT, bg=COLOR_SIDEBAR, bd=1, labelanchor="nw", padx=10, pady=10)
-        ip_card.pack(fill="x", pady=(0, 15))
+        # Start/Stop Button
+        self.btn_toggle = ttk.Button(left_inner, text="▶  Start Server",
+                                      style="Start.TButton", command=self.toggle_server)
+        self.btn_toggle.pack(fill="x", pady=(0, 10))
 
-        self.lbl_local_ip = tk.Label(ip_card, text="Local Host: http://localhost:3000", font=("Courier", 10),
-                                     fg=COLOR_TEXT, bg=COLOR_SIDEBAR, anchor="w")
+        # Network Addresses Card
+        ip_card = ttk.LabelFrame(left_inner, text="  NETWORK ADDRESSES  ",
+                                  style="Card.TLabelframe", padding=10)
+        ip_card.pack(fill="x", pady=(0, 8))
+
+        self.lbl_local_ip = ttk.Label(ip_card, text="Local:     http://localhost:3000",
+                                       style="IP.TLabel")
         self.lbl_local_ip.pack(fill="x", pady=2)
 
-        self.lbl_net_ip = tk.Label(ip_card, text="Local Network: discovering...", font=("Courier", 10),
-                                   fg=COLOR_TEXT, bg=COLOR_SIDEBAR, anchor="w")
+        self.lbl_net_ip = ttk.Label(ip_card, text="Network:   discovering...",
+                                     style="IP.TLabel")
         self.lbl_net_ip.pack(fill="x", pady=2)
 
-        btn_refresh = tk.Button(ip_card, text="Refresh IPs", font=("Helvetica", 9), command=self.trigger_refresh_ips)
-        btn_refresh.pack(pady=(8, 0))
+        ttk.Button(ip_card, text="↻ Refresh Network Addresses",
+                    style="Outline.TButton",
+                    command=self.trigger_refresh_ips).pack(fill="x", pady=(6, 0))
 
-        # Dashboard grid label
-        grid_lbl = tk.Label(left_panel, text="DASHBOARD LINKS", font=("Helvetica", 9, "bold"), fg=COLOR_MUTED, bg=COLOR_SIDEBAR, anchor="w")
-        grid_lbl.pack(fill="x", pady=(10, 5))
+        # Quick Launch Section
+        ttk.Label(left_inner, text="QUICK LAUNCH",
+                  style="Accent.TLabel").pack(anchor="w", pady=(8, 4))
 
-        grid_frame = tk.Frame(left_panel, bg=COLOR_SIDEBAR)
-        grid_frame.pack(fill="both", expand=True)
+        grid = ttk.Frame(left_inner, style="Sidebar.TFrame")
+        grid.pack(fill="both", expand=True)
 
+        # Buttons match the server.js routes exactly
         buttons = [
-            ("Scoreboard Control", "basketball-scoreboard.html"),
-            ("Fullscreen Overlay", "basketball-fullscreen.html"),
-            ("NBC NBA Scoreboard", "basketball-nba-nbc.html"),
-            ("ESPN NBA Style", "basketball-nbaoverlay.html"),
-            ("Alternative NBA", "basketball-nbaoverlay2.html"),
-            ("Shotclock Screen", "shotclock-display.html"),
-            ("Shotclock Remote", "shotclock-control.html"),
-            ("Camera Stream", "camera.html")
+            ("Control Board",       "control"),
+            ("Venue Display",       "display"),
+            ("Venue Display 2",     "display2"),
+            ("OBS Fullscreen",      "fullscreen"),
+            ("NBC NBA Overlay",     "nbc"),
+            ("NBA Scorebug",        "nbaoverlay"),
+            ("NBA Scorebug 2",      "nbaoverlay2"),
+            ("Shot Clock Display",  "shotclock-display"),
+            ("Shot Clock Control",  "shotclock"),
+            ("Camera Stream",       "camera"),
         ]
 
         for i, (name, path) in enumerate(buttons):
             row = i // 2
             col = i % 2
-            # Use standard Native macOS Buttons for 100% crash-free rendering
-            btn = tk.Button(grid_frame, text=name, font=("Helvetica", 9), highlightbackground=COLOR_SIDEBAR,
-                            command=lambda p=path: self.open_browser(p))
+            btn = ttk.Button(grid, text=name, style="Launch.TButton",
+                              command=lambda p=path: self.open_browser(p))
             btn.grid(row=row, column=col, sticky="nsew", padx=2, pady=2)
-            grid_frame.grid_columnconfigure(col, weight=1)
-            grid_frame.grid_rowconfigure(row, weight=1)
+            grid.grid_columnconfigure(col, weight=1)
+            grid.grid_rowconfigure(row, weight=1)
 
-        # ── RIGHT COLUMN CONTENTS ──
-        log_title = tk.Label(right_panel, text="CONSOLE OUTPUT LOG", font=("Helvetica", 9, "bold"), fg=COLOR_ACCENT, bg=COLOR_BG, anchor="w")
-        log_title.pack(fill="x", pady=(0, 5))
+        # ── RIGHT PANEL (LOG) ──
+        right = ttk.Frame(main_pw, style="BG.TFrame")
+        main_pw.add(right, minsize=300)
 
-        # Scrolled Text Box Container
-        text_container = tk.Frame(right_panel, bg="black", bd=1, relief="sunken")
-        text_container.pack(fill="both", expand=True)
+        right_inner = ttk.Frame(right, style="BG.TFrame")
+        right_inner.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Text area
-        self.log_area = tk.Text(text_container, font=("Courier", 10), bg="black", fg="#00ff00",
-                                insertbackground="white", bd=0, highlightthickness=0)
-        self.log_area.pack(fill="both", expand=True, side="left")
+        ttk.Label(right_inner, text="SERVER LOG",
+                  style="AccentBG.TLabel").pack(anchor="w", pady=(0, 4))
 
-        # Scrollbar linked directly to text area
-        scrollbar = tk.Scrollbar(text_container, command=self.log_area.yview)
-        scrollbar.pack(fill="y", side="right")
-        self.log_area.configure(yscrollcommand=scrollbar.set)
+        ttk.Frame(right_inner, style="Border.TFrame", height=1).pack(fill="x", pady=(0, 6))
 
-        self.log_write("=== Console ready. Click 'Start Server' to boot Node.js backend. ===\n")
+        self.log_area = scrolledtext.ScrolledText(
+            right_inner, font=("Courier", 10),
+            bg="#0d1117", fg="#6ee7b7",
+            insertbackground="#6ee7b7",
+            bd=0, relief="flat", wrap="word",
+            highlightthickness=1, highlightbackground=C["border"]
+        )
+        self.log_area.pack(fill="both", expand=True)
         self.log_area.configure(state="disabled")
+
+    # ── Startup Log ──
+
+    def _startup_log(self):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.log_write("Launcher ready.")
+        self.log_write(f"Repo:        {script_dir}")
+        self.log_write(f"Server file: server.js")
+        self.log_write(f"Local URL:   http://localhost:3000")
+        self.log_write("-" * 48)
+        self.log_write("Click 'Start Server' to launch the scoreboard.")
+
+    # ── Server Control ──
 
     def toggle_server(self):
         if self.running:
@@ -150,71 +252,83 @@ class ScoreboardLauncherApp:
             self.start_server()
 
     def start_server(self):
-        self.log_write("\n>>> Booting Scoreboard local Node.js server...\n")
-        
+        self.log_write("")
+        self.log_write(">>> Starting Node.js server...")
+
         if not os.path.exists("server.js"):
-            self.log_write("❌ Error: server.js file not found in directory.\n")
+            self.log_write("ERROR: server.js not found in directory!")
             return
 
         try:
+            env = os.environ.copy()
+            # Ensure Homebrew paths are visible to child processes
+            for p in ["/opt/homebrew/bin", "/usr/local/bin"]:
+                if p not in env.get("PATH", ""):
+                    env["PATH"] = p + ":" + env.get("PATH", "")
+
             self.server_process = subprocess.Popen(
                 ["node", "server.js"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                bufsize=1
+                bufsize=1,
+                env=env
             )
             self.running = True
-            
-            # Update Button to Red STOP State
-            self.btn_toggle.configure(text="Stop Server", fg="red")
-            
-            # Update Header indicator to Online Green State
-            self.status_lbl.configure(text="● ONLINE (PORT: 3000)", fg=COLOR_GREEN)
-
-            threading.Thread(target=self.read_server_output, daemon=True).start()
+            self.btn_toggle.configure(text="■  Stop Server", style="Stop.TButton")
+            self.status_lbl.configure(text="● SERVER RUNNING", style="StatusOn.TLabel")
+            threading.Thread(target=self._read_output, daemon=True).start()
+        except FileNotFoundError:
+            self.log_write("ERROR: 'node' not found. Install Node.js from nodejs.org")
         except Exception as e:
-            self.log_write(f"❌ Failed to run 'node server.js': {str(e)}\n")
+            self.log_write(f"ERROR: {e}")
 
     def stop_server(self):
         if self.server_process:
-            self.log_write("\n>>> Stopping Scoreboard local server...\n")
-            self.server_process.terminate()
+            self.log_write(">>> Stopping server...")
+            try:
+                self.server_process.terminate()
+                self.server_process.wait(timeout=3)
+            except Exception:
+                self.server_process.kill()
             self.server_process = None
         self.running = False
-        
-        # Reset Button to Green START State
-        self.btn_toggle.configure(text="Start Server", fg="green")
-        
-        # Reset Header status to Offline Red State
-        self.status_lbl.configure(text="● OFFLINE", fg=COLOR_RED)
-        self.log_write("🔴 Server process stopped.\n")
+        self.btn_toggle.configure(text="▶  Start Server", style="Start.TButton")
+        self.status_lbl.configure(text="● SERVER STOPPED", style="StatusOff.TLabel")
+        self.log_write("Server stopped.")
 
-    def read_server_output(self):
-        while self.running and self.server_process:
-            line = self.server_process.stdout.readline()
-            if not line:
-                break
-            self.log_write(line)
-        self.stop_server()
+    def _read_output(self):
+        proc = self.server_process
+        while self.running and proc and proc.poll() is None:
+            line = proc.stdout.readline()
+            if line:
+                self.log_write(line.rstrip())
+        # Process ended unexpectedly
+        if self.running:
+            self.root.after(0, self.stop_server)
+
+    # ── Logging ──
 
     def log_write(self, message):
-        self.root.after(0, self._append_to_log, message)
+        self.root.after(0, self._append, message)
 
-    def _append_to_log(self, message):
+    def _append(self, message):
+        ts = datetime.datetime.now().strftime("%H:%M:%S")
         self.log_area.configure(state="normal")
-        self.log_area.insert("end", message)
+        self.log_area.insert("end", f"[{ts}]  {message}\n")
         self.log_area.see("end")
         self.log_area.configure(state="disabled")
 
+    # ── Network Discovery ──
+
     def trigger_refresh_ips(self):
-        self.lbl_net_ip.configure(text="Local Network: discovering...")
+        self.lbl_net_ip.configure(text="Network:   discovering...")
         self.discovered_ip = None
         self.discovery_done = False
-        threading.Thread(target=self._run_ip_discovery, daemon=True).start()
-        self.root.after(100, self._check_discovery_result)
+        threading.Thread(target=self._discover, daemon=True).start()
+        self.root.after(150, self._poll_discovery)
 
-    def _run_ip_discovery(self):
+    def _discover(self):
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.settimeout(0.5)
@@ -222,33 +336,33 @@ class ScoreboardLauncherApp:
             self.discovered_ip = s.getsockname()[0]
             s.close()
         except Exception:
-            self.discovered_ip = "offline"
+            self.discovered_ip = None
         self.discovery_done = True
 
-    def _check_discovery_result(self):
+    def _poll_discovery(self):
         if self.discovery_done:
-            if self.discovered_ip and self.discovered_ip != "offline":
-                self.lbl_net_ip.configure(text=f"Local Network: http://{self.discovered_ip}:3000")
+            if self.discovered_ip:
+                self.lbl_net_ip.configure(
+                    text=f"Network:   http://{self.discovered_ip}:3000")
             else:
-                self.lbl_net_ip.configure(text="Local Network: No Network/Offline")
+                self.lbl_net_ip.configure(text="Network:   (no network)")
         else:
-            self.root.after(100, self._check_discovery_result)
+            self.root.after(150, self._poll_discovery)
+
+    # ── Utilities ──
 
     def open_browser(self, path):
-        url = f"http://localhost:3000/{path}"
-        if path == "":
-            url = "http://localhost:3000"
-        webbrowser.open(url)
+        webbrowser.open(f"http://localhost:3000/{path}")
 
     def on_close(self):
         if self.running:
             self.stop_server()
         self.root.destroy()
 
+
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(script_dir)
-
     root = tk.Tk()
     app = ScoreboardLauncherApp(root)
     root.mainloop()
