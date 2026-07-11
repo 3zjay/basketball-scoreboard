@@ -463,12 +463,22 @@ function render(){
   document.getElementById('possArrowAwayOv2')?.classList.toggle('on', S.possession==='away');
 }
 
+const _gameBuzzer = new Audio('/buzzer.mp3');
+_gameBuzzer.volume = 1.0;
+_gameBuzzer.load();
+
+const _shotBuzzer = new Audio('/buzzer.mp3');
+_shotBuzzer.volume = 1.0;
+_shotBuzzer.load();
+
 window.addEventListener('load', () => {
-  const audio = new Audio('/buzzer.mp3'); audio.volume = 0;
-  audio.play().then(()=>{ audio.pause(); audio.currentTime=0; }).catch(()=>{});
+  [_gameBuzzer, _shotBuzzer].forEach(a => {
+    a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => {});
+  });
 });
-function playGameBuzzer(){ const a=new Audio('/buzzer.mp3'); a.volume=1.0; a.play().catch(()=>{}); }
-function playShotBuzzer(){ const a=new Audio('/buzzer.mp3'); a.volume=1.0; a.play().catch(()=>{}); }
+
+function playGameBuzzer(){ _gameBuzzer.currentTime = 0; _gameBuzzer.play().catch(()=>{}); }
+function playShotBuzzer(){ _shotBuzzer.currentTime = 0; _shotBuzzer.play().catch(()=>{}); }
 
 let _lastBuzzTime = 0;
 

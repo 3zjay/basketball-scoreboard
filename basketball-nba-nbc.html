@@ -609,9 +609,22 @@ function draw(){
 }
 
 /* ══ AUDIO ══ */
-window.addEventListener('load',()=>{const a=new Audio('/buzzer.mp3');a.volume=0;a.play().then(()=>{a.pause();a.currentTime=0;}).catch(()=>{});});
-function gbuzz(){new Audio('/buzzer.mp3').play().catch(()=>{});}
-function sbuzz(){new Audio('/buzzer.mp3').play().catch(()=>{});}
+const _gameBuzzer = new Audio('/buzzer.mp3');
+_gameBuzzer.volume = 1.0;
+_gameBuzzer.load();
+
+const _shotBuzzer = new Audio('/buzzer.mp3');
+_shotBuzzer.volume = 1.0;
+_shotBuzzer.load();
+
+window.addEventListener('load', () => {
+  [_gameBuzzer, _shotBuzzer].forEach(a => {
+    a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => {});
+  });
+});
+
+function gbuzz(){ _gameBuzzer.currentTime = 0; _gameBuzzer.play().catch(()=>{}); }
+function sbuzz(){ _shotBuzzer.currentTime = 0; _shotBuzzer.play().catch(()=>{}); }
 
 /* ══ CONNECT ══ */
 function conn(){
