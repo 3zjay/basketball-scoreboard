@@ -337,10 +337,16 @@
           <span id="threshold-val" style="color:var(--orange);">120</span>
         </div>
         <input type="range" id="threshold-slider" min="40" max="220" value="120" oninput="updateThreshold(this.value)" style="width:100%; height:4px; background:var(--border); border-radius:2px; cursor:pointer; accent-color:var(--orange);">
-        <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:10px; color:var(--grey); font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-top:4px;">
-          <input type="checkbox" id="dilation-toggle" onchange="toggleDilation(this.checked)" style="accent-color:var(--orange); cursor:pointer; width:12px; height:12px;" checked>
-          🔌 Connect LED Gaps (Dilation)
-        </label>
+        <div style="display:flex; gap:12px; margin-top:4px; flex-wrap:wrap;">
+          <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:10px; color:var(--grey); font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:1px; text-transform:uppercase;">
+            <input type="checkbox" id="dilation-toggle" onchange="toggleDilation(this.checked)" style="accent-color:var(--orange); cursor:pointer; width:12px; height:12px;" checked>
+            🔌 Connect LED Gaps (Dilation)
+          </label>
+          <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:10px; color:var(--grey); font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:1px; text-transform:uppercase;">
+            <input type="checkbox" id="invert-toggle" onchange="toggleInvert(this.checked)" style="accent-color:var(--orange); cursor:pointer; width:12px; height:12px;">
+            🔄 Invert Black/White
+          </label>
+        </div>
       </div>
     </div>
 
@@ -559,6 +565,10 @@
       const slider = document.getElementById('threshold-slider');
       if (slider) slider.value = savedT;
 
+      // Update manual invert checkbox state
+      const invCheckbox = document.getElementById('invert-toggle');
+      if (invCheckbox) invCheckbox.checked = !!invertStates[key];
+
       // Force immediate re-scan on active crop change to give instant feedback
       if (window.lastBinarizedPixels) {
         delete window.lastBinarizedPixels[key];
@@ -721,10 +731,18 @@
     }
 
     let dilationEnabled = true;
+    let invertStates = {}; // key -> boolean (stored in local storage)
 
     function toggleDilation(enabled) {
       dilationEnabled = enabled;
       localStorage.setItem('hc_ocr_dilation', enabled);
+      window.lastBinarizedPixels = {};
+    }
+
+    function toggleInvert(enabled) {
+      invertStates[activeCrop] = enabled;
+      localStorage.setItem('hc_ocr_invert_states', JSON.stringify(invertStates));
+      window.lastBinarizedPixels = {};
     }
 
     function dilate(data, w, h) {
@@ -767,10 +785,19 @@
         if (v === 0) blackCount++;
       }
 
-      // Auto-invert if binarization resulted in white digits on a black background.
-      // Tesseract strictly requires black text on a white background.
-      const initialBlackRatio = blackCount / totalPixels;
-      if (initialBlackRatio > 0.5) {
+      // Auto-detect inversion on first frame if not already set in invertStates
+      if (invertStates[key] === undefined || invertStates[key] === null) {
+        const initialBlackRatio = blackCount / totalPixels;
+        invertStates[key] = initialBlackRatio > 0.5;
+        // Update checkbox if it's the active crop
+        if (key === activeCrop) {
+          const invCheckbox = document.getElementById('invert-toggle');
+          if (invCheckbox) invCheckbox.checked = invertStates[key];
+        }
+        localStorage.setItem('hc_ocr_invert_states', JSON.stringify(invertStates));
+      }
+
+      if (invertStates[key]) {
         blackCount = 0;
         for (let i = 0; i < data.length; i += 4) {
           const inv = 255 - data[i];
@@ -1251,6 +1278,16 @@
         dilationEnabled = savedDilation === 'true';
         const checkbox = document.getElementById('dilation-toggle');
         if (checkbox) checkbox.checked = dilationEnabled;
+      }
+
+      // Restore invert states setting
+      const savedInvert = localStorage.getItem('hc_ocr_invert_states');
+      if (savedInvert) {
+        try {
+          invertStates = JSON.parse(savedInvert);
+          const checkbox = document.getElementById('invert-toggle');
+          if (checkbox) checkbox.checked = !!invertStates[activeCrop];
+        } catch(e) {}
       }
 
       // Auto-show help guide on first visit
