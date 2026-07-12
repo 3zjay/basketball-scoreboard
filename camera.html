@@ -589,14 +589,14 @@
         // Wait for system fonts to load so Barlow Condensed is rendered correctly
         await document.fonts.ready;
 
-        // Try loading pre-trained model from IndexedDB cache
-        digitModel = await tf.loadLayersModel('indexeddb://hc-digit-model-v2');
+        // Try loading pre-trained model from IndexedDB cache (v3)
+        digitModel = await tf.loadLayersModel('indexeddb://hc-digit-model-v3');
         ocrWorker = { active: true }; // keep other sync controls happy
         document.getElementById('engine-status').textContent = 'AI Ready';
         document.getElementById('engine-status').style.color = '#16c784';
-        console.log('Digit Classifier loaded from IndexedDB cache (v2).');
+        console.log('Digit Classifier loaded from IndexedDB cache (v3).');
       } catch (err) {
-        console.log('No cached digit model (v2) found. Training custom model on the fly...', err);
+        console.log('No cached digit model (v3) found. Training custom model on the fly...', err);
         try {
           await trainCustomModel();
         } catch (e) {
@@ -616,7 +616,7 @@
       const xs = [];
       const ys = [];
       const fonts = ['Barlow Condensed', 'Impact', 'Arial', 'Courier New', 'monospace'];
-      const samplesPerClass = 50;
+      const samplesPerClass = 55; // slightly more samples for higher precision
 
       for (let c = 0; c < CLASSES.length; c++) {
         const char = CLASSES[c];
@@ -673,14 +673,14 @@
         metrics: ['accuracy']
       });
 
-      // 4. Train Model (30 epochs ensures high accuracy & convergence)
+      // 4. Train Model (40 epochs ensures high accuracy & convergence)
       await model.fit(trainXs, trainYs, {
-        epochs: 30,
+        epochs: 40,
         batchSize: 32,
         shuffle: true,
         callbacks: {
           onEpochEnd: (epoch, logs) => {
-            const pct = Math.round(((epoch + 1) / 30) * 100);
+            const pct = Math.round(((epoch + 1) / 40) * 100);
             document.getElementById('engine-status').textContent = `Training AI (${pct}%)`;
           }
         }
@@ -694,7 +694,7 @@
       digitModel = model;
       ocrWorker = { active: true };
       try {
-        await model.save('indexeddb://hc-digit-model-v2');
+        await model.save('indexeddb://hc-digit-model-v3');
       } catch (e) {
         console.warn('Could not save model to IndexedDB:', e);
       }
@@ -724,9 +724,9 @@
         ctx.fillRect(-1.5, 2, 3, 3);  // bottom dot
         ctx.restore();
       } else {
-        // Draw white character
+        // Draw white character using extra bold (900 weight) to match collegiate scoreboard thickness
         ctx.fillStyle = '#ffffff';
-        ctx.font = `${Math.round(14 * scale)}px "${font}"`;
+        ctx.font = `900 ${Math.round(16 * scale)}px "${font}"`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
