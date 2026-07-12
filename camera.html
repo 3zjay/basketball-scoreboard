@@ -537,6 +537,9 @@
       const slider = document.getElementById('threshold-slider');
       if (slider) slider.value = tVal;
       localStorage.setItem('hc_ocr_thresholds', JSON.stringify(thresholds));
+      
+      // Clear the image baseline cache to force immediate re-scan with the new threshold filter
+      window.lastBinarizedPixels = {};
     }
 
     function selectCrop(key) {
@@ -555,6 +558,11 @@
       if (displayVal) displayVal.textContent = savedT;
       const slider = document.getElementById('threshold-slider');
       if (slider) slider.value = savedT;
+
+      // Force immediate re-scan on active crop change to give instant feedback
+      if (window.lastBinarizedPixels) {
+        delete window.lastBinarizedPixels[key];
+      }
     }
 
     // Initialize Tesseract.js Worker
@@ -934,6 +942,9 @@
               const mappedText = mapLettersToDigits(text);
               const cleanText = mappedText.replace(/[^0-9:]/g, '').trim();
               if (cleanText) {
+                const displayKey = key === 'period' ? 'period' : (key === 'shot' ? 'shot' : key);
+                const previewEl = document.getElementById(`read-${displayKey}`);
+                
                 let isVal = false;
                 if (key === 'clock') {
                   isVal = isValidClock(cleanText);
@@ -955,9 +966,6 @@
                   payload[key === 'period' ? 'period' : (key === 'shot' ? 'shotClock' : key)] = cleanText;
                   sendUpdate(payload);
                   
-                  // Flash value green in visual readings panel
-                  const displayKey = key === 'period' ? 'period' : (key === 'shot' ? 'shot' : key);
-                  
                   // Update battery saver dashboard
                   const saverReadEl = document.getElementById(`saver-read-${displayKey}`);
                   if (saverReadEl) {
@@ -970,22 +978,26 @@
                     }
                   }
 
-                  const previewEl = document.getElementById(`read-${displayKey}`);
                   if (previewEl) {
                     previewEl.textContent = cleanText;
-                    previewEl.style.color = '#16c784';
-                    setTimeout(() => {
-                      if (previewEl) {
-                        if (displayKey === 'clock') previewEl.style.color = 'var(--orange2)';
-                        else if (displayKey === 'home') previewEl.style.color = '#f5c842';
-                        else if (displayKey === 'away') previewEl.style.color = '#ef4444';
-                        else if (displayKey === 'period') previewEl.style.color = '#a855f7';
-                        else if (displayKey === 'shot') previewEl.style.color = '#00d2ff';
-                      }
-                    }, 300);
+                    previewEl.style.color = '#16c784'; // Green for valid/synced
+                    previewEl.style.textShadow = '0 0 10px rgba(22,199,132,0.5)';
                   }
                 } else {
                   console.log(`Discarded noisy/invalid scan for ${key}: "${cleanText}"`);
+                  if (previewEl) {
+                    previewEl.textContent = cleanText;
+                    previewEl.style.color = '#ef4444'; // Red for invalid/noisy
+                    previewEl.style.textShadow = '0 0 10px rgba(239,68,68,0.5)';
+                  }
+                }
+              } else {
+                const displayKey = key === 'period' ? 'period' : (key === 'shot' ? 'shot' : key);
+                const previewEl = document.getElementById(`read-${displayKey}`);
+                if (previewEl) {
+                  previewEl.textContent = '--';
+                  previewEl.style.color = 'var(--grey)';
+                  previewEl.style.textShadow = 'none';
                 }
               }
             } catch(err) {
