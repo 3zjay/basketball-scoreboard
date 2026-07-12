@@ -602,7 +602,7 @@ body.light .reset-btn:hover { background:#fee2e2; }
     <button class="mode-toggle" onclick="logout()" style="border-color:var(--red);color:var(--red);">🚪 Logout</button>
     <button class="mode-toggle" id="fsToggle" onclick="toggleFullscreen()">⛶ Fullscreen</button>
     <button class="mode-toggle" id="modeToggle" onclick="toggleMode()">☀️ Light Mode</button>
-    <button class="mode-toggle" id="audioToggle" onclick="toggleLocalAudio()">🔊 Tablet Sound: On</button>
+    <button class="mode-toggle" id="audioToggle" onclick="toggleLocalAudio()">Tablet Sound: On</button>
     <label class="mode-toggle" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;border-color:var(--orange);color:var(--orange);padding:6px 12px;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:0;">
       <input type="checkbox" id="aiSyncToggle" onchange="toggleAiSync(this.checked)" style="accent-color:var(--orange);cursor:pointer;width:14px;height:14px;margin:0;">
       🤖 AI Sync
@@ -1627,7 +1627,7 @@ let localAudioMuted = localStorage.getItem('localAudioMuted') === 'true';
 function updateAudioToggleButton() {
   const btn = document.getElementById('audioToggle');
   if (btn) {
-    btn.innerHTML = localAudioMuted ? '🔇 Tablet Sound: Off' : '🔊 Tablet Sound: On';
+    btn.innerHTML = localAudioMuted ? 'Tablet Sound: Off' : 'Tablet Sound: On';
     btn.style.borderColor = localAudioMuted ? 'var(--red)' : 'var(--green)';
     btn.style.color = localAudioMuted ? 'var(--red)' : 'var(--green)';
   }
