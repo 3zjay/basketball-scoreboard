@@ -599,6 +599,19 @@ const requestHandler = (req, res) => {
 // HTTP and HTTPS Dual Server Boot
 const keyPath = path.join(__dirname, 'key.pem');
 const certPath = path.join(__dirname, 'cert.pem');
+
+// Automatically generate self-signed certificates on macOS/Linux if missing
+if (!fs.existsSync(keyPath) || !fs.existsSync(certPath)) {
+  try {
+    const { execSync } = require('child_process');
+    console.log('Generating self-signed SSL certificates for local offline camera scanner...');
+    execSync('openssl req -nodes -new -x509 -keyout key.pem -out cert.pem -days 365 -subj "/CN=localhost"', { stdio: 'ignore' });
+    console.log('SSL certificates generated successfully!');
+  } catch (err) {
+    console.warn('Auto-generation of self-signed certs failed. Offline camera scanner may not be available on port 3001:', err.message);
+  }
+}
+
 const https = require('https');
 
 // 1. Always boot the HTTP server on PORT (3000) so local Control Panel and OBS don't break with SSL issues

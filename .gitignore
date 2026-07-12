@@ -15,3 +15,8 @@ Desktop.ini
 # Dependencies
 node_modules/
 package-lock.json
+
+# Local SSL Certificates
+key.pem
+cert.pem
+*.pem
