@@ -151,6 +151,7 @@ const ROUTES = {
   '/LOCAL_SETUP.txt': 'LOCAL_SETUP.txt',
   '/AI_SCOREBOARD_GUIDE.txt': 'AI_SCOREBOARD_GUIDE.txt',
   '/README.txt': 'README.txt',
+  '/tf.min.js':          'tf.min.js',
   '/quick_start_operator_guide.md': 'quick_start_operator_guide.md',
   '/clean_gym_operator_guide.jpg': 'clean_gym_operator_guide.jpg',
   '/docking_station_wifi_setup_diagram.jpg': 'docking_station_wifi_setup_diagram.jpg',

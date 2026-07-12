@@ -46,8 +46,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Hoop Culture — AI Camera OCR Scanner</title>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;900&family=Barlow:wght@400;600&display=swap" rel="stylesheet"/>
-  <!-- Tesseract.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- Local TensorFlow.js for Offline Digit Classifier -->
+  <script src="/tf.min.js"></script>
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -414,6 +414,8 @@
     let stream = null;
     let syncActive = false;
     let ocrWorker = null;
+    let digitModel = null;
+    let isTraining = false;
     let activeCrop = 'clock';
     let ocrLoopCount = 0;
     let syncTarget = 'auto';
@@ -575,32 +577,280 @@
       }
     }
 
-    // Initialize Tesseract.js Worker
-    let isInitializing = false;
+    // Initialize Custom Digit Classifier (TensorFlow.js)
+    const CLASSES = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ' '];
+
     async function initOCR() {
-      if (isInitializing) return;
-      isInitializing = true;
-      document.getElementById('engine-status').textContent = 'Initializing...';
+      if (isTraining) return;
+      document.getElementById('engine-status').textContent = 'Loading AI...';
+      document.getElementById('engine-status').style.color = '#ff6b1a';
+      
       try {
-        if (ocrWorker) {
-          try { await ocrWorker.terminate(); } catch(e) {}
-          ocrWorker = null;
-        }
-        // Use lightweight 4.0.0_best_int model (~2.9MB) which is fully supported and stable on mobile
-        ocrWorker = await Tesseract.createWorker('eng', 1, {
-          langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int/'
-        });
-        await ocrWorker.setParameters({
-          tessedit_char_whitelist: '0123456789:',
-        });
-        document.getElementById('engine-status').textContent = 'Ready';
+        // Try loading pre-trained model from IndexedDB cache
+        digitModel = await tf.loadLayersModel('indexeddb://hc-digit-model-v1');
+        ocrWorker = { active: true }; // keep other sync controls happy
+        document.getElementById('engine-status').textContent = 'AI Ready';
         document.getElementById('engine-status').style.color = '#16c784';
-      } catch (e) {
-        document.getElementById('engine-status').textContent = 'Error Loading';
-        document.getElementById('engine-status').style.color = '#ef4444';
-      } finally {
-        isInitializing = false;
+        console.log('Digit Classifier loaded from IndexedDB cache.');
+      } catch (err) {
+        console.log('No cached digit model found. Training custom model on the fly...', err);
+        try {
+          await trainCustomModel();
+        } catch (e) {
+          console.error('Failed to train custom digit classifier:', e);
+          document.getElementById('engine-status').textContent = 'AI Error';
+          document.getElementById('engine-status').style.color = '#ef4444';
+        }
       }
+    }
+
+    async function trainCustomModel() {
+      isTraining = true;
+      document.getElementById('engine-status').textContent = 'Training AI...';
+      document.getElementById('engine-status').style.color = '#ff6b1a';
+
+      // 1. Generate Synthetic Dataset
+      const xs = [];
+      const ys = [];
+      const fonts = ['Impact', 'Arial', 'Courier New', 'monospace', 'sans-serif'];
+      const samplesPerClass = 50;
+
+      for (let c = 0; c < CLASSES.length; c++) {
+        const char = CLASSES[c];
+        for (let s = 0; s < samplesPerClass; s++) {
+          const font = fonts[s % fonts.length];
+          const angle = (Math.random() - 0.5) * 0.28; // +/- 8 degrees
+          const scale = 0.85 + Math.random() * 0.3; // 0.85 to 1.15
+          const offsetX = (Math.random() - 0.5) * 4; // +/- 2px
+          const offsetY = (Math.random() - 0.5) * 4; // +/- 2px
+          
+          const pixels = generateSyntheticDigit(char, font, angle, scale, offsetX, offsetY);
+          xs.push(pixels);
+          
+          const oneHot = new Float32Array(CLASSES.length);
+          oneHot[c] = 1.0;
+          ys.push(oneHot);
+        }
+      }
+
+      // 2. Convert to Tensors
+      const trainXs = tf.tensor4d(new Float32Array(xs.flat()), [xs.length, 20, 20, 1]);
+      const trainYs = tf.tensor2d(new Float32Array(ys.flat()), [ys.length, CLASSES.length]);
+
+      // 3. Define CNN Architecture
+      const model = tf.sequential();
+      model.add(tf.layers.conv2d({
+        inputShape: [20, 20, 1],
+        kernelSize: 3,
+        filters: 8,
+        activation: 'relu'
+      }));
+      model.add(tf.layers.maxPooling2d({poolSize: 2}));
+      model.add(tf.layers.flatten());
+      model.add(tf.layers.dense({units: 16, activation: 'relu'}));
+      model.add(tf.layers.dense({units: CLASSES.length, activation: 'softmax'}));
+
+      model.compile({
+        optimizer: 'adam',
+        loss: 'categoricalCrossentropy',
+        metrics: ['accuracy']
+      });
+
+      // 4. Train Model
+      await model.fit(trainXs, trainYs, {
+        epochs: 25,
+        batchSize: 32,
+        shuffle: true,
+        callbacks: {
+          onEpochEnd: (epoch, logs) => {
+            const pct = Math.round(((epoch + 1) / 25) * 100);
+            document.getElementById('engine-status').textContent = `Training AI (${pct}%)`;
+          }
+        }
+      });
+
+      // 5. Cleanup Tensors
+      trainXs.dispose();
+      trainYs.dispose();
+
+      // 6. Save Model to Cache
+      digitModel = model;
+      ocrWorker = { active: true };
+      try {
+        await model.save('indexeddb://hc-digit-model-v1');
+      } catch (e) {
+        console.warn('Could not save model to IndexedDB:', e);
+      }
+
+      document.getElementById('engine-status').textContent = 'AI Ready';
+      document.getElementById('engine-status').style.color = '#16c784';
+      isTraining = false;
+    }
+
+    function generateSyntheticDigit(char, font, angle, scale, offsetX, offsetY) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 20;
+      canvas.height = 20;
+      const ctx = canvas.getContext('2d');
+      
+      // Draw black background
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, 20, 20);
+
+      // Draw white character
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `${Math.round(14 * scale)}px ${font}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      ctx.save();
+      ctx.translate(10 + offsetX, 10 + offsetY);
+      ctx.rotate(angle);
+      ctx.fillText(char, 0, 0);
+      ctx.restore();
+
+      const imgData = ctx.getImageData(0, 0, 20, 20);
+      const data = imgData.data;
+      const pixels = new Float32Array(20 * 20);
+      for (let i = 0; i < pixels.length; i++) {
+        pixels[i] = data[i * 4] > 127 ? 1.0 : 0.0;
+      }
+      return pixels;
+    }
+
+    function segmentCharacters(canvas) {
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const data = imgData.data;
+
+      // 1. Calculate vertical projection profile (active pixels per column)
+      const colProfile = new Int32Array(w);
+      for (let x = 0; x < w; x++) {
+        let count = 0;
+        for (let y = 0; y < h; y++) {
+          const idx = (y * w + x) * 4;
+          // Preprocessing maps text to black (0) and background to white (255)
+          if (data[idx] === 0) {
+            count++;
+          }
+        }
+        colProfile[x] = count;
+      }
+
+      // 2. Identify horizontal character intervals
+      const intervals = [];
+      let inChar = false;
+      let startX = 0;
+      const minColPixels = 1;
+
+      for (let x = 0; x < w; x++) {
+        if (colProfile[x] >= minColPixels) {
+          if (!inChar) {
+            startX = x;
+            inChar = true;
+          }
+        } else {
+          if (inChar) {
+            intervals.push({ left: startX, right: x - 1 });
+            inChar = false;
+          }
+        }
+      }
+      if (inChar) {
+        intervals.push({ left: startX, right: w - 1 });
+      }
+
+      // 3. Locate vertical boundaries
+      const charBoxes = [];
+      for (const interval of intervals) {
+        const width = interval.right - interval.left + 1;
+        if (width < 2) continue; // Skip noise
+
+        let top = h;
+        let bottom = 0;
+        
+        for (let x = interval.left; x <= interval.right; x++) {
+          for (let y = 0; y < h; y++) {
+            const idx = (y * w + x) * 4;
+            if (data[idx] === 0) {
+              if (y < top) top = y;
+              if (y > bottom) bottom = y;
+            }
+          }
+        }
+
+        const height = bottom - top + 1;
+        if (height < 4) continue;
+
+        charBoxes.push({
+          x: interval.left,
+          y: top,
+          w: width,
+          h: height
+        });
+      }
+
+      charBoxes.sort((a, b) => a.x - b.x);
+      return charBoxes;
+    }
+
+    function getResizedCharTensor(canvas, box) {
+      const cropCanvas = document.createElement('canvas');
+      cropCanvas.width = 20;
+      cropCanvas.height = 20;
+      const cropCtx = cropCanvas.getContext('2d');
+      
+      // Background is white (255)
+      cropCtx.fillStyle = '#ffffff';
+      cropCtx.fillRect(0, 0, 20, 20);
+
+      const size = Math.max(box.w, box.h);
+      const padX = (size - box.w) / 2;
+      const padY = (size - box.h) / 2;
+
+      cropCtx.drawImage(
+        canvas,
+        box.x, box.y, box.w, box.h,
+        Math.round((padX / size) * 16) + 2,
+        Math.round((padY / size) * 16) + 2,
+        Math.round((box.w / size) * 16),
+        Math.round((box.h / size) * 16)
+      );
+
+      const imgData = cropCtx.getImageData(0, 0, 20, 20);
+      const data = imgData.data;
+      const pixels = new Float32Array(20 * 20);
+      for (let i = 0; i < pixels.length; i++) {
+        // Model was trained on white-on-black: black pixel -> 1.0, white pixel -> 0.0
+        pixels[i] = data[i * 4] < 127 ? 1.0 : 0.0;
+      }
+      
+      return tf.tensor4d(pixels, [1, 20, 20, 1]);
+    }
+
+    async function predictScoreboardBox(canvas) {
+      if (!digitModel) return '';
+
+      const boxes = segmentCharacters(canvas);
+      if (boxes.length === 0) return '';
+
+      let text = '';
+      for (const box of boxes) {
+        const tensor = getResizedCharTensor(canvas, box);
+        const prediction = digitModel.predict(tensor);
+        const argmax = prediction.argMax(1).dataSync()[0];
+        
+        tensor.dispose();
+        prediction.dispose();
+
+        const char = CLASSES[argmax];
+        if (char !== ' ') {
+          text += char;
+        }
+      }
+      return text;
     }
 
     // Drag-and-drop mechanics
@@ -962,7 +1212,8 @@
               pCanvas.width = canvas.width;
               pCanvas.height = canvas.height;
               const pCtx = pCanvas.getContext('2d');
-              pCtx.drawImage(canvas, 0, 0);
+              // Bypass GPU texture cache to show exact CPU binarization output immediately
+              pCtx.putImageData(ctx.getImageData(0, 0, canvas.width, canvas.height), 0, 0);
             }
           }
 
@@ -973,15 +1224,13 @@
             }
 
             try {
-              // Race Tesseract recognize with a 1500ms timeout to prevent permanent thread hangs
-              const ocrPromise = ocrWorker.recognize(canvas);
+              const ocrPromise = predictScoreboardBox(canvas);
               const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Scan Timeout')), 1500)
+                setTimeout(() => reject(new Error('Scan Timeout')), 1000)
               );
               
-              const { data: { text } } = await Promise.race([ocrPromise, timeoutPromise]);
-              const mappedText = mapLettersToDigits(text);
-              const cleanText = mappedText.replace(/[^0-9:]/g, '').trim();
+              const text = await Promise.race([ocrPromise, timeoutPromise]);
+              const cleanText = text.trim();
               if (cleanText) {
                 const displayKey = key === 'period' ? 'period' : (key === 'shot' ? 'shot' : key);
                 const previewEl = document.getElementById(`read-${displayKey}`);
