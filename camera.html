@@ -634,8 +634,16 @@
       }
 
       // 2. Convert to Tensors
-      const trainXs = tf.tensor4d(new Float32Array(xs.flat()), [xs.length, 20, 20, 1]);
-      const trainYs = tf.tensor2d(new Float32Array(ys.flat()), [ys.length, CLASSES.length]);
+      const flatXs = new Float32Array(xs.length * 400);
+      for (let i = 0; i < xs.length; i++) {
+        flatXs.set(xs[i], i * 400);
+      }
+      const flatYs = new Float32Array(ys.length * CLASSES.length);
+      for (let i = 0; i < ys.length; i++) {
+        flatYs.set(ys[i], i * CLASSES.length);
+      }
+      const trainXs = tf.tensor4d(flatXs, [xs.length, 20, 20, 1]);
+      const trainYs = tf.tensor2d(flatYs, [ys.length, CLASSES.length]);
 
       // 3. Define CNN Architecture
       const model = tf.sequential();
