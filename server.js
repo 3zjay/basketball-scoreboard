@@ -587,7 +587,10 @@ const requestHandler = (req, res) => {
     if (fs.existsSync(filePath)) {
       const ext = path.extname(fileName);
       const types = { '.html':'text/html', '.json':'application/json', '.js':'application/javascript', '.png':'image/png', '.jpg':'image/jpeg', '.mp3':'audio/mpeg', '.md':'text/markdown' };
-      res.writeHead(200, { 'Content-Type': types[ext] || 'text/plain' });
+      res.writeHead(200, { 
+        'Content-Type': types[ext] || 'text/plain',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'
+      });
       res.end(fs.readFileSync(filePath));
       return;
     }
