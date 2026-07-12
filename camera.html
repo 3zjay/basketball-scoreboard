@@ -589,14 +589,14 @@
         // Wait for system fonts to load so Barlow Condensed is rendered correctly
         await document.fonts.ready;
 
-        // Try loading pre-trained model from IndexedDB cache (v3)
-        digitModel = await tf.loadLayersModel('indexeddb://hc-digit-model-v3');
+        // Try loading pre-trained model from IndexedDB cache (v4)
+        digitModel = await tf.loadLayersModel('indexeddb://hc-digit-model-v4');
         ocrWorker = { active: true }; // keep other sync controls happy
         document.getElementById('engine-status').textContent = 'AI Ready';
         document.getElementById('engine-status').style.color = '#16c784';
-        console.log('Digit Classifier loaded from IndexedDB cache (v3).');
+        console.log('Digit Classifier loaded from IndexedDB cache (v4).');
       } catch (err) {
-        console.log('No cached digit model (v3) found. Training custom model on the fly...', err);
+        console.log('No cached digit model (v4) found. Training custom model on the fly...', err);
         try {
           await trainCustomModel();
         } catch (e) {
@@ -694,7 +694,7 @@
       digitModel = model;
       ocrWorker = { active: true };
       try {
-        await model.save('indexeddb://hc-digit-model-v3');
+        await model.save('indexeddb://hc-digit-model-v4');
       } catch (e) {
         console.warn('Could not save model to IndexedDB:', e);
       }
@@ -714,11 +714,15 @@
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, 20, 20);
 
+      const shearX = (Math.random() - 0.5) * 0.15; // Random perspective shear (horizontal)
+      const shearY = (Math.random() - 0.5) * 0.15; // Random perspective shear (vertical)
+
       if (char === ':') {
         // Draw two centered square dots manually to match binarized colon segments
         ctx.fillStyle = '#ffffff';
         ctx.save();
         ctx.translate(10 + offsetX, 10 + offsetY);
+        ctx.transform(1, shearY, shearX, 1, 0, 0); // Apply perspective skew
         ctx.rotate(angle);
         ctx.fillRect(-1.5, -5, 3, 3); // top dot
         ctx.fillRect(-1.5, 2, 3, 3);  // bottom dot
@@ -732,6 +736,7 @@
         
         ctx.save();
         ctx.translate(10 + offsetX, 10 + offsetY);
+        ctx.transform(1, shearY, shearX, 1, 0, 0); // Apply perspective skew
         ctx.rotate(angle);
         ctx.fillText(char, 0, 0);
         ctx.restore();
@@ -1024,20 +1029,28 @@
     }
 
     function dilate(data, w, h) {
-      const temp = new Uint8ClampedArray(data);
-      for (let y = 1; y < h - 1; y++) {
-        for (let x = 1; x < w - 1; x++) {
-          const idx = (y * w + x) * 4;
-          if (temp[idx] === 255) {
-            const topIdx = ((y - 1) * w + x) * 4;
-            const bottomIdx = ((y + 1) * w + x) * 4;
-            const leftIdx = (y * w + (x - 1)) * 4;
-            const rightIdx = (y * w + (x + 1)) * 4;
+      // 2 passes of 8-neighborhood dilation to robustly bridge pixel gaps in physical LED scoreboards
+      for (let iter = 0; iter < 2; iter++) {
+        const temp = new Uint8ClampedArray(data);
+        for (let y = 1; y < h - 1; y++) {
+          for (let x = 1; x < w - 1; x++) {
+            const idx = (y * w + x) * 4;
+            if (temp[idx] === 255) {
+              const top = ((y - 1) * w + x) * 4;
+              const bot = ((y + 1) * w + x) * 4;
+              const left = (y * w + (x - 1)) * 4;
+              const right = (y * w + (x + 1)) * 4;
+              const tl = ((y - 1) * w + (x - 1)) * 4;
+              const tr = ((y - 1) * w + (x + 1)) * 4;
+              const bl = ((y + 1) * w + (x - 1)) * 4;
+              const br = ((y + 1) * w + (x + 1)) * 4;
 
-            if (temp[topIdx] === 0 || temp[bottomIdx] === 0 || temp[leftIdx] === 0 || temp[rightIdx] === 0) {
-              data[idx] = 0;
-              data[idx+1] = 0;
-              data[idx+2] = 0;
+              if (temp[top] === 0 || temp[bot] === 0 || temp[left] === 0 || temp[right] === 0 ||
+                  temp[tl] === 0 || temp[tr] === 0 || temp[bl] === 0 || temp[br] === 0) {
+                data[idx] = 0;
+                data[idx+1] = 0;
+                data[idx+2] = 0;
+              }
             }
           }
         }
