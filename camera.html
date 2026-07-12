@@ -767,6 +767,20 @@
         if (v === 0) blackCount++;
       }
 
+      // Auto-invert if binarization resulted in white digits on a black background.
+      // Tesseract strictly requires black text on a white background.
+      const initialBlackRatio = blackCount / totalPixels;
+      if (initialBlackRatio > 0.5) {
+        blackCount = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          const inv = 255 - data[i];
+          data[i] = inv;
+          data[i+1] = inv;
+          data[i+2] = inv;
+          if (inv === 0) blackCount++;
+        }
+      }
+
       if (dilationEnabled) {
         dilate(data, w, h);
         blackCount = 0;
