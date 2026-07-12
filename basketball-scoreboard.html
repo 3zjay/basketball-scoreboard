@@ -584,6 +584,11 @@ body.light .reset-btn:hover { background:#fee2e2; }
 </head>
 <body>
 
+<!-- AUDIO UNLOCK BANNER FOR MOBILE BROWSERS -->
+<div id="audioUnlockBanner" style="display:none;position:fixed;top:100px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;padding:14px 28px;border-radius:30px;z-index:9999;font-family:'Barlow Condensed',sans-serif;font-weight:800;letter-spacing:1px;box-shadow:0 10px 30px rgba(232,67,10,0.6);cursor:pointer;border:2px solid #fff;text-align:center;text-transform:uppercase;animation:pulse 2s infinite;" onclick="unlockAudioManual()">
+  🔊 TAP HERE TO ENABLE BUZZER SOUNDS
+</div>
+
 <!-- HEADER -->
 <div class="page-header">
   <div class="page-logo-title">
@@ -1587,22 +1592,49 @@ _shotBuzzer.load();
 // Unlock preloaded audio on first user interaction (required for mobile/Safari)
 function _unlockBuzzers(){
   [_gameBuzzer, _shotBuzzer].forEach(a => {
-    a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(()=>{});
+    a.play().then(() => { 
+      a.pause(); 
+      a.currentTime = 0; 
+      // Hide banner if successfully unlocked
+      document.getElementById('audioUnlockBanner').style.display = 'none';
+    }).catch(()=>{});
   });
 }
 document.addEventListener('touchstart', _unlockBuzzers, { once: true, passive: true });
 document.addEventListener('click',      _unlockBuzzers, { once: true, passive: true });
 
-function playGameBuzzer(){
-  _gameBuzzer.currentTime = 0;
-  _gameBuzzer.play().catch(()=>{});
+function unlockAudioManual() {
+  [_gameBuzzer, _shotBuzzer].forEach(a => {
+    a.play().then(() => {
+      a.pause();
+      a.currentTime = 0;
+      document.getElementById('audioUnlockBanner').style.display = 'none';
+      console.log("Audio successfully unlocked manually.");
+    }).catch(e => {
+      console.warn("Manual unlock failed:", e);
+    });
+  });
 }
 
+function showAudioUnlock() {
+  const banner = document.getElementById('audioUnlockBanner');
+  if (banner) banner.style.display = 'block';
+}
 
+function playGameBuzzer(){
+  _gameBuzzer.currentTime = 0;
+  _gameBuzzer.play().catch(e => {
+    console.warn("Local game buzzer blocked, showing unlock banner:", e);
+    showAudioUnlock();
+  });
+}
 
 function playShotBuzzer(){
   _shotBuzzer.currentTime = 0;
-  _shotBuzzer.play().catch(()=>{});
+  _shotBuzzer.play().catch(e => {
+    console.warn("Local shot buzzer blocked, showing unlock banner:", e);
+    showAudioUnlock();
+  });
 }
 
 
