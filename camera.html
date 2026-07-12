@@ -351,6 +351,12 @@
           <option value="api-local">Local Offline Sync (API)</option>
         </select>
       </div>
+      <div style="display:flex;align-items:center;gap:10px;width:100%;">
+        <span style="font-size:11px;color:var(--grey);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Camera Source:</span>
+        <select id="camera-device-select" onchange="switchCamera(this.value)" style="flex:1;background:#0d0906;border:1px solid var(--border);color:#fff;border-radius:4px;padding:6px 10px;font-size:12px;font-family:sans-serif;cursor:pointer;outline:none;">
+          <option value="">Detecting cameras...</option>
+        </select>
+      </div>
     </div>
 
     <div class="status-panel">
@@ -423,23 +429,96 @@
       shot: document.getElementById('frame-shot')
     };
 
+    let currentDeviceId = null;
+
     // Initialize Camera Stream
-    async function startCamera() {
+    async function startCamera(deviceId = null) {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
       try {
         const constraints = {
           video: {
-            facingMode: 'environment', // Use rear camera
             width: { ideal: 1280 },
             height: { ideal: 720 }
           },
           audio: false
         };
+        if (deviceId) {
+          constraints.video.deviceId = { exact: deviceId };
+        } else {
+          constraints.video.facingMode = 'environment';
+        }
         stream = await navigator.mediaDevices.getUserMedia(constraints);
         const video = document.getElementById('camera-view');
         video.srcObject = stream;
+        
+        // Enumerate devices once stream is active (permissions granted)
+        await enumerateCameras();
       } catch (err) {
-        alert('Could not access rear camera. Make sure you grant camera permissions.');
+        console.error("Camera access error:", err);
+        // Fallback for laptops without 'environment' rear camera support
+        if (!deviceId) {
+          try {
+            const fallbackConstraints = { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
+            stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+            const video = document.getElementById('camera-view');
+            video.srcObject = stream;
+            await enumerateCameras();
+          } catch(e) {
+            alert('Could not access camera. Please check your camera permissions.');
+          }
+        } else {
+          alert('Could not access selected camera.');
+        }
       }
+    }
+
+    async function enumerateCameras() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        const select = document.getElementById('camera-device-select');
+        if (!select) return;
+        
+        select.innerHTML = '';
+        
+        if (videoDevices.length === 0) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'No cameras found';
+          select.appendChild(opt);
+          return;
+        }
+
+        // Get the active track's deviceId
+        let activeId = null;
+        if (stream) {
+          const videoTrack = stream.getVideoTracks()[0];
+          if (videoTrack) {
+            activeId = videoTrack.getSettings().deviceId;
+          }
+        }
+
+        videoDevices.forEach((device, index) => {
+          const opt = document.createElement('option');
+          opt.value = device.deviceId;
+          opt.textContent = device.label || `Camera ${index + 1}`;
+          if (device.deviceId === activeId) {
+            opt.selected = true;
+            currentDeviceId = device.deviceId;
+          }
+          select.appendChild(opt);
+        });
+      } catch (err) {
+        console.warn("Failed to enumerate cameras:", err);
+      }
+    }
+
+    function switchCamera(deviceId) {
+      if (!deviceId || deviceId === currentDeviceId) return;
+      currentDeviceId = deviceId;
+      startCamera(deviceId);
     }
     
     let thresholds = { clock: 120, home: 120, away: 120, period: 120, shot: 120 };
