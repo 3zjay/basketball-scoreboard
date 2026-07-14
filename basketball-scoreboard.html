@@ -1517,7 +1517,7 @@ function getDominantColor(canvas){
   return '#' + [r,g,b].map(v => Math.min(255,v).toString(16).padStart(2,'0')).join('');
 }
 
-// Logos — resize to 400x400 PNG for crisp local/overlay display, 180x180 JPEG thumbnail for cross-device sync
+// Logos — resize to 600x600 PNG for crisp local/overlay display (sharp at 4K), 250x250 JPEG thumbnail for cross-device sync
 function setLogo(team, input){
   const f = input.files[0]; if(!f) return;
   const r = new FileReader();
@@ -1541,17 +1541,18 @@ function setLogo(team, input){
         ctx.drawImage(img, x, y, nw, nh);
       };
 
-      // Full-size 400x400 PNG — sharp at any overlay size up to 4K
+      // Full-size 600x600 PNG — sharp at any overlay size up to 4K
+      // If the source image is smaller than 600px, use it at its native size to avoid upscaling artifacts
+      const fullSize = Math.min(600, Math.max(img.width, img.height));
       const canvas = document.createElement('canvas');
-      drawContain(canvas, 400);
+      drawContain(canvas, fullSize);
       const resized = canvas.toDataURL('image/png');
       S[team+'Logo'] = resized;
 
-      // 180x180 JPEG at 85% quality — good cross-device quality via SSE broadcast
-      // without bloating the payload too much (~8-15 KB vs 3-6 KB before)
+      // 250x250 JPEG at 92% quality — crisp cross-device sync via SSE broadcast (~20-40 KB)
       const thumb = document.createElement('canvas');
-      drawContain(thumb, 180);
-      S[team+'LogoThumb'] = thumb.toDataURL('image/jpeg', 0.85);
+      drawContain(thumb, 250);
+      S[team+'LogoThumb'] = thumb.toDataURL('image/jpeg', 0.92);
 
       applyLogo(team, resized);
 
