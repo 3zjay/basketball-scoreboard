@@ -1,6 +1,67 @@
 const http = require('http');
 const fs   = require('fs');
 const path = require('path');
+const WebSocket = require('ws');
+
+// --- Streamlabs Replay Buffer Integration ---
+const STREAMLABS_TOKEN = '8183a35b168a986def8938bbfc456a988453c';
+let streamlabsSocket = null;
+let streamlabsAuth = false;
+
+function connectToStreamlabs() {
+  if (STREAMLABS_TOKEN === 'YOUR_API_TOKEN_HERE' || !STREAMLABS_TOKEN) {
+    console.log('⚠️ Streamlabs API Token is not set in server.js. Auto-save replays will be disabled until you add your token from Settings > Remote Control.');
+    return;
+  }
+  
+  streamlabsSocket = new WebSocket('ws://127.0.0.1:59650/api/websocket');
+
+  streamlabsSocket.on('open', () => {
+    streamlabsSocket.send(JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "auth",
+      params: {
+        resource: "TcpServerService",
+        args: [STREAMLABS_TOKEN]
+      }
+    }));
+  });
+
+  streamlabsSocket.on('message', (data) => {
+    try {
+      const res = JSON.parse(data);
+      if (res.id === 1 && res.result === true) {
+        streamlabsAuth = true;
+        console.log('✅ Connected & Authenticated to Streamlabs Replay Buffer!');
+      }
+    } catch (e) {}
+  });
+
+  streamlabsSocket.on('close', () => {
+    streamlabsAuth = false;
+    setTimeout(connectToStreamlabs, 5000);
+  });
+  
+  streamlabsSocket.on('error', () => {});
+}
+
+function triggerSaveReplay() {
+  if (streamlabsSocket && streamlabsAuth) {
+    streamlabsSocket.send(JSON.stringify({
+      jsonrpc: "2.0",
+      id: 2,
+      method: "saveReplay",
+      params: {
+        resource: "StreamingService"
+      }
+    }));
+    console.log('📡 Sent Replay Buffer Save Request to Streamlabs!');
+  }
+}
+
+connectToStreamlabs();
+// --------------------------------------------
 
 let ngrok = null;
 try {
@@ -463,7 +524,23 @@ const requestHandler = (req, res) => {
           stopShotClock(user);
         }
 
+        // Store old scores for replay comparison
+        const prevHomeScore = states[user].homeScore || 0;
+        const prevAwayScore = states[user].awayScore || 0;
+
         states[user] = { ...states[user], ...updated };
+
+        // Check if score went up
+        try {
+          const newHomeScore = states[user].homeScore || 0;
+          const newAwayScore = states[user].awayScore || 0;
+          if (newHomeScore > prevHomeScore || newAwayScore > prevAwayScore) {
+            triggerSaveReplay();
+          }
+        } catch (err) {
+          console.error("⚠️ Replay trigger check failed:", err);
+        }
+
         pushToAll(user, { type: 'state', data: fullState(user) });
       } catch(e) {}
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -481,7 +558,23 @@ const requestHandler = (req, res) => {
         delete incoming.shotRunning;
         delete incoming.gameSeconds;
         delete incoming.shotSeconds;
+
+        // Store old scores for replay comparison
+        const prevHomeScore = states[user].homeScore || 0;
+        const prevAwayScore = states[user].awayScore || 0;
+
         states[user] = { ...states[user], ...incoming };
+
+        // Check if score went up
+        try {
+          const newHomeScore = states[user].homeScore || 0;
+          const newAwayScore = states[user].awayScore || 0;
+          if (newHomeScore > prevHomeScore || newAwayScore > prevAwayScore) {
+            triggerSaveReplay();
+          }
+        } catch (err) {
+          console.error("⚠️ Replay trigger check failed:", err);
+        }
       } catch(e) {}
       pushToAll(user, { type: 'state', data: fullState(user) });
       res.writeHead(200, { 'Content-Type': 'application/json' });

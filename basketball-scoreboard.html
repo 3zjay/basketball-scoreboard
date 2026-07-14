@@ -1517,7 +1517,7 @@ function getDominantColor(canvas){
   return '#' + [r,g,b].map(v => Math.min(255,v).toString(16).padStart(2,'0')).join('');
 }
 
-// Logos — resize to 200x200 for local display, 72x72 JPEG thumbnail for cross-device sync
+// Logos — resize to 400x400 PNG for crisp local/overlay display, 180x180 JPEG thumbnail for cross-device sync
 function setLogo(team, input){
   const f = input.files[0]; if(!f) return;
   const r = new FileReader();
@@ -1525,10 +1525,13 @@ function setLogo(team, input){
     const img = new Image();
     img.onload = () => {
       // Helper to draw image while maintaining aspect ratio (contain fitting)
+      // Uses imageSmoothingQuality=high for best downscaling quality
       const drawContain = (canvas, targetSize) => {
         canvas.width = targetSize;
         canvas.height = targetSize;
         const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         ctx.clearRect(0, 0, targetSize, targetSize);
         const ratio = Math.min(targetSize / img.width, targetSize / img.height);
         const nw = img.width * ratio;
@@ -1538,17 +1541,17 @@ function setLogo(team, input){
         ctx.drawImage(img, x, y, nw, nh);
       };
 
-      // Full-size copy — stored in localStorage for high-quality local display
+      // Full-size 400x400 PNG — sharp at any overlay size up to 4K
       const canvas = document.createElement('canvas');
-      drawContain(canvas, 200);
+      drawContain(canvas, 400);
       const resized = canvas.toDataURL('image/png');
       S[team+'Logo'] = resized;
 
-      // Compressed thumbnail (~3-6 KB) — included in state so it syncs to all
-      // devices via the server's SSE broadcast without bloating the payload
+      // 180x180 JPEG at 85% quality — good cross-device quality via SSE broadcast
+      // without bloating the payload too much (~8-15 KB vs 3-6 KB before)
       const thumb = document.createElement('canvas');
-      drawContain(thumb, 72);
-      S[team+'LogoThumb'] = thumb.toDataURL('image/jpeg', 0.65);
+      drawContain(thumb, 180);
+      S[team+'LogoThumb'] = thumb.toDataURL('image/jpeg', 0.85);
 
       applyLogo(team, resized);
 

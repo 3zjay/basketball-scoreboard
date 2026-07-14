@@ -138,6 +138,29 @@ For fast, mouse-free tabletop operations, you can use the following keyboard key
 
 ---
 
+## 📹 Streamlabs Replay Auto-Save Automation
+
+This scoreboard system features a built-in **Streamlabs Desktop Replay Buffer Auto-Save** integration. 
+Whenever a point is scored (either manually via keyboard/controller or automatically via the AI Camera OCR), the scoreboard server instantly sends a background WebSocket RPC request to Streamlabs Desktop to save the last 15 seconds of gameplay as a replay.
+
+### ⚙️ How to Configure
+1. Open Streamlabs Desktop.
+2. Go to **Settings > Remote Control** and click **Show Details** to copy your local **API Token**.
+3. Open `server.js` in a text editor and paste the token on line 6:
+   ```javascript
+   const STREAMLABS_TOKEN = 'YOUR_API_TOKEN_HERE';
+   ```
+4. Make sure your **Replay Buffer is started** in Streamlabs (button next to Record).
+5. Restart your scoreboard server. You will see a console confirmation: `✅ Connected & Authenticated to Streamlabs Replay Buffer!`.
+
+### ⚡ Game Day Replay Workflow
+1. Double-click the **`Start Replay Center.command`** on your Desktop to run the local replay watcher in the background.
+2. Run your scoreboard server as usual.
+3. Every time a basket is scored, Streamlabs will silently save the replay clip to disk in the background.
+4. Open **`http://localhost:8000/controls.html`** on your second monitor or phone to view the button panel and click on any clip to play it back instantly with automated transition sweeps!
+
+---
+
 ## 🛠️ Troubleshooting & Tips
 
 * **Delay in Buzzer Sound**: The local version minimizes browser audio latency. For the absolute lowest audio lag, ensure the operator and OBS laptops are connected directly or run on the same device.
