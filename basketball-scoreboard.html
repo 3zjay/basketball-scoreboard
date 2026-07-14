@@ -630,6 +630,7 @@ body.light .reset-btn:hover { background:#fee2e2; }
           <div id="homeLogoCtrl"><div class="lbtext">Upload<br>Logo</div></div>
         </div>
         <input type="file" id="homeFile" accept="image/*" onchange="setLogo('home',this)" style="display:none;position:absolute;width:0;height:0;opacity:0;">
+        <button class="btn r" onclick="clearLogos()" style="font-size:10px;padding:2px 7px;letter-spacing:0.5px;margin-top:4px;align-self:flex-start;" title="Clear all cached logo data and re-upload fresh">🗑 Reset Logos</button>
         <div class="field-group">
           <div class="field-label">Team Name</div>
           <div style="display:flex;gap:6px;">
@@ -1581,6 +1582,34 @@ function applyLogo(team, src){
   const img = `<img src="${src}" alt="logo">`;
   const ct = document.getElementById(team+'LogoCtrl');
   if(ct) ct.innerHTML = img;
+}
+
+// Clear all cached logo data — localStorage, server memory, and Firebase
+// Use this when logos appear blurry (old low-res data cached from previous sessions)
+function clearLogos() {
+  if(!confirm('Reset both team logos? You will need to re-upload them.')) return;
+  // 1. Wipe from in-memory state
+  ['home','away'].forEach(t => {
+    S[t+'Logo'] = null;
+    S[t+'LogoThumb'] = null;
+    // Reset the logo button UI
+    const ct = document.getElementById(t+'LogoCtrl');
+    if(ct) ct.innerHTML = '<div class="lbtext">Upload<br>Logo</div>';
+  });
+  // 2. Wipe from localStorage
+  save();
+  // 3. Wipe from server memory via DELETE /logo
+  fetch(`${SERVER_URL}/logo?user=${encodeURIComponent(currentUser)}`, { method: 'DELETE' })
+    .catch(err => console.warn('Logo clear on server failed:', err));
+  // 4. Wipe from Firebase if connected
+  if(typeof db !== 'undefined' && db) {
+    try {
+      const ref = db.ref ? db.ref(`scoreboards/${currentUser}`) : null;
+      if(ref) ref.update({ homeLogo: null, awayLogo: null, homeLogoThumb: null, awayLogoThumb: null });
+    } catch(e) { console.warn('Firebase logo clear failed:', e); }
+  }
+  renderAll();
+  console.log('✅ Logo cache cleared. Re-upload logos to apply new high-res versions.');
 }
 
 // ── BUZZER SOUNDS ──────────────────────────────────────────

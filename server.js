@@ -607,6 +607,16 @@ const requestHandler = (req, res) => {
     return;
   }
 
+  // DELETE /logo — wipe ALL logo data from server memory for a user
+  if (req.method === 'DELETE' && pathname === '/logo') {
+    if (logos[user]) { logos[user].home = null; logos[user].away = null; }
+    if (states[user]) { states[user].homeLogo = null; states[user].awayLogo = null; states[user].homeLogoThumb = null; states[user].awayLogoThumb = null; }
+    pushToAll(user, { type: 'state', data: fullState(user) });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end('{"ok":true}');
+    return;
+  }
+
   // GET /events — SSE stream for all clients
   if (pathname === '/events') {
     res.writeHead(200, {
