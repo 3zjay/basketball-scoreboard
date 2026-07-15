@@ -22,6 +22,12 @@ def main():
         if p not in env.get("PATH", ""):
             env["PATH"] = p + ":" + env.get("PATH", "")
 
+    # Set default OBS Studio WebSocket connection details
+    if "OBS_PORT" not in env:
+        env["OBS_PORT"] = "4455"
+    if "OBS_PASSWORD" not in env:
+        env["OBS_PASSWORD"] = "veCk9KOvB5MTV0aI"
+
     # Check for node
     try:
         subprocess.run(["node", "--version"], capture_output=True, check=True, env=env)

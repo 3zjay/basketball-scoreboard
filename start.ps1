@@ -11,7 +11,7 @@ Set-Location $PSScriptRoot
 # Optional: Set your OBS WebSocket Port and Password for Windows
 # Find these in OBS Studio under Tools > WebSocket Server Settings.
 $env:OBS_PORT = "4455"
-$env:OBS_PASSWORD = ""
+$env:OBS_PASSWORD = "veCk9KOvB5MTV0aI"
 
 Clear-Host
 

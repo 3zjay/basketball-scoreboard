@@ -3,7 +3,7 @@
 :: Optional: Set your OBS WebSocket Port and Password for Windows
 :: Find these in OBS Studio under Tools > WebSocket Server Settings.
 set OBS_PORT=4455
-set OBS_PASSWORD=
+set OBS_PASSWORD=veCk9KOvB5MTV0aI
 
 echo Starting Scoreboard Launcher...
 echo.
