@@ -27,6 +27,18 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:: Check if node_modules folder exists, if not install dependencies
+if not exist "%~dp0node_modules" (
+    echo [INFO] node_modules folder not found. Installing dependencies...
+    cd /d "%~dp0"
+    call npm install
+    if %errorlevel% neq 0 (
+        echo [ERROR] Failed to install dependencies.
+        pause
+        exit /b 1
+    )
+)
+
 :: Check if server.js exists
 if not exist "%~dp0server.js" (
     echo  [ERROR] server.js not found in %~dp0

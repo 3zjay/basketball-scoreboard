@@ -34,6 +34,18 @@ if %errorlevel% neq 0 (
     exit /b
 )
 
+:: Check if node_modules folder exists, if not install dependencies
+if not exist "%~dp0node_modules" (
+    echo node_modules folder not found. Installing dependencies...
+    cd /d "%~dp0"
+    call npm install
+    if %errorlevel% neq 0 (
+        echo ERROR: Failed to install node dependencies.
+        pause
+        exit /b
+    )
+)
+
 :: Check if server.js exists next to this bat file
 if not exist "%~dp0server.js" (
     echo ERROR: server.js not found in %~dp0
