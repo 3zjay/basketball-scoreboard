@@ -59,10 +59,10 @@ for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /i "IPv4"') do (
 )
 
 echo.
-echo  Scoreboard Control  ->  http://localhost:3000
-echo  Venue Display       ->  http://localhost:3000/display
-echo  Shot Clock Display  ->  http://localhost:3000/shotclock-display
-echo  OBS Overlay         ->  http://localhost:3000/fullscreen
+echo  Scoreboard Control  :  http://localhost:3000
+echo  Venue Display       :  http://localhost:3000/display
+echo  Shot Clock Display  :  http://localhost:3000/shotclock-display
+echo  OBS Overlay         :  http://localhost:3000/fullscreen
 echo.
 echo  Press Ctrl+C to stop the server.
 echo  ============================================
