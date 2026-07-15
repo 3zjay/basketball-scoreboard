@@ -2,6 +2,7 @@ const http = require('http');
 const fs   = require('fs');
 const path = require('path');
 const WebSocket = require('ws');
+const crypto = require('crypto');
 
 // --- Streamlabs Replay Buffer Integration ---
 const STREAMLABS_TOKEN = process.env.STREAMLABS_TOKEN || '8183a35b168a986def8938bbfc456a988453c';
@@ -10,7 +11,7 @@ let streamlabsAuth = false;
 
 function connectToStreamlabs() {
   if (STREAMLABS_TOKEN === 'YOUR_API_TOKEN_HERE' || !STREAMLABS_TOKEN) {
-    console.log('⚠️ Streamlabs API Token is not set in server.js. Auto-save replays will be disabled until you add your token from Settings > Remote Control.');
+    console.log('⚠️ Streamlabs API Token is not set. Auto-save replays for Streamlabs will be disabled.');
     return;
   }
   
@@ -46,7 +47,67 @@ function connectToStreamlabs() {
   streamlabsSocket.on('error', () => {});
 }
 
+// --- OBS Studio Replay Buffer Integration (obs-websocket v5) ---
+const OBS_PORT = process.env.OBS_PORT || 4455;
+const OBS_PASSWORD = process.env.OBS_PASSWORD || '';
+let obsSocket = null;
+let obsAuth = false;
+
+function generateAuthResponse(password, salt, challenge) {
+  const sha256 = (data) => crypto.createHash('sha256').update(data).digest('base64');
+  const secret = sha256(password + salt);
+  return sha256(secret + challenge);
+}
+
+function connectToOBS() {
+  obsSocket = new WebSocket(`ws://127.0.0.1:${OBS_PORT}`);
+
+  obsSocket.on('open', () => {
+    // Wait for the hello message op:0
+  });
+
+  obsSocket.on('message', (data) => {
+    try {
+      const msg = JSON.parse(data);
+      const op = msg.op;
+
+      if (op === 0) { // Hello
+        const handshake = {
+          op: 1,
+          d: {
+            rpcVersion: 1,
+            eventSubscriptions: 0
+          }
+        };
+
+        const auth = msg.d.authentication;
+        if (auth) {
+          if (OBS_PASSWORD) {
+            handshake.d.authentication = generateAuthResponse(OBS_PASSWORD, auth.salt, auth.challenge);
+          } else {
+            console.log('⚠️ OBS WebSocket requires a password, but OBS_PASSWORD is not set. Replay triggers via OBS will fail.');
+            return;
+          }
+        }
+
+        obsSocket.send(JSON.stringify(handshake));
+      } else if (op === 2) { // Identified
+        obsAuth = true;
+        console.log('✅ Connected & Authenticated to OBS Studio Replay Buffer!');
+      }
+    } catch (e) {}
+  });
+
+  obsSocket.on('close', () => {
+    obsAuth = false;
+    setTimeout(connectToOBS, 5000);
+  });
+
+  obsSocket.on('error', () => {});
+}
+
 function triggerSaveReplay() {
+  // 1. Trigger Streamlabs
   if (streamlabsSocket && streamlabsAuth) {
     streamlabsSocket.send(JSON.stringify({
       jsonrpc: "2.0",
@@ -58,9 +119,22 @@ function triggerSaveReplay() {
     }));
     console.log('📡 Sent Replay Buffer Save Request to Streamlabs!');
   }
+
+  // 2. Trigger OBS Studio
+  if (obsSocket && obsAuth) {
+    obsSocket.send(JSON.stringify({
+      op: 6,
+      d: {
+        requestType: "SaveReplayBuffer",
+        requestId: "scoreboard-replay-trigger"
+      }
+    }));
+    console.log('📡 Sent Replay Buffer Save Request to OBS Studio!');
+  }
 }
 
 connectToStreamlabs();
+connectToOBS();
 // --------------------------------------------
 
 let ngrok = null;

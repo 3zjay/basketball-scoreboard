@@ -6,6 +6,11 @@ cd /d "%~dp0"
 :: Find this in Streamlabs Desktop under Settings > Remote Control > Copy API Token.
 :: set STREAMLABS_TOKEN=8183a35b168a986def8938bbfc456a988453c
 
+:: Optional: Set your OBS WebSocket Port and Password for Windows
+:: Find these in OBS Studio under Tools > WebSocket Server Settings.
+:: set OBS_PORT=4455
+:: set OBS_PASSWORD=your_obs_websocket_password_here
+
 echo.
 echo  ============================================
 echo   HOOP CULTURE SCOREBOARD - Starting Server

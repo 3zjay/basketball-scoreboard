@@ -8,6 +8,11 @@ Set-Location $PSScriptRoot
 # Find this in Streamlabs Desktop under Settings > Remote Control > Copy API Token.
 # $env:STREAMLABS_TOKEN = "8183a35b168a986def8938bbfc456a988453c"
 
+# Optional: Set your OBS WebSocket Port and Password for Windows
+# Find these in OBS Studio under Tools > WebSocket Server Settings.
+# $env:OBS_PORT = "4455"
+# $env:OBS_PASSWORD = "your_obs_websocket_password_here"
+
 Clear-Host
 
 Write-Host "==========================================================" -ForegroundColor Cyan
