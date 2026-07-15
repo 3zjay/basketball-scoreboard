@@ -2,6 +2,10 @@
 title 🏀 Hoop Culture Scoreboard
 cd /d "%~dp0"
 
+:: Optional: Set your Windows Streamlabs Remote Control API Token here if it differs from Mac
+:: Find this in Streamlabs Desktop under Settings > Remote Control > Copy API Token.
+:: set STREAMLABS_TOKEN=8183a35b168a986def8938bbfc456a988453c
+
 echo.
 echo  ============================================
 echo   HOOP CULTURE SCOREBOARD - Starting Server

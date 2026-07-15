@@ -4,7 +4,7 @@ const path = require('path');
 const WebSocket = require('ws');
 
 // --- Streamlabs Replay Buffer Integration ---
-const STREAMLABS_TOKEN = '8183a35b168a986def8938bbfc456a988453c';
+const STREAMLABS_TOKEN = process.env.STREAMLABS_TOKEN || '8183a35b168a986def8938bbfc456a988453c';
 let streamlabsSocket = null;
 let streamlabsAuth = false;
 
@@ -213,6 +213,8 @@ const ROUTES = {
   '/AI_SCOREBOARD_GUIDE.txt': 'AI_SCOREBOARD_GUIDE.txt',
   '/README.txt': 'README.txt',
   '/tf.min.js':          'tf.min.js',
+  '/clear-logos':        'clear-logos.html',
+  '/clear-logos.html':   'clear-logos.html',
   '/quick_start_operator_guide.md': 'quick_start_operator_guide.md',
   '/clean_gym_operator_guide.jpg': 'clean_gym_operator_guide.jpg',
   '/docking_station_wifi_setup_diagram.jpg': 'docking_station_wifi_setup_diagram.jpg',

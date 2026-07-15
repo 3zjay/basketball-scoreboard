@@ -4,6 +4,10 @@ $ErrorActionPreference = "Stop"
 # Set working directory to the folder where this script is located
 Set-Location $PSScriptRoot
 
+# Optional: Set your Windows Streamlabs Remote Control API Token here if it differs from Mac
+# Find this in Streamlabs Desktop under Settings > Remote Control > Copy API Token.
+# $env:STREAMLABS_TOKEN = "8183a35b168a986def8938bbfc456a988453c"
+
 Clear-Host
 
 Write-Host "==========================================================" -ForegroundColor Cyan
