@@ -8,10 +8,11 @@ Featuring a modern **Tri-Mode Architecture**, this system offers triple redundan
 
 ## 🚀 Key Features
 
-* **Tri-Mode Redundancy (`v2.0.0`)**: 
+* **Tri-Mode Redundancy (`v2.1.0`)**: 
   * 🔌 **Offline Local Mode**: Runs a local Node.js WebSocket server on any Windows laptop—perfect for zero-internet gym environments.
   * ⚡ **Vercel + Firebase Serverless Cloud**: Host statically on Vercel at zero cost, syncing scores and clocks in real time across the globe using **Firebase Realtime Database**.
   * ☁️ **OnRender Full-Stack Cloud**: Full Node.js deployment for permanent cloud environments with standard client-server syncing.
+* **Automatic Instant Replay Triggers (`v2.1.0`)**: Links score events directly with OBS Studio (via WebSocket v5) and Streamlabs Desktop (via local RPC). Scoring a point on the controller panel automatically saves the active replay buffer to disk.
 * **Desktop Launcher GUI (`ScoreboardLauncher.ps1`)**: A beautiful, dark-mode native Windows Forms app to launch servers, check logs, and control network interfaces.
 * **Integrated Mobile Hotspot Controls**: One-click native control of your PC's Mobile Hotspot using Windows tethering APIs—perfect for setting up a court-side private tablet network instantly.
 * **Authoritative Server / DB Clocks**: Game clock and shot clock calculations are synchronized server-side (or database-side in Firebase) to prevent clock drift between connected tablets, venue displays, and broadcast graphics.
