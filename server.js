@@ -352,10 +352,16 @@ const requestHandler = async (req, res) => {
         // Start tunnel options
         const opts = { port: PORT };
         if (domain && domain.trim() !== '') {
-          opts.subdomain = domain.trim();
+          opts.subdomain = domain.trim().toLowerCase();
         }
 
-        activeTunnel = await localtunnel(opts);
+        // Establish tunnel with a 7-second timeout to handle already taken subdomains or server issues
+        const tunnelPromise = localtunnel(opts);
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Tunnel request timed out. The subdomain might be in use or the localtunnel service is busy. Please try a different or more unique subdomain.')), 7000);
+        });
+
+        activeTunnel = await Promise.race([tunnelPromise, timeoutPromise]);
         activeTunnelUrl = activeTunnel.url;
 
         // Register close event
