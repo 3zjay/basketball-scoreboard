@@ -376,7 +376,7 @@ html,body{background:transparent;overflow:hidden;width:100%;height:100%}
 
 <script>
 /* ══ CONFIG ══ */
-const SRV=(window.location.hostname.includes('vercel.app')||window.location.hostname.includes('vercel.sh'))?'https://basketball-scoreboard-o0c7.onrender.com':'';
+const SRV=(window.location.hostname.includes('vercel.app')||window.location.hostname.includes('vercel.sh'))?'https://basketball-scoreboard-o0c7.onrender.com':(window.location.protocol==='file:'?'http://localhost:3000':'');
 const useFB=window.location.hostname.includes('vercel.app')||window.location.hostname.includes('vercel.sh');
 let db=null;
 if(useFB&&typeof firebase!=='undefined'&&isFirebaseConfigured){try{if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);db=firebase.database();}catch(e){}}
