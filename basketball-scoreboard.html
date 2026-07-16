@@ -95,7 +95,8 @@
                   window.location.hostname.startsWith('172.') ||
                   window.location.hostname.endsWith('.local') ||
                   window.location.hostname.endsWith('.ngrok.io') ||
-                  window.location.hostname.endsWith('.ngrok-free.dev');
+                  window.location.hostname.endsWith('.ngrok-free.dev') ||
+                  window.location.hostname.endsWith('.loca.lt');
   if (!isLocal && !hasUserSession && !stopRedirect) {
     const currentPath = window.location.pathname + window.location.search;
     window.location.href = '/login?redirect=' + encodeURIComponent(currentPath);
@@ -920,30 +921,26 @@ body.light .reset-btn:hover { background:#fee2e2; }
     </div>
   </div>
 
-  <!-- ── INTERNET SHARING (NGROK) ── -->
-  <div class="card" style="margin-top:12px;" id="ngrokCard">
+  <!-- ── INTERNET SHARING (LOCALTUNNEL) ── -->
+  <div class="card" style="margin-top:12px;" id="tunnelCard">
     <div class="card-header">
-      <div class="card-title">🌐 Internet Sharing (ngrok)</div>
+      <div class="card-title">🌐 Internet Sharing (Localtunnel)</div>
     </div>
     <div style="margin-top:4px;">
-      <div class="field-label" style="font-size:11px;color:var(--text3);margin-bottom:4px;">ngrok Authtoken</div>
+      <div class="field-label" style="font-size:11px;color:var(--text3);margin-bottom:4px;">Custom Subdomain (Optional)</div>
       <div style="display:flex;gap:6px;">
-        <input type="password" class="inp" id="ngrokTokenIn" placeholder="Paste your authtoken here..." style="flex:1;font-size:12px;">
-      </div>
-      <div class="field-label" style="font-size:11px;color:var(--text3);margin-bottom:4px;margin-top:6px;">ngrok Custom Domain (Optional)</div>
-      <div style="display:flex;gap:6px;">
-        <input type="text" class="inp" id="ngrokDomainIn" placeholder="e.g. yourname.ngrok-free.dev" style="flex:1;font-size:12px;">
-        <button class="btn" style="padding:0 12px;font-size:12px;" id="ngrokSaveBtn" onclick="saveNgrokToken()">Save</button>
+        <input type="text" class="inp" id="ltSubdomainIn" placeholder="e.g. hoop-culture-scoreboard" style="flex:1;font-size:12px;">
+        <button class="btn" style="padding:0 12px;font-size:12px;" id="ltSaveBtn" onclick="saveLtSettings()">Save</button>
       </div>
       <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
-        <button class="btn primary" id="ngrokToggleBtn" onclick="toggleNgrokTunnel()" style="flex:1;padding:10px;font-size:12px;letter-spacing:0.5px;">
+        <button class="btn primary" id="ltToggleBtn" onclick="toggleLtTunnel()" style="flex:1;padding:10px;font-size:12px;letter-spacing:0.5px;">
           Start Tunnel
         </button>
-        <div id="ngrokStatusIndicator" style="width:12px;height:12px;border-radius:50%;background:#ef4444;box-shadow:0 0 6px #ef4444;" title="Offline"></div>
+        <div id="ltStatusIndicator" style="width:12px;height:12px;border-radius:50%;background:#ef4444;box-shadow:0 0 6px #ef4444;" title="Offline"></div>
       </div>
-      <div id="ngrokUrlContainer" style="display:none;margin-top:12px;padding:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:4px;">
+      <div id="ltUrlContainer" style="display:none;margin-top:12px;padding:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:4px;">
         <span style="font-size:11px;color:var(--text3);display:block;margin-bottom:2px;">Public Controller URL:</span>
-        <a id="ngrokPublicLink" href="#" target="_blank" style="color:var(--accent);font-weight:700;font-size:12px;text-decoration:none;word-break:break-all;"></a>
+        <a id="ltPublicLink" href="#" target="_blank" style="color:var(--accent);font-weight:700;font-size:12px;text-decoration:none;word-break:break-all;"></a>
       </div>
     </div>
   </div>
@@ -1050,18 +1047,13 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   if (useFirebase) {
-    const ngCard = document.getElementById('ngrokCard');
-    if (ngCard) ngCard.style.display = 'none';
+    const tCard = document.getElementById('tunnelCard');
+    if (tCard) tCard.style.display = 'none';
   } else {
-    const savedToken = localStorage.getItem('hc_ngrok_token');
-    if (savedToken) {
-      const tokenInput = document.getElementById('ngrokTokenIn');
-      if (tokenInput) tokenInput.value = savedToken;
-    }
-    const savedDomain = localStorage.getItem('hc_ngrok_domain');
-    if (savedDomain) {
-      const domainInput = document.getElementById('ngrokDomainIn');
-      if (domainInput) domainInput.value = savedDomain;
+    const savedSubdomain = localStorage.getItem('hc_lt_subdomain');
+    if (savedSubdomain) {
+      const subdomainInput = document.getElementById('ltSubdomainIn');
+      if (subdomainInput) subdomainInput.value = savedSubdomain;
     }
     checkTunnelStatus();
   }
@@ -1293,29 +1285,27 @@ function setScoreDirect(team, val){
   save(); renderAll();
 }
 
-function saveNgrokToken() {
-  const token = document.getElementById('ngrokTokenIn').value;
-  const domain = document.getElementById('ngrokDomainIn').value;
-  localStorage.setItem('hc_ngrok_token', token);
-  localStorage.setItem('hc_ngrok_domain', domain);
-  alert('ngrok settings saved!');
+function saveLtSettings() {
+  const subdomain = document.getElementById('ltSubdomainIn').value;
+  localStorage.setItem('hc_lt_subdomain', subdomain);
+  alert('Localtunnel settings saved!');
 }
 
 async function checkTunnelStatus() {
   try {
     const res = await fetch('/api/tunnel/status');
     const data = await res.json();
-    updateNgrokUI(data.active, data.url);
+    updateLtUI(data.active, data.url);
   } catch(e) {
     console.error('Error checking tunnel status:', e);
   }
 }
 
-function updateNgrokUI(active, url) {
-  const btn = document.getElementById('ngrokToggleBtn');
-  const indicator = document.getElementById('ngrokStatusIndicator');
-  const container = document.getElementById('ngrokUrlContainer');
-  const link = document.getElementById('ngrokPublicLink');
+function updateLtUI(active, url) {
+  const btn = document.getElementById('ltToggleBtn');
+  const indicator = document.getElementById('ltStatusIndicator');
+  const container = document.getElementById('ltUrlContainer');
+  const link = document.getElementById('ltPublicLink');
 
   if (!btn || !indicator || !container || !link) return;
 
@@ -1344,20 +1334,15 @@ function updateNgrokUI(active, url) {
   }
 }
 
-let isNgrokLoading = false;
-async function toggleNgrokTunnel() {
-  if (isNgrokLoading) return;
-  const btn = document.getElementById('ngrokToggleBtn');
-  const token = document.getElementById('ngrokTokenIn').value;
-  const domain = document.getElementById('ngrokDomainIn').value;
+let isLtLoading = false;
+async function toggleLtTunnel() {
+  if (isLtLoading) return;
+  const btn = document.getElementById('ltToggleBtn');
+  const subdomain = document.getElementById('ltSubdomainIn').value;
   if (!btn) return;
 
   if (btn.textContent === 'Start Tunnel') {
-    if (!token || token.trim() === '') {
-      alert('Please enter your ngrok Authtoken first.');
-      return;
-    }
-    isNgrokLoading = true;
+    isLtLoading = true;
     btn.textContent = 'Starting...';
     btn.disabled = true;
 
@@ -1365,24 +1350,24 @@ async function toggleNgrokTunnel() {
       const res = await fetch('/api/tunnel/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ authtoken: token, domain: domain })
+        body: JSON.stringify({ domain: subdomain })
       });
       const data = await res.json();
       if (data.error) {
-        alert('Failed to start ngrok tunnel:\n' + data.error);
-        updateNgrokUI(false);
+        alert('Failed to start localtunnel:\n' + data.error);
+        updateLtUI(false);
       } else {
-        updateNgrokUI(true, data.url);
+        updateLtUI(true, data.url);
       }
     } catch(e) {
-      alert('Network error starting ngrok tunnel.');
-      updateNgrokUI(false);
+      alert('Network error starting localtunnel.');
+      updateLtUI(false);
     } finally {
-      isNgrokLoading = false;
+      isLtLoading = false;
       btn.disabled = false;
     }
   } else {
-    isNgrokLoading = true;
+    isLtLoading = true;
     btn.textContent = 'Stopping...';
     btn.disabled = true;
 
@@ -1390,14 +1375,14 @@ async function toggleNgrokTunnel() {
       const res = await fetch('/api/tunnel/stop', { method: 'POST' });
       const data = await res.json();
       if (data.error) {
-        alert('Failed to stop ngrok tunnel:\n' + data.error);
+        alert('Failed to stop localtunnel:\n' + data.error);
       } else {
-        updateNgrokUI(false);
+        updateLtUI(false);
       }
     } catch(e) {
-      alert('Network error stopping ngrok tunnel.');
+      alert('Network error stopping localtunnel.');
     } finally {
-      isNgrokLoading = false;
+      isLtLoading = false;
       btn.disabled = false;
     }
   }

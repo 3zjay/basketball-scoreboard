@@ -7,7 +7,7 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "@ngrok/ngrok": "^1.7.0",
+    "localtunnel": "^2.0.2",
     "ws": "^8.21.0"
   }
 }
