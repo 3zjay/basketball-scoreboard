@@ -1388,6 +1388,12 @@ async function toggleLtTunnel() {
   }
 }
 
+
+// Cache compatibility aliases to handle older browser versions of the page
+function toggleNgrokTunnel() { return toggleLtTunnel(); }
+function saveNgrokToken() { return saveLtSettings(); }
+function updateNgrokUI(active, url) { return updateLtUI(active, url); }
+
 // Scores
 function addScore(team,pts){
   S[team+'Score']=Math.max(0,S[team+'Score']+pts);
