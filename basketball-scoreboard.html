@@ -96,7 +96,8 @@
                   window.location.hostname.endsWith('.local') ||
                   window.location.hostname.endsWith('.ngrok.io') ||
                   window.location.hostname.endsWith('.ngrok-free.dev') ||
-                  window.location.hostname.endsWith('.loca.lt');
+                  window.location.hostname.endsWith('.loca.lt') ||
+                  window.location.hostname.endsWith('.trycloudflare.com');
   if (!isLocal && !hasUserSession && !stopRedirect) {
     const currentPath = window.location.pathname + window.location.search;
     window.location.href = '/login?redirect=' + encodeURIComponent(currentPath);
@@ -921,18 +922,13 @@ body.light .reset-btn:hover { background:#fee2e2; }
     </div>
   </div>
 
-  <!-- ── INTERNET SHARING (LOCALTUNNEL) ── -->
+  <!-- ── INTERNET SHARING (CLOUDFLARE) ── -->
   <div class="card" style="margin-top:12px;" id="tunnelCard">
     <div class="card-header">
-      <div class="card-title">🌐 Internet Sharing (Localtunnel)</div>
+      <div class="card-title">🌐 Internet Sharing (Cloudflare)</div>
     </div>
     <div style="margin-top:4px;">
-      <div class="field-label" style="font-size:11px;color:var(--text3);margin-bottom:4px;">Custom Subdomain (Optional)</div>
-      <div style="display:flex;gap:6px;">
-        <input type="text" class="inp" id="ltSubdomainIn" placeholder="e.g. hoop-culture-scoreboard" style="flex:1;font-size:12px;">
-        <button class="btn" style="padding:0 12px;font-size:12px;" id="ltSaveBtn" onclick="saveLtSettings()">Save</button>
-      </div>
-      <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
+      <div style="display:flex;gap:10px;align-items:center;">
         <button class="btn primary" id="ltToggleBtn" onclick="toggleLtTunnel()" style="flex:1;padding:10px;font-size:12px;letter-spacing:0.5px;">
           Start Tunnel
         </button>
@@ -1050,11 +1046,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const tCard = document.getElementById('tunnelCard');
     if (tCard) tCard.style.display = 'none';
   } else {
-    const savedSubdomain = localStorage.getItem('hc_lt_subdomain');
-    if (savedSubdomain) {
-      const subdomainInput = document.getElementById('ltSubdomainIn');
-      if (subdomainInput) subdomainInput.value = savedSubdomain;
-    }
     checkTunnelStatus();
   }
 });
@@ -1285,11 +1276,6 @@ function setScoreDirect(team, val){
   save(); renderAll();
 }
 
-function saveLtSettings() {
-  const subdomain = document.getElementById('ltSubdomainIn').value;
-  localStorage.setItem('hc_lt_subdomain', subdomain);
-  alert('Localtunnel settings saved!');
-}
 
 async function checkTunnelStatus() {
   try {
@@ -1338,7 +1324,6 @@ let isLtLoading = false;
 async function toggleLtTunnel() {
   if (isLtLoading) return;
   const btn = document.getElementById('ltToggleBtn');
-  const subdomain = document.getElementById('ltSubdomainIn').value;
   if (!btn) return;
 
   if (btn.textContent.trim() === 'Start Tunnel') {
@@ -1350,17 +1335,17 @@ async function toggleLtTunnel() {
       const res = await fetch('/api/tunnel/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: subdomain })
+        body: JSON.stringify({})
       });
       const data = await res.json();
       if (data.error) {
-        alert('Failed to start localtunnel:\n' + data.error);
+        alert('Failed to start tunnel:\n' + data.error);
         updateLtUI(false);
       } else {
         updateLtUI(true, data.url);
       }
     } catch(e) {
-      alert('Network error starting localtunnel.');
+      alert('Network error starting tunnel.');
       updateLtUI(false);
     } finally {
       isLtLoading = false;
@@ -1375,12 +1360,12 @@ async function toggleLtTunnel() {
       const res = await fetch('/api/tunnel/stop', { method: 'POST' });
       const data = await res.json();
       if (data.error) {
-        alert('Failed to stop localtunnel:\n' + data.error);
+        alert('Failed to stop tunnel:\n' + data.error);
       } else {
         updateLtUI(false);
       }
     } catch(e) {
-      alert('Network error stopping localtunnel.');
+      alert('Network error stopping tunnel.');
     } finally {
       isLtLoading = false;
       btn.disabled = false;

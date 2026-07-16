@@ -96,7 +96,8 @@
                   window.location.hostname.endsWith('.local') ||
                   window.location.hostname.endsWith('.ngrok.io') ||
                   window.location.hostname.endsWith('.ngrok-free.dev') ||
-                  window.location.hostname.endsWith('.loca.lt');
+                  window.location.hostname.endsWith('.loca.lt') ||
+                  window.location.hostname.endsWith('.trycloudflare.com');
   if (!isLocal && !hasUserSession && !stopRedirect) {
     const currentPath = window.location.pathname + window.location.search;
     window.location.href = '/login?redirect=' + encodeURIComponent(currentPath);

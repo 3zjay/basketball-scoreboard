@@ -137,11 +137,11 @@ connectToStreamlabs();
 connectToOBS();
 // --------------------------------------------
 
-let localtunnel = null;
+let cloudflared = null;
 try {
-  localtunnel = require('localtunnel');
+  cloudflared = require('cloudflared');
 } catch (e) {
-  console.log('localtunnel library is not installed or failed to load. Sharing will be disabled.');
+  console.log('cloudflared library is not installed or failed to load. Sharing will be disabled.');
 }
 let activeTunnel = null;
 let activeTunnelUrl = '';
@@ -334,47 +334,52 @@ const requestHandler = async (req, res) => {
   if (req.method === 'POST' && pathname === '/api/tunnel/start') {
     readBody(req).then(async (body) => {
       try {
-        const { domain } = JSON.parse(body);
-        if (!localtunnel) {
+        if (!cloudflared) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'localtunnel library is not loaded on this server.' }));
+          res.end(JSON.stringify({ error: 'cloudflared library is not loaded on this server.' }));
           return;
         }
 
         if (activeTunnel) {
           try {
-            await activeTunnel.close();
+            activeTunnel.stop();
           } catch(e) {}
           activeTunnel = null;
           activeTunnelUrl = '';
         }
 
-        // Start tunnel options
-        const opts = { port: PORT };
-        if (domain && domain.trim() !== '') {
-          opts.subdomain = domain.trim().toLowerCase();
-        }
+        const localUrl = `http://localhost:${PORT}`;
+        activeTunnel = cloudflared.Tunnel.quick(localUrl);
 
-        // Establish tunnel with a 7-second timeout to handle already taken subdomains or server issues
-        const tunnelPromise = localtunnel(opts);
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Tunnel request timed out. The subdomain might be in use or the localtunnel service is busy. Please try a different or more unique subdomain.')), 7000);
+        // Wait for the URL event or a timeout
+        const urlPromise = new Promise((resolve, reject) => {
+          activeTunnel.once('url', (url) => resolve(url));
+          activeTunnel.once('error', (err) => reject(err));
+          activeTunnel.once('exit', (code) => reject(new Error(`Tunnel exited with code ${code}`)));
         });
 
-        activeTunnel = await Promise.race([tunnelPromise, timeoutPromise]);
-        activeTunnelUrl = activeTunnel.url;
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Cloudflare Tunnel connection timed out.')), 12000);
+        });
 
-        // Register close event
-        activeTunnel.on('close', () => {
+        activeTunnelUrl = await Promise.race([urlPromise, timeoutPromise]);
+
+        // Register exit/close cleanup
+        activeTunnel.on('exit', () => {
           activeTunnel = null;
           activeTunnelUrl = '';
         });
 
-        console.log(`[localtunnel] Secure tunnel started successfully: ${activeTunnelUrl}`);
+        console.log(`[cloudflared] Secure tunnel started successfully: ${activeTunnelUrl}`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ url: activeTunnelUrl }));
       } catch (err) {
-        console.error('[localtunnel] Failed to start tunnel:', err.message);
+        console.error('[cloudflared] Failed to start tunnel:', err.message);
+        if (activeTunnel) {
+          try { activeTunnel.stop(); } catch(e) {}
+          activeTunnel = null;
+        }
+        activeTunnelUrl = '';
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
       }
@@ -386,21 +391,16 @@ const requestHandler = async (req, res) => {
   if (req.method === 'POST' && pathname === '/api/tunnel/stop') {
     if (activeTunnel) {
       try {
-        await activeTunnel.close();
-        console.log('[localtunnel] Secure tunnel stopped.');
-        activeTunnel = null;
-        activeTunnelUrl = '';
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true }));
+        activeTunnel.stop();
+        console.log('[cloudflared] Secure tunnel stopped.');
       } catch (err) {
-        console.error('[localtunnel] Error stopping tunnel:', err.message);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: err.message }));
+        console.error('[cloudflared] Error stopping tunnel:', err.message);
       }
-    } else {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, message: 'No active tunnel running.' }));
+      activeTunnel = null;
+      activeTunnelUrl = '';
     }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true }));
     return;
   }
 

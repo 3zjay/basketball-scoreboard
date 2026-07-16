@@ -420,7 +420,8 @@
                         window.location.hostname.endsWith('.local') ||
                         window.location.hostname.endsWith('.ngrok.io') ||
                         window.location.hostname.endsWith('.ngrok-free.dev') ||
-                        window.location.hostname.endsWith('.loca.lt');
+                        window.location.hostname.endsWith('.loca.lt') ||
+                        window.location.hostname.endsWith('.trycloudflare.com');
     if (isLocalHost) {
       const urlParams = new URLSearchParams(window.location.search);
       const redirectUrl = urlParams.get('redirect') || '/control';
