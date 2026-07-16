@@ -95,7 +95,8 @@
                   window.location.hostname.startsWith('172.') ||
                   window.location.hostname.endsWith('.local') ||
                   window.location.hostname.endsWith('.ngrok.io') ||
-                  window.location.hostname.endsWith('.ngrok-free.dev');
+                  window.location.hostname.endsWith('.ngrok-free.dev') ||
+                  window.location.hostname.endsWith('.loca.lt');
   if (!isLocal && !hasUserSession && !stopRedirect) {
     const currentPath = window.location.pathname + window.location.search;
     window.location.href = '/login?redirect=' + encodeURIComponent(currentPath);
@@ -429,7 +430,9 @@ html, body {
 const SERVER_URL = (
   window.location.hostname.includes('vercel.app') ||
   window.location.hostname.includes('vercel.sh')
-) ? 'https://basketball-scoreboard-o0c7.onrender.com' : '';
+) ? 'https://basketball-scoreboard-o0c7.onrender.com' : (
+  window.location.protocol === 'file:' ? 'http://localhost:3000' : ''
+);
 
 const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';

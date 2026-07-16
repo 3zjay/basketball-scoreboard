@@ -137,11 +137,11 @@ connectToStreamlabs();
 connectToOBS();
 // --------------------------------------------
 
-let ngrok = null;
+let localtunnel = null;
 try {
-  ngrok = require('@ngrok/ngrok');
+  localtunnel = require('localtunnel');
 } catch (e) {
-  console.log('ngrok SDK is not installed or failed to load. Sharing will be disabled.');
+  console.log('localtunnel library is not installed or failed to load. Sharing will be disabled.');
 }
 let activeTunnel = null;
 let activeTunnelUrl = '';
@@ -310,7 +310,7 @@ function readBody(req) {
   });
 }
 
-const requestHandler = (req, res) => {
+const requestHandler = async (req, res) => {
   const reqUrl = new URL(req.url, 'http://localhost');
   const pathname = reqUrl.pathname;
   const user = getOrCreateUser(reqUrl.searchParams.get('user') || 'default');
@@ -334,10 +334,10 @@ const requestHandler = (req, res) => {
   if (req.method === 'POST' && pathname === '/api/tunnel/start') {
     readBody(req).then(async (body) => {
       try {
-        const { authtoken, domain } = JSON.parse(body);
-        if (!ngrok) {
+        const { domain } = JSON.parse(body);
+        if (!localtunnel) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'ngrok library is not loaded on this server.' }));
+          res.end(JSON.stringify({ error: 'localtunnel library is not loaded on this server.' }));
           return;
         }
 
@@ -349,36 +349,26 @@ const requestHandler = (req, res) => {
           activeTunnelUrl = '';
         }
 
-        if (!authtoken || authtoken.trim() === '') {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Authtoken is required to start ngrok.' }));
-          return;
-        }
-
-        // Configure authtoken
-        try {
-          await ngrok.authtoken(authtoken.trim());
-        } catch(e) {
-          // ignore or handle if already configured
-        }
-
         // Start tunnel options
-        const opts = {
-          addr: PORT,
-          authtoken: authtoken.trim()
-        };
+        const opts = { port: PORT };
         if (domain && domain.trim() !== '') {
-          opts.domain = domain.trim();
+          opts.subdomain = domain.trim();
         }
 
-        activeTunnel = await ngrok.forward(opts);
-        activeTunnelUrl = activeTunnel.url();
+        activeTunnel = await localtunnel(opts);
+        activeTunnelUrl = activeTunnel.url;
 
-        console.log(`[ngrok] Secure tunnel started successfully: ${activeTunnelUrl}`);
+        // Register close event
+        activeTunnel.on('close', () => {
+          activeTunnel = null;
+          activeTunnelUrl = '';
+        });
+
+        console.log(`[localtunnel] Secure tunnel started successfully: ${activeTunnelUrl}`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ url: activeTunnelUrl }));
       } catch (err) {
-        console.error('[ngrok] Failed to start tunnel:', err.message);
+        console.error('[localtunnel] Failed to start tunnel:', err.message);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
       }
@@ -389,17 +379,18 @@ const requestHandler = (req, res) => {
   // POST /api/tunnel/stop
   if (req.method === 'POST' && pathname === '/api/tunnel/stop') {
     if (activeTunnel) {
-      activeTunnel.close().then(() => {
-        console.log('[ngrok] Secure tunnel stopped.');
+      try {
+        await activeTunnel.close();
+        console.log('[localtunnel] Secure tunnel stopped.');
         activeTunnel = null;
         activeTunnelUrl = '';
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true }));
-      }).catch(err => {
-        console.error('[ngrok] Error stopping tunnel:', err.message);
+      } catch (err) {
+        console.error('[localtunnel] Error stopping tunnel:', err.message);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
-      });
+      }
     } else {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, message: 'No active tunnel running.' }));

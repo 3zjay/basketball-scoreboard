@@ -1,13 +1,13 @@
 {
   "name": "basketball-scoreboard",
-  "version": "2.0.0",
-  "description": "Hoop Culture live basketball scoreboard — tri-mode: offline local, Vercel + Firebase serverless, OnRender full-stack cloud",
+  "version": "2.1.0",
+  "description": "Hoop Culture live basketball scoreboard — tri-mode: offline local, Vercel + Firebase serverless, OnRender full-stack cloud, integrated with OBS Studio & Streamlabs Replay Buffer for automatic game-day highlights",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "@ngrok/ngrok": "^1.7.0",
+    "localtunnel": "^2.0.2",
     "ws": "^8.21.0"
   }
 }

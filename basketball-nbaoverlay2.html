@@ -165,7 +165,9 @@ html, body { background:transparent; overflow:hidden; width:100%; height:100%; }
 const SERVER_URL = (
   window.location.hostname.includes('vercel.app') ||
   window.location.hostname.includes('vercel.sh')
-) ? 'https://basketball-scoreboard-o0c7.onrender.com' : '';
+) ? 'https://basketball-scoreboard-o0c7.onrender.com' : (
+  window.location.protocol === 'file:' ? 'http://localhost:3000' : ''
+);
 
 const useFirebase = window.location.hostname.includes('vercel.app') ||
                     window.location.hostname.includes('vercel.sh');

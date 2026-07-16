@@ -296,7 +296,9 @@ html, body {
 const SERVER_URL = (
   window.location.hostname.includes('vercel.app') ||
   window.location.hostname.includes('vercel.sh')
-) ? 'https://basketball-scoreboard-o0c7.onrender.com' : '';
+) ? 'https://basketball-scoreboard-o0c7.onrender.com' : (
+  window.location.protocol === 'file:' ? 'http://localhost:3000' : ''
+);
 
 const useFirebase = window.location.hostname.includes('vercel.app') ||
                     window.location.hostname.includes('vercel.sh');
@@ -345,7 +347,16 @@ const DEF = {
 let S = {...DEF};
 let lastHome = -1, lastAway = -1;
 
-function syncLocalTick(){}
+let localTick = null;
+function startLocalTick(){
+  if(localTick) return;
+  localTick = setInterval(()=>{
+    if(S.gameRunning && S.gameSeconds > 0){ S.gameSeconds--; renderClocks(); }
+    if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; renderClocks(); }
+  }, 1000);
+}
+function stopLocalTick(){ clearInterval(localTick); localTick = null; }
+function syncLocalTick(){ if(S.gameRunning || S.shotRunning){ startLocalTick(); } else { stopLocalTick(); } }
 
 function renderClocks(){
   const m = Math.floor(S.gameSeconds/60), sec = S.gameSeconds%60;
