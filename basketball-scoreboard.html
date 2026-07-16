@@ -1341,7 +1341,7 @@ async function toggleLtTunnel() {
   const subdomain = document.getElementById('ltSubdomainIn').value;
   if (!btn) return;
 
-  if (btn.textContent === 'Start Tunnel') {
+  if (btn.textContent.trim() === 'Start Tunnel') {
     isLtLoading = true;
     btn.textContent = 'Starting...';
     btn.disabled = true;
