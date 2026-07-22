@@ -478,6 +478,10 @@ function $(i){return document.getElementById(i);}
 function tx(i,v){const e=$(i);if(e)e.textContent=v;}
 function isHex(c){return/^#[0-9A-F]{6}$/i.test(c);}
 
+function isValidStream(url) {
+  return typeof url === 'string' && url.length > 50 && url.startsWith('data:image/');
+}
+
 /* Hex Darkener Helper */
 function dk(hex, factor) {
   if (!isHex(hex)) return '#2d2d2d';
@@ -552,13 +556,13 @@ function draw(){
   if(aE&&parseInt(aE.textContent)!==S.awayScore){aE.textContent=S.awayScore;if(lA>=0){aE.classList.remove('bump');void aE.offsetWidth;aE.classList.add('bump');}}
   lH=S.homeScore;lA=S.awayScore;
 
-  /* Optical Camera Stream Crops vs Digital Fallback (opacity:0 preserves exact layout geometry) */
+  /* Optical Camera Stream Crops vs Digital Fallback */
   const isAiOn = S.aiSyncEnabled !== false;
 
   // Home Score Stream
   const hImg = $('homeScoreStreamImg');
   if (hImg && hE) {
-    if (isAiOn && S.homeScoreStream) {
+    if (isAiOn && isValidStream(S.homeScoreStream)) {
       if (hImg.src !== S.homeScoreStream) hImg.src = S.homeScoreStream;
       hImg.style.display = 'block';
       hE.style.opacity = '0';
@@ -571,7 +575,7 @@ function draw(){
   // Away Score Stream
   const aImg = $('awayScoreStreamImg');
   if (aImg && aE) {
-    if (isAiOn && S.awayScoreStream) {
+    if (isAiOn && isValidStream(S.awayScoreStream)) {
       if (aImg.src !== S.awayScoreStream) aImg.src = S.awayScoreStream;
       aImg.style.display = 'block';
       aE.style.opacity = '0';
@@ -584,7 +588,7 @@ function draw(){
   // Game Clock Stream
   const cImg = $('gameClockStreamImg'), cClk = $('clk');
   if (cImg && cClk) {
-    if (isAiOn && S.gameClockStream) {
+    if (isAiOn && isValidStream(S.gameClockStream)) {
       if (cImg.src !== S.gameClockStream) cImg.src = S.gameClockStream;
       cImg.style.display = 'block';
       cClk.style.opacity = '0';
@@ -597,7 +601,7 @@ function draw(){
   // Period Stream
   const pImg = $('periodStreamImg'), pPer = $('per');
   if (pImg && pPer) {
-    if (isAiOn && S.periodStream) {
+    if (isAiOn && isValidStream(S.periodStream)) {
       if (pImg.src !== S.periodStream) pImg.src = S.periodStream;
       pImg.style.display = 'block';
       pPer.style.opacity = '0';
@@ -610,7 +614,7 @@ function draw(){
   // Shot Clock Stream
   const sImg = $('shotClockStreamImg'), sSc = $('sc');
   if (sImg && sSc) {
-    if (isAiOn && S.shotClockStream) {
+    if (isAiOn && isValidStream(S.shotClockStream)) {
       if (sImg.src !== S.shotClockStream) sImg.src = S.shotClockStream;
       sImg.style.display = 'block';
       sSc.style.opacity = '0';
