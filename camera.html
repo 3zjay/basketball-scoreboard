@@ -44,10 +44,8 @@
   </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Hoop Culture — AI Camera OCR Scanner</title>
+  <title>Hoop Culture — Optical Bridge Scanner</title>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;900&family=Barlow:wght@400;600&display=swap" rel="stylesheet"/>
-  <!-- Local TensorFlow.js for Offline Digit Classifier -->
-  <script src="/tf.min.js"></script>
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -100,153 +98,169 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      z-index: 5;
+      z-index: 2;
       pointer-events: none;
     }
 
-    /* Floating control headers */
-    .controls-overlay {
-      position: absolute;
-      left: 15px;
-      right: 15px;
-      z-index: 10;
-      pointer-events: auto;
-    }
-
-    .top-bar {
-      top: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(8, 6, 5, 0.85);
-      backdrop-filter: blur(10px);
-      padding: 10px 16px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .bottom-bar {
-      bottom: 25px;
-      background: rgba(8, 6, 5, 0.85);
-      backdrop-filter: blur(10px);
-      padding: 16px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .title {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--orange2);
-    }
-
-    .btn {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      padding: 6px 12px;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--white);
-      cursor: pointer;
-      letter-spacing: 1px;
-    }
-
-    .btn.active {
-      background: var(--orange);
-      border-color: transparent;
-      color: #fff;
-    }
-
-    /* Draggable Crop Frame UI */
     .crop-frame {
       position: absolute;
-      border: 2px solid #00ff00;
-      z-index: 6;
+      z-index: 10;
+      border: 2px dashed #000;
+      box-shadow: 0 0 0 1px #fff;
+      border-radius: 4px;
       cursor: move;
-      pointer-events: auto;
-      box-shadow: 0 0 10px rgba(0,255,0,0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      touch-action: none;
+      background: rgba(255, 255, 255, 0.05);
+      transition: opacity 0.2s ease;
     }
 
-    .crop-frame.clock { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56,189,248,0.3); }
-    .crop-frame.home { border-color: #f5c842; box-shadow: 0 0 10px rgba(245,200,66,0.3); }
-    .crop-frame.away { border-color: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.3); }
-    .crop-frame.period { border-color: #a855f7; box-shadow: 0 0 10px rgba(168,85,247,0.3); }
-    .crop-frame.shot { border-color: #00d2ff; box-shadow: 0 0 10px rgba(0,210,255,0.3); }
+    .crop-frame.clock { border-color: var(--orange2); box-shadow: 0 0 10px rgba(255, 107, 26, 0.5); }
+    .crop-frame.home { border-color: #f5c842; box-shadow: 0 0 10px rgba(245, 200, 66, 0.5); }
+    .crop-frame.away { border-color: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+    .crop-frame.period { border-color: #a855f7; box-shadow: 0 0 10px rgba(168, 85, 247, 0.5); }
+    .crop-frame.shot { border-color: #00d2ff; box-shadow: 0 0 10px rgba(0, 210, 255, 0.5); }
 
     .crop-label {
       position: absolute;
       top: -18px;
-      left: 0;
-      font-family: 'Barlow Condensed', sans-serif;
+      left: -2px;
+      padding: 1px 6px;
       font-size: 10px;
-      font-weight: 900;
-      text-transform: uppercase;
-      padding: 2px 6px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
       border-radius: 3px 3px 0 0;
       color: #000;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
-    .crop-frame.clock .crop-label { background: #38bdf8; }
+    .crop-frame.clock .crop-label { background: var(--orange2); color: #fff; }
     .crop-frame.home .crop-label { background: #f5c842; }
-    .crop-frame.away .crop-label { background: #ef4444; }
-    .crop-frame.period .crop-label { background: #a855f7; }
+    .crop-frame.away .crop-label { background: #ef4444; color: #fff; }
+    .crop-frame.period .crop-label { background: #a855f7; color: #fff; }
     .crop-frame.shot .crop-label { background: #00d2ff; }
 
-    /* Touch Resize Handles */
     .resize-handle {
       position: absolute;
-      width: 20px;
-      height: 20px;
-      background: rgba(255,255,255,0.7);
-      border: 1px solid #000;
+      right: -6px;
+      bottom: -6px;
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      border: 2px solid #000;
       border-radius: 50%;
-      bottom: -10px;
-      right: -10px;
       cursor: se-resize;
+      touch-action: none;
     }
 
-    .status-panel {
+    /* UI Controls overlay */
+    .controls-overlay {
+      position: absolute;
+      z-index: 100;
+      background: rgba(8, 6, 5, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      border-radius: 8px;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    }
+
+    .top-bar {
+      top: 10px;
+      left: 10px;
+      right: 10px;
       display: flex;
       justify-content: space-between;
+      align-items: center;
+    }
+
+    .bottom-bar {
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 16px;
+      color: var(--orange2);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn {
+      background: #18120c;
+      border: 1px solid var(--border);
+      color: var(--white);
+      padding: 6px 12px;
+      border-radius: 6px;
       font-size: 12px;
-      color: var(--grey);
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+    }
+
+    .btn.primary {
+      background: var(--orange);
+      border-color: var(--orange2);
+      color: #fff;
+    }
+
+    .btn.active {
+      background: #16c784;
+      border-color: #10b981;
+      color: #fff;
+    }
+
+    /* Status Pill */
+    .status-panel {
+      display: flex;
+      gap: 12px;
+      font-size: 11px;
+      font-family: monospace;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .status-item span {
       font-weight: bold;
-      color: var(--white);
     }
 
-    /* Helper canvas hides in background */
     #helper-canvas {
       display: none;
     }
 
-    /* Toggle Config list */
+    /* Configuration Tabs */
     .config-tabs {
       display: flex;
       gap: 6px;
-      overflow-x: auto;
+      margin-bottom: 2px;
     }
 
     .config-tab {
-      padding: 6px 10px;
+      padding: 4px 10px;
       font-size: 11px;
-      background: rgba(255,255,255,0.05);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: #120d09;
       border: 1px solid var(--border);
       border-radius: 4px;
       color: var(--grey);
@@ -307,7 +321,7 @@
   <!-- Top bar status controls -->
   <div class="controls-overlay top-bar">
     <div style="display:flex;align-items:center;gap:8px;">
-      <div class="title">📸 AI Scanner</div>
+      <div class="title">📸 Optical Bridge</div>
       <button class="btn" onclick="toggleHelp()" style="padding:4px; font-size:12px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; border-color:var(--grey); color:var(--grey); border-radius:50%; line-height:1;">?</button>
     </div>
     <div style="display:flex; align-items:center; gap:6px;">
@@ -350,45 +364,66 @@
       </div>
     </div>
 
-    <input type="hidden" id="session-input" value="default">
-    <div style="display:flex;flex-direction:column;gap:10px;width:100%;">
-      <div style="display:flex;align-items:center;gap:10px;width:100%;">
-        <span style="font-size:11px;color:var(--grey);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Sync Target:</span>
-        <select id="sync-target-select" onchange="updateSyncTarget()" style="flex:1;background:#0d0906;border:1px solid var(--border);color:#fff;border-radius:4px;padding:6px 10px;font-size:12px;font-family:sans-serif;cursor:pointer;outline:none;">
-          <option value="auto">Auto-Detect Environment</option>
-          <option value="firebase">Vercel + Firebase Cloud Sync</option>
+    <!-- Active Field Crop Toggles (Uncheck to fall back to digital scoreboard graphic) -->
+    <div style="font-size:9px; color:var(--grey); font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-top:2px;">Active Camera Stream Crops (Uncheck to show digital graphic):</div>
+    <div style="display:flex; gap:12px; margin-top:2px; flex-wrap:wrap;">
+      <label style="display:inline-flex; align-items:center; gap:4px; cursor:pointer; font-size:10px; color:var(--orange2); font-weight:700;">
+        <input type="checkbox" id="crop-toggle-clock" onchange="toggleCropField('clock',this.checked)" style="accent-color:var(--orange); width:12px; height:12px;" checked>
+        CLOCK
+      </label>
+      <label style="display:inline-flex; align-items:center; gap:4px; cursor:pointer; font-size:10px; color:#f5c842; font-weight:700;">
+        <input type="checkbox" id="crop-toggle-home" onchange="toggleCropField('home',this.checked)" style="accent-color:var(--orange); width:12px; height:12px;" checked>
+        HOME SCORE
+      </label>
+      <label style="display:inline-flex; align-items:center; gap:4px; cursor:pointer; font-size:10px; color:#ef4444; font-weight:700;">
+        <input type="checkbox" id="crop-toggle-away" onchange="toggleCropField('away',this.checked)" style="accent-color:var(--orange); width:12px; height:12px;" checked>
+        AWAY SCORE
+      </label>
+      <label style="display:inline-flex; align-items:center; gap:4px; cursor:pointer; font-size:10px; color:#a855f7; font-weight:700;">
+        <input type="checkbox" id="crop-toggle-period" onchange="toggleCropField('period',this.checked)" style="accent-color:var(--orange); width:12px; height:12px;" checked>
+        QTR / PERIOD
+      </label>
+      <label style="display:inline-flex; align-items:center; gap:4px; cursor:pointer; font-size:10px; color:#00d2ff; font-weight:700;">
+        <input type="checkbox" id="crop-toggle-shot" onchange="toggleCropField('shot',this.checked)" style="accent-color:var(--orange); width:12px; height:12px;" checked>
+        SHOT CLOCK
+      </label>
+    </div>
+
+    <!-- Session Target & Status -->
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:4px;">
+      <div style="display:flex; align-items:center; gap:6px; flex:1;">
+        <span style="font-size:11px; color:var(--grey); font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:1px; text-transform:uppercase; white-space:nowrap;">Session User:</span>
+        <input type="text" id="session-input" value="default" style="background:#0d0906; border:1px solid var(--border); color:#fff; border-radius:4px; padding:4px 8px; font-size:12px; font-weight:bold; width:110px; outline:none;" onchange="saveSession()">
+      </div>
+      
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="font-size:11px; color:var(--grey); font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:1px; text-transform:uppercase; white-space:nowrap;">Target:</span>
+        <select id="sync-target-select" onchange="updateSyncTarget()" style="background:#0d0906; border:1px solid var(--border); color:#fff; border-radius:4px; padding:4px 6px; font-size:11px; font-family:sans-serif; cursor:pointer; outline:none;">
+          <option value="auto">Auto-Detect</option>
+          <option value="firebase">Firebase Realtime DB</option>
           <option value="api-onrender">OnRender Cloud Sync (API)</option>
           <option value="api-local">Local Offline Sync (API)</option>
         </select>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;width:100%;">
-        <span style="font-size:11px;color:var(--grey);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">Camera Source:</span>
-        <select id="camera-device-select" onchange="switchCamera(this.value)" style="flex:1;background:#0d0906;border:1px solid var(--border);color:#fff;border-radius:4px;padding:6px 10px;font-size:12px;font-family:sans-serif;cursor:pointer;outline:none;">
-          <option value="">Detecting cameras...</option>
-        </select>
-      </div>
     </div>
 
-    <div class="status-panel">
-      <div class="status-item">Status: <span id="status-text" style="color:#f5c842;">Configuring...</span></div>
-      <div class="status-item">Engine: <span id="engine-status">Loading OCR...</span></div>
-      <div class="status-item" style="grid-column: span 2; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px;">
-        <span style="color:var(--grey); font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase;">AI Readings (Live Preview):</span>
-        <div style="display:flex; justify-content:space-between; margin-top: 6px; font-size:12px;">
-          <div>🕒 <span id="read-clock" style="color:var(--orange2); font-weight:bold;">--</span></div>
-          <div>🏠 <span id="read-home" style="color:#f5c842; font-weight:bold;">--</span></div>
-          <div>✈️ <span id="read-away" style="color:#ef4444; font-weight:bold;">--</span></div>
-          <div>⏱️ <span id="read-period" style="color:#a855f7; font-weight:bold;">--</span></div>
-          <div>🚨 <span id="read-shot" style="color:#00d2ff; font-weight:bold;">--</span></div>
-        </div>
-      </div>
+    <div style="display:flex; align-items:center; gap:10px; width:100%; margin-top:2px;">
+      <span style="font-size:11px; color:var(--grey); font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:1px; text-transform:uppercase; white-space:nowrap;">Camera Source:</span>
+      <select id="camera-device-select" onchange="switchCamera(this.value)" style="flex:1; background:#0d0906; border:1px solid var(--border); color:#fff; border-radius:4px; padding:4px 8px; font-size:11px; font-family:sans-serif; cursor:pointer; outline:none;">
+        <option value="">Detecting cameras...</option>
+      </select>
+    </div>
+
+    <div class="status-panel" style="margin-top:4px;">
+      <div class="status-item">Status: <span id="status-text" style="color:#f5c842;">Ready</span></div>
+      <div class="status-item">Mode: <span id="engine-status" style="color:#16c784;">Optical Bridge (Live 12.5 FPS)</span></div>
     </div>
   </div>
 
   <!-- Help Overlay Modal -->
   <div id="help-overlay" style="display:none;position:absolute;inset:0;background:rgba(8,6,5,0.95);z-index:2000;padding:20px;overflow-y:auto;align-items:center;justify-content:center;">
     <div style="max-width:400px;width:100%;border:1px solid var(--border);background:#0d0906;border-radius:12px;padding:24px;position:relative;">
-      <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--orange2);margin-bottom:16px;text-transform:uppercase;letter-spacing:1px;text-align:center;">How to Use the Scanner 📱</h3>
+      <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:20px;color:var(--orange2);margin-bottom:16px;text-transform:uppercase;letter-spacing:1px;text-align:center;">Optical Bridge Guide 📱</h3>
       <ol style="margin-left:16px;margin-bottom:20px;font-size:13px;line-height:1.6;color:#dfd5cb;">
         <li style="margin-bottom:8px;">Position your phone on a tripod facing the gym's physical scoreboard.</li>
         <li style="margin-bottom:8px;">Grant camera permissions when prompted to load the rear camera feed.</li>
@@ -396,12 +431,11 @@
         <li style="margin-bottom:8px;">Tap the selection buttons (<strong>Clock, Home Score, Away Score, Period, Shot Clock</strong>) at the bottom to calibrate each box individually:
           <ul style="margin-left:16px; margin-top:4px; font-size:12px; color:var(--grey);">
             <li>Adjust the <strong>Binarization Filter Slider</strong> for each box until its digits display as clean, solid black shapes on a white background in the preview monitor.</li>
-            <li>Yellow/bright digits need a higher filter threshold (~150-180), while red/darker digits need a lower threshold (~60-90).</li>
           </ul>
         </li>
+        <li style="margin-bottom:8px;">Use the <strong>Active Camera Stream Crops</strong> checkboxes to choose which fields stream from the camera vs. which fields show the standard digital scoreboard graphic created on the control panel!</li>
         <li style="margin-bottom:8px;">Tap <strong>Start Sync</strong>. The status will update to green.</li>
         <li style="margin-bottom:8px;">Go to your controller console page on your operator tablet, and toggle <strong>AI Sync</strong> to <strong>ON</strong>.</li>
-        <li style="margin-bottom:8px;"><strong>Landscape Full-Screen:</strong> Turn your phone landscape to enter full-screen mode. Tapping any empty space on the screen will auto-hide or show the control overlays.</li>
       </ol>
       <button class="btn" onclick="toggleHelp()" style="width:100%;border-color:var(--orange);color:var(--orange);padding:10px;">Close Guide</button>
     </div>
@@ -413,12 +447,12 @@
   <script>
     let stream = null;
     let syncActive = false;
-    let ocrWorker = null;
-    let digitModel = null;
-    let isTraining = false;
     let activeCrop = 'clock';
-    let ocrLoopCount = 0;
     let syncTarget = 'auto';
+
+    let enabledCrops = { clock: true, home: true, away: true, period: true, shot: true };
+
+    const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('basketball_scoreboard') : null;
 
     // Initialize Firebase if configured
     let db = null;
@@ -443,6 +477,30 @@
 
     let currentDeviceId = null;
 
+    function toggleCropField(key, enabled) {
+      enabledCrops[key] = enabled;
+      localStorage.setItem('hc_ocr_enabled_crops', JSON.stringify(enabledCrops));
+      const frame = frames[key];
+      if (frame) {
+        frame.style.opacity = enabled ? '1' : '0.2';
+      }
+    }
+
+    function restoreEnabledCrops() {
+      const saved = localStorage.getItem('hc_ocr_enabled_crops');
+      if (saved) {
+        try {
+          enabledCrops = Object.assign(enabledCrops, JSON.parse(saved));
+          Object.keys(enabledCrops).forEach(k => {
+            const cb = document.getElementById(`crop-toggle-${k}`);
+            if (cb) cb.checked = !!enabledCrops[k];
+            const frame = frames[k];
+            if (frame) frame.style.opacity = enabledCrops[k] ? '1' : '0.2';
+          });
+        } catch(e) {}
+      }
+    }
+
     // Initialize Camera Stream
     async function startCamera(deviceId = null) {
       if (stream) {
@@ -465,11 +523,9 @@
         const video = document.getElementById('camera-view');
         video.srcObject = stream;
         
-        // Enumerate devices once stream is active (permissions granted)
         await enumerateCameras();
       } catch (err) {
         console.error("Camera access error:", err);
-        // Fallback for laptops without 'environment' rear camera support
         if (!deviceId) {
           try {
             const fallbackConstraints = { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
@@ -503,7 +559,6 @@
           return;
         }
 
-        // Get the active track's deviceId
         let activeId = null;
         if (stream) {
           const videoTrack = stream.getVideoTracks()[0];
@@ -518,379 +573,38 @@
           opt.textContent = device.label || `Camera ${index + 1}`;
           if (device.deviceId === activeId) {
             opt.selected = true;
-            currentDeviceId = device.deviceId;
           }
           select.appendChild(opt);
         });
-      } catch (err) {
-        console.warn("Failed to enumerate cameras:", err);
+      } catch(err) {
+        console.warn("Could not enumerate camera devices:", err);
       }
     }
 
     function switchCamera(deviceId) {
-      if (!deviceId || deviceId === currentDeviceId) return;
+      if (!deviceId) return;
       currentDeviceId = deviceId;
       startCamera(deviceId);
     }
-    
-    let thresholds = { clock: 120, home: 120, away: 120, period: 120, shot: 120 };
+
+    // Interactive Calibration States
     let thresholdValue = 120;
-    
+    let thresholds = { clock: 120, home: 120, away: 120, period: 120, shot: 120 };
+
     function updateThreshold(val) {
-      const tVal = parseInt(val, 10) || 120;
-      thresholds[activeCrop] = tVal;
-      thresholdValue = tVal;
-      const displayVal = document.getElementById('threshold-val');
-      if (displayVal) displayVal.textContent = tVal;
-      const slider = document.getElementById('threshold-slider');
-      if (slider) slider.value = tVal;
+      thresholdValue = parseInt(val, 10);
+      thresholds[activeCrop] = thresholdValue;
+      document.getElementById('threshold-val').textContent = thresholdValue;
       localStorage.setItem('hc_ocr_thresholds', JSON.stringify(thresholds));
-      
-      // Clear the image baseline cache to force immediate re-scan with the new threshold filter
-      window.lastBinarizedPixels = {};
-    }
-
-    function selectCrop(key) {
-      activeCrop = key;
-      document.querySelectorAll('.config-tab').forEach(tab => {
-        const txt = tab.textContent.toLowerCase();
-        const isMatch = (key === 'clock' && txt.includes('clock') && !txt.includes('shot')) ||
-                        (key === 'home' && txt.includes('home')) ||
-                        (key === 'away' && txt.includes('away')) ||
-                        (key === 'period' && txt.includes('period')) ||
-                        (key === 'shot' && txt.includes('shot'));
-        tab.classList.toggle('active', isMatch);
-      });
-      const savedT = thresholds[key] || 120;
-      const displayVal = document.getElementById('threshold-val');
-      if (displayVal) displayVal.textContent = savedT;
-      const slider = document.getElementById('threshold-slider');
-      if (slider) slider.value = savedT;
-
-      // Update manual invert checkbox state
-      const invCheckbox = document.getElementById('invert-toggle');
-      if (invCheckbox) invCheckbox.checked = !!invertStates[key];
-
-      // Force immediate re-scan on active crop change to give instant feedback
-      if (window.lastBinarizedPixels) {
-        delete window.lastBinarizedPixels[key];
-      }
-    }
-
-    // Initialize Custom Digit Classifier (TensorFlow.js)
-    const CLASSES = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ' '];
-
-    async function initOCR() {
-      if (isTraining) return;
-      document.getElementById('engine-status').textContent = 'Loading AI...';
-      document.getElementById('engine-status').style.color = '#ff6b1a';
-      
-      try {
-        // Wait for system fonts to load so Barlow Condensed is rendered correctly
-        await document.fonts.ready;
-
-        // Try loading pre-trained model from IndexedDB cache (v4)
-        digitModel = await tf.loadLayersModel('indexeddb://hc-digit-model-v4');
-        ocrWorker = { active: true }; // keep other sync controls happy
-        document.getElementById('engine-status').textContent = 'AI Ready';
-        document.getElementById('engine-status').style.color = '#16c784';
-        console.log('Digit Classifier loaded from IndexedDB cache (v4).');
-      } catch (err) {
-        console.log('No cached digit model (v4) found. Training custom model on the fly...', err);
-        try {
-          await trainCustomModel();
-        } catch (e) {
-          console.error('Failed to train custom digit classifier:', e);
-          document.getElementById('engine-status').textContent = 'AI Error';
-          document.getElementById('engine-status').style.color = '#ef4444';
-        }
-      }
-    }
-
-    async function trainCustomModel() {
-      isTraining = true;
-      document.getElementById('engine-status').textContent = 'Training AI...';
-      document.getElementById('engine-status').style.color = '#ff6b1a';
-
-      // 1. Generate Synthetic Dataset
-      const xs = [];
-      const ys = [];
-      const fonts = ['Barlow Condensed', 'Impact', 'Arial', 'Courier New', 'monospace'];
-      const samplesPerClass = 55; // slightly more samples for higher precision
-
-      for (let c = 0; c < CLASSES.length; c++) {
-        const char = CLASSES[c];
-        for (let s = 0; s < samplesPerClass; s++) {
-          const font = fonts[s % fonts.length];
-          const angle = (Math.random() - 0.5) * 0.28; // +/- 8 degrees
-          const scale = 0.85 + Math.random() * 0.3; // 0.85 to 1.15
-          const offsetX = (Math.random() - 0.5) * 4; // +/- 2px
-          const offsetY = (Math.random() - 0.5) * 4; // +/- 2px
-          
-          const pixels = generateSyntheticDigit(char, font, angle, scale, offsetX, offsetY);
-          xs.push(pixels);
-          
-          const oneHot = new Float32Array(CLASSES.length);
-          oneHot[c] = 1.0;
-          ys.push(oneHot);
-        }
-      }
-
-      // 2. Convert to Tensors
-      const flatXs = new Float32Array(xs.length * 400);
-      for (let i = 0; i < xs.length; i++) {
-        flatXs.set(xs[i], i * 400);
-      }
-      const flatYs = new Float32Array(ys.length * CLASSES.length);
-      for (let i = 0; i < ys.length; i++) {
-        flatYs.set(ys[i], i * CLASSES.length);
-      }
-      const trainXs = tf.tensor4d(flatXs, [xs.length, 20, 20, 1]);
-      const trainYs = tf.tensor2d(flatYs, [ys.length, CLASSES.length]);
-
-      // 3. Define CNN Architecture (2 Conv layers, 64 hidden nodes for high-accuracy digit separation)
-      const model = tf.sequential();
-      model.add(tf.layers.conv2d({
-        inputShape: [20, 20, 1],
-        kernelSize: 3,
-        filters: 16,
-        activation: 'relu'
-      }));
-      model.add(tf.layers.maxPooling2d({poolSize: 2}));
-      model.add(tf.layers.conv2d({
-        kernelSize: 3,
-        filters: 32,
-        activation: 'relu'
-      }));
-      model.add(tf.layers.maxPooling2d({poolSize: 2}));
-      model.add(tf.layers.flatten());
-      model.add(tf.layers.dense({units: 64, activation: 'relu'}));
-      model.add(tf.layers.dense({units: CLASSES.length, activation: 'softmax'}));
-
-      model.compile({
-        optimizer: 'adam',
-        loss: 'categoricalCrossentropy',
-        metrics: ['accuracy']
-      });
-
-      // 4. Train Model (40 epochs ensures high accuracy & convergence)
-      await model.fit(trainXs, trainYs, {
-        epochs: 40,
-        batchSize: 32,
-        shuffle: true,
-        callbacks: {
-          onEpochEnd: (epoch, logs) => {
-            const pct = Math.round(((epoch + 1) / 40) * 100);
-            document.getElementById('engine-status').textContent = `Training AI (${pct}%)`;
-          }
-        }
-      });
-
-      // 5. Cleanup Tensors
-      trainXs.dispose();
-      trainYs.dispose();
-
-      // 6. Save Model to Cache
-      digitModel = model;
-      ocrWorker = { active: true };
-      try {
-        await model.save('indexeddb://hc-digit-model-v4');
-      } catch (e) {
-        console.warn('Could not save model to IndexedDB:', e);
-      }
-
-      document.getElementById('engine-status').textContent = 'AI Ready';
-      document.getElementById('engine-status').style.color = '#16c784';
-      isTraining = false;
-    }
-
-    function generateSyntheticDigit(char, font, angle, scale, offsetX, offsetY) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 20;
-      canvas.height = 20;
-      const ctx = canvas.getContext('2d');
-      
-      // Draw black background
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, 20, 20);
-
-      const shearX = (Math.random() - 0.5) * 0.15; // Random perspective shear (horizontal)
-      const shearY = (Math.random() - 0.5) * 0.15; // Random perspective shear (vertical)
-
-      if (char === ':') {
-        // Draw two centered square dots manually to match binarized colon segments
-        ctx.fillStyle = '#ffffff';
-        ctx.save();
-        ctx.translate(10 + offsetX, 10 + offsetY);
-        ctx.transform(1, shearY, shearX, 1, 0, 0); // Apply perspective skew
-        ctx.rotate(angle);
-        ctx.fillRect(-1.5, -5, 3, 3); // top dot
-        ctx.fillRect(-1.5, 2, 3, 3);  // bottom dot
-        ctx.restore();
-      } else {
-        // Draw white character using extra bold (900 weight) to match collegiate scoreboard thickness
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `900 ${Math.round(16 * scale)}px "${font}"`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        ctx.save();
-        ctx.translate(10 + offsetX, 10 + offsetY);
-        ctx.transform(1, shearY, shearX, 1, 0, 0); // Apply perspective skew
-        ctx.rotate(angle);
-        ctx.fillText(char, 0, 0);
-        ctx.restore();
-      }
-
-      const imgData = ctx.getImageData(0, 0, 20, 20);
-      const data = imgData.data;
-      const pixels = new Float32Array(20 * 20);
-      for (let i = 0; i < pixels.length; i++) {
-        pixels[i] = data[i * 4] > 127 ? 1.0 : 0.0;
-      }
-      return pixels;
-    }
-
-    function segmentCharacters(canvas) {
-      const ctx = canvas.getContext('2d');
-      const w = canvas.width;
-      const h = canvas.height;
-      const imgData = ctx.getImageData(0, 0, w, h);
-      const data = imgData.data;
-
-      // 1. Calculate vertical projection profile (active pixels per column)
-      const colProfile = new Int32Array(w);
-      for (let x = 0; x < w; x++) {
-        let count = 0;
-        for (let y = 0; y < h; y++) {
-          const idx = (y * w + x) * 4;
-          // Preprocessing maps text to black (0) and background to white (255)
-          if (data[idx] === 0) {
-            count++;
-          }
-        }
-        colProfile[x] = count;
-      }
-
-      // 2. Identify horizontal character intervals
-      const intervals = [];
-      let inChar = false;
-      let startX = 0;
-      const minColPixels = 1;
-
-      for (let x = 0; x < w; x++) {
-        if (colProfile[x] >= minColPixels) {
-          if (!inChar) {
-            startX = x;
-            inChar = true;
-          }
-        } else {
-          if (inChar) {
-            intervals.push({ left: startX, right: x - 1 });
-            inChar = false;
-          }
-        }
-      }
-      if (inChar) {
-        intervals.push({ left: startX, right: w - 1 });
-      }
-
-      // 3. Locate vertical boundaries
-      const charBoxes = [];
-      for (const interval of intervals) {
-        const width = interval.right - interval.left + 1;
-        if (width < 2) continue; // Skip noise
-
-        let top = h;
-        let bottom = 0;
-        
-        for (let x = interval.left; x <= interval.right; x++) {
-          for (let y = 0; y < h; y++) {
-            const idx = (y * w + x) * 4;
-            if (data[idx] === 0) {
-              if (y < top) top = y;
-              if (y > bottom) bottom = y;
-            }
-          }
-        }
-
-        const height = bottom - top + 1;
-        if (height < 4) continue;
-
-        charBoxes.push({
-          x: interval.left,
-          y: top,
-          w: width,
-          h: height
-        });
-      }
-
-      charBoxes.sort((a, b) => a.x - b.x);
-      return charBoxes;
-    }
-
-    function getResizedCharTensor(canvas, box) {
-      const cropCanvas = document.createElement('canvas');
-      cropCanvas.width = 20;
-      cropCanvas.height = 20;
-      const cropCtx = cropCanvas.getContext('2d');
-      
-      // Background is white (255)
-      cropCtx.fillStyle = '#ffffff';
-      cropCtx.fillRect(0, 0, 20, 20);
-
-      const size = Math.max(box.w, box.h);
-      const padX = (size - box.w) / 2;
-      const padY = (size - box.h) / 2;
-
-      cropCtx.drawImage(
-        canvas,
-        box.x, box.y, box.w, box.h,
-        Math.round((padX / size) * 16) + 2,
-        Math.round((padY / size) * 16) + 2,
-        Math.round((box.w / size) * 16),
-        Math.round((box.h / size) * 16)
-      );
-
-      const imgData = cropCtx.getImageData(0, 0, 20, 20);
-      const data = imgData.data;
-      const pixels = new Float32Array(20 * 20);
-      for (let i = 0; i < pixels.length; i++) {
-        // Model was trained on white-on-black: black pixel -> 1.0, white pixel -> 0.0
-        pixels[i] = data[i * 4] < 127 ? 1.0 : 0.0;
-      }
-      
-      return tf.tensor4d(pixels, [1, 20, 20, 1]);
-    }
-
-    async function predictScoreboardBox(canvas) {
-      if (!digitModel) return '';
-
-      const boxes = segmentCharacters(canvas);
-      if (boxes.length === 0) return '';
-
-      let text = '';
-      for (const box of boxes) {
-        const tensor = getResizedCharTensor(canvas, box);
-        const prediction = digitModel.predict(tensor);
-        const argmax = prediction.argMax(1).dataSync()[0];
-        
-        tensor.dispose();
-        prediction.dispose();
-
-        const char = CLASSES[argmax];
-        if (char !== ' ') {
-          text += char;
-        }
-      }
-      return text;
     }
 
     // Drag-and-drop mechanics
     Object.keys(frames).forEach(k => {
       const f = frames[k];
-      f.addEventListener('mousedown', (e) => startDrag(e, k));
-      f.addEventListener('touchstart', (e) => startDrag(e, k), { passive: false });
+      if (f) {
+        f.addEventListener('mousedown', (e) => startDrag(e, k));
+        f.addEventListener('touchstart', (e) => startDrag(e, k), { passive: false });
+      }
     });
 
     function startDrag(e, key) {
@@ -970,7 +684,6 @@
       saveCropPositions();
     }
 
-    // Resize mechanics
     function startResize(e, key) {
       e.stopPropagation();
       e.preventDefault();
@@ -1014,22 +727,19 @@
     }
 
     let dilationEnabled = true;
-    let invertStates = {}; // key -> boolean (stored in local storage)
+    let invertStates = {};
 
     function toggleDilation(enabled) {
       dilationEnabled = enabled;
       localStorage.setItem('hc_ocr_dilation', enabled);
-      window.lastBinarizedPixels = {};
     }
 
     function toggleInvert(enabled) {
       invertStates[activeCrop] = enabled;
       localStorage.setItem('hc_ocr_invert_states', JSON.stringify(invertStates));
-      window.lastBinarizedPixels = {};
     }
 
     function dilate(data, w, h) {
-      // 2 passes of 8-neighborhood dilation to robustly bridge pixel gaps in physical LED scoreboards
       for (let iter = 0; iter < 2; iter++) {
         const temp = new Uint8ClampedArray(data);
         for (let y = 1; y < h - 1; y++) {
@@ -1057,7 +767,6 @@
       }
     }
 
-    // Canvas pre-processing for binarization and gap connection
     function preprocess(ctx, w, h, key) {
       const imgData = ctx.getImageData(0, 0, w, h);
       const data = imgData.data;
@@ -1068,7 +777,6 @@
 
       for (let i = 0; i < data.length; i += 4) {
         const brightness = 0.34 * data[i] + 0.5 * data[i + 1] + 0.16 * data[i + 2];
-        // Binarize (Threshold)
         const v = brightness > tVal ? 0 : 255;
         data[i] = v;
         data[i+1] = v;
@@ -1076,11 +784,9 @@
         if (v === 0) blackCount++;
       }
 
-      // Auto-detect inversion on first frame if not already set in invertStates
       if (invertStates[key] === undefined || invertStates[key] === null) {
         const initialBlackRatio = blackCount / totalPixels;
         invertStates[key] = initialBlackRatio > 0.5;
-        // Update checkbox if it's the active crop
         if (key === activeCrop) {
           const invCheckbox = document.getElementById('invert-toggle');
           if (invCheckbox) invCheckbox.checked = invertStates[key];
@@ -1101,264 +807,131 @@
 
       if (dilationEnabled) {
         dilate(data, w, h);
-        blackCount = 0;
-        for (let i = 0; i < data.length; i += 4) {
-          if (data[i] === 0) blackCount++;
-        }
       }
 
       ctx.putImageData(imgData, 0, 0);
-
-      // Solid Area Guard: If image is > 99% white or > 99% black, skip OCR to prevent WebAssembly hangs
-      const blackRatio = blackCount / totalPixels;
-      if (blackRatio < 0.01 || blackRatio > 0.99) {
-        return false; // Solid frame, unsafe for Tesseract
-      }
-      return true; // Valid frame
-    }
-
-    function isImageUnchanged(ctx, w, h, key) {
-      const imgData = ctx.getImageData(0, 0, w, h);
-      const data = imgData.data;
-      
-      if (!window.lastBinarizedPixels) {
-        window.lastBinarizedPixels = {};
-      }
-      
-      const lastPixels = window.lastBinarizedPixels[key];
-      if (!lastPixels || lastPixels.length !== data.length) {
-        return false;
-      }
-      
-      let diffs = 0;
-      const threshold = data.length * 0.005; // 0.5% tolerance threshold for noise/flicker
-      for (let i = 0; i < data.length; i += 4) {
-        if (data[i] !== lastPixels[i]) {
-          diffs++;
-          if (diffs > threshold) {
-            return false;
-          }
-        }
-      }
       return true;
     }
 
-    function mapLettersToDigits(text) {
-      if (!text) return '';
-      return text
-        .replace(/[Oo]/g, '0')
-        .replace(/[Ii|l]/g, '1')
-        .replace(/[Bb]/g, '8')
-        .replace(/[Ss]/g, '5')
-        .replace(/[Gg]/g, '9')
-        .replace(/[Qq]/g, '9')
-        .replace(/[Zz]/g, '2')
-        .replace(/[Tt]/g, '7')
-        .replace(/[Aa]/g, '4');
+    function selectCrop(key) {
+      activeCrop = key;
+      document.querySelectorAll('.config-tab').forEach(tab => {
+        const txt = tab.textContent.toLowerCase();
+        const isMatch = (key === 'clock' && txt.includes('clock') && !txt.includes('shot')) ||
+                        (key === 'home' && txt.includes('home')) ||
+                        (key === 'away' && txt.includes('away')) ||
+                        (key === 'period' && txt.includes('period')) ||
+                        (key === 'shot' && txt.includes('shot'));
+        tab.classList.toggle('active', isMatch);
+      });
+      const savedT = thresholds[key] || 120;
+      const displayVal = document.getElementById('threshold-val');
+      if (displayVal) displayVal.textContent = savedT;
+      const slider = document.getElementById('threshold-slider');
+      if (slider) slider.value = savedT;
+
+      const invCheckbox = document.getElementById('invert-toggle');
+      if (invCheckbox) invCheckbox.checked = !!invertStates[key];
     }
 
-    function isValidClock(str) {
-      if (!/[0-9]/.test(str)) return false;
-      if (str.includes(':')) {
-        const parts = str.split(':');
-        if (parts.length !== 2) return false;
-        if (parts[1].length !== 2) return false;
-      }
-      return true;
-    }
-
-    // Run OCR Loop
-    async function captureAndOCR() {
-      if (!syncActive || !ocrWorker) return;
+    // Optical Bridge 12.5 FPS Stream Loop
+    function opticalStreamLoop() {
+      if (!syncActive) return;
 
       const video = document.getElementById('camera-view');
       const canvas = document.getElementById('helper-canvas');
-      const ctx = canvas.getContext('2d');
+      if (!video || !canvas) return;
 
       const videoW = video.videoWidth;
       const videoH = video.videoHeight;
       const viewW = video.offsetWidth;
       const viewH = video.offsetHeight;
 
-      // Layout protection check to prevent NaN division during render cycles
       if (!videoW || !videoH || !viewW || !viewH) {
-        setTimeout(captureAndOCR, 500);
+        setTimeout(opticalStreamLoop, 150);
         return;
       }
 
-      ocrLoopCount++;
+      const keys = ['clock', 'shot', 'home', 'away', 'period'];
+      const fieldMap = {
+        clock: 'gameClockStream',
+        shot: 'shotClockStream',
+        home: 'homeScoreStream',
+        away: 'awayScoreStream',
+        period: 'periodStream'
+      };
 
-      // Interleaved Active-Crop Scheduler:
-      // Alternately scan the currently active calibration crop tab for instant preview feedback,
-      // and rotate through all other fields on the off-ticks.
-      let key = activeCrop || 'clock';
-      if (ocrLoopCount % 2 === 0) {
-        key = activeCrop || 'clock';
-      } else {
-        const rotateKeys = ['clock', 'home', 'away', 'period', 'shot'];
-        key = rotateKeys[Math.floor(ocrLoopCount / 2) % rotateKeys.length];
-      }
+      const payload = { streamActive: true };
 
-      try {
+      for (const key of keys) {
+        if (enabledCrops[key] === false) {
+          payload[fieldMap[key]] = null;
+          continue;
+        }
+
         const frame = frames[key];
-        if (frame) {
-          // Map screen coordinates relative to actual video resolution under object-fit: cover
-          const streamRatio = videoW / videoH;
-          const viewRatio = viewW / viewH;
+        if (!frame) continue;
 
-          let scaledWidth, scaledHeight;
-          let offsetX = 0, offsetY = 0;
+        const streamRatio = videoW / videoH;
+        const viewRatio = viewW / viewH;
 
-          if (viewRatio > streamRatio) {
-            // Video scaled to match container width; height is cropped top/bottom
-            scaledWidth = viewW;
-            scaledHeight = viewW / streamRatio;
-            offsetY = (scaledHeight - viewH) / 2;
-          } else {
-            // Video scaled to match container height; width is cropped left/right
-            scaledWidth = viewH * streamRatio;
-            scaledHeight = viewH;
-            offsetX = (scaledWidth - viewW) / 2;
-          }
+        let scaledWidth, scaledHeight;
+        let offsetX = 0, offsetY = 0;
 
-          // Screen box boundaries
-          const boxX = frame.offsetLeft;
-          const boxY = frame.offsetTop;
-          const boxW = frame.offsetWidth;
-          const boxH = frame.offsetHeight;
+        if (viewRatio > streamRatio) {
+          scaledWidth = viewW;
+          scaledHeight = viewW / streamRatio;
+          offsetY = (scaledHeight - viewH) / 2;
+        } else {
+          scaledWidth = viewH * streamRatio;
+          scaledHeight = viewH;
+          offsetX = (scaledWidth - viewW) / 2;
+        }
 
-          // Convert to scaled video space
-          const xInScaled = boxX + offsetX;
-          const yInScaled = boxY + offsetY;
+        const boxX = frame.offsetLeft;
+        const boxY = frame.offsetTop;
+        const boxW = frame.offsetWidth;
+        const boxH = frame.offsetHeight;
 
-          // Project to physical video resolution
-          const cropX = (xInScaled / scaledWidth) * videoW;
-          const cropY = (yInScaled / scaledHeight) * videoH;
-          const cropW = (boxW / scaledWidth) * videoW;
-          const cropH = (boxH / scaledHeight) * videoH;
+        const xInScaled = boxX + offsetX;
+        const yInScaled = boxY + offsetY;
 
-          canvas.width = cropW * 2.0; // 2.0x scaling is perfectly sharp for digital digits and saves 36% CPU vs 2.5x!
-          canvas.height = cropH * 2.0;
+        const cropX = Math.max(0, Math.min(videoW - 1, (xInScaled / scaledWidth) * videoW));
+        const cropY = Math.max(0, Math.min(videoH - 1, (yInScaled / scaledHeight) * videoH));
+        const cropW = Math.max(1, Math.min(videoW - cropX, (boxW / scaledWidth) * videoW));
+        const cropH = Math.max(1, Math.min(videoH - cropY, (boxH / scaledHeight) * videoH));
 
-          // Draw crop area on helper canvas
-          ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
-          
-          // Binarize for high-contrast OCR
-          const isValidFrame = preprocess(ctx, canvas.width, canvas.height, key);
-          
-          // Copy preprocessed binary frame to diagnostics preview canvas if active
-          if (key === activeCrop) {
-            const pCanvas = document.getElementById('ocr-preview-canvas');
-            if (pCanvas) {
-              pCanvas.width = canvas.width;
-              pCanvas.height = canvas.height;
-              const pCtx = pCanvas.getContext('2d');
-              // Bypass GPU texture cache to show exact CPU binarization output immediately
-              pCtx.putImageData(ctx.getImageData(0, 0, canvas.width, canvas.height), 0, 0);
-            }
-          }
+        const scale = Math.min(160 / cropW, 1.0);
+        canvas.width = Math.round(cropW * scale);
+        canvas.height = Math.round(cropH * scale);
 
-          if (isValidFrame) {
-            // Skip OCR scan if the crop frame binarization remains identical to save GPU/CPU cycles
-            if (isImageUnchanged(ctx, canvas.width, canvas.height, key)) {
-              return;
-            }
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
-            try {
-              const ocrPromise = predictScoreboardBox(canvas);
-              const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Scan Timeout')), 1000)
-              );
-              
-              const text = await Promise.race([ocrPromise, timeoutPromise]);
-              const cleanText = text.trim();
-              if (cleanText) {
-                const displayKey = key === 'period' ? 'period' : (key === 'shot' ? 'shot' : key);
-                const previewEl = document.getElementById(`read-${displayKey}`);
-                
-                let isVal = false;
-                if (key === 'clock') {
-                  isVal = isValidClock(cleanText);
-                } else if (key === 'home' || key === 'away') {
-                  isVal = /^[0-9]{1,3}$/.test(cleanText);
-                } else if (key === 'period') {
-                  isVal = /^[1-4]$/.test(cleanText);
-                } else if (key === 'shot') {
-                  isVal = /^[0-9]{1,2}$/.test(cleanText) && parseInt(cleanText, 10) <= 45;
-                }
+        preprocess(ctx, canvas.width, canvas.height, key);
 
-                if (isVal) {
-                  // Save these binarized pixels as the new valid baseline!
-                  if (!window.lastBinarizedPixels) window.lastBinarizedPixels = {};
-                  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                  window.lastBinarizedPixels[key] = new Uint8Array(imgData.data);
-
-                  const payload = {};
-                  payload[key === 'period' ? 'period' : (key === 'shot' ? 'shotClock' : key)] = cleanText;
-                  sendUpdate(payload);
-                  
-                  // Update battery saver dashboard
-                  const saverReadEl = document.getElementById(`saver-read-${displayKey}`);
-                  if (saverReadEl) {
-                    if (displayKey === 'clock' && cleanText.length === 4 && !cleanText.includes(':')) {
-                      saverReadEl.textContent = cleanText.substring(0, 2) + ':' + cleanText.substring(2);
-                    } else if (displayKey === 'clock' && cleanText.length === 3 && !cleanText.includes(':')) {
-                      saverReadEl.textContent = cleanText.substring(0, 1) + ':' + cleanText.substring(1);
-                    } else {
-                      saverReadEl.textContent = cleanText;
-                    }
-                  }
-
-                  if (previewEl) {
-                    previewEl.textContent = cleanText;
-                    previewEl.style.color = '#16c784'; // Green for valid/synced
-                    previewEl.style.textShadow = '0 0 10px rgba(22,199,132,0.5)';
-                  }
-                } else {
-                  console.log(`Discarded noisy/invalid scan for ${key}: "${cleanText}"`);
-                  if (previewEl) {
-                    previewEl.textContent = cleanText;
-                    previewEl.style.color = '#ef4444'; // Red for invalid/noisy
-                    previewEl.style.textShadow = '0 0 10px rgba(239,68,68,0.5)';
-                  }
-                }
-              } else {
-                const displayKey = key === 'period' ? 'period' : (key === 'shot' ? 'shot' : key);
-                const previewEl = document.getElementById(`read-${displayKey}`);
-                if (previewEl) {
-                  previewEl.textContent = '--';
-                  previewEl.style.color = 'var(--grey)';
-                  previewEl.style.textShadow = 'none';
-                }
-              }
-            } catch(err) {
-              console.warn(`OCR scan failed for ${key}:`, err.message || err);
-              if (err.message === 'Scan Timeout') {
-                console.warn("Worker hung. Restarting OCR engine...");
-                document.getElementById('engine-status').textContent = 'Restarting...';
-                document.getElementById('engine-status').style.color = '#ff9800';
-                initOCR(); // Terminate and spin up fresh worker
-              }
-            }
-          } else {
-            console.log(`Skipping solid/empty frame for ${key} to prevent WebAssembly hangs.`);
+        if (key === activeCrop) {
+          const pCanvas = document.getElementById('ocr-preview-canvas');
+          if (pCanvas) {
+            pCanvas.width = canvas.width;
+            pCanvas.height = canvas.height;
+            const pCtx = pCanvas.getContext('2d');
+            pCtx.putImageData(ctx.getImageData(0, 0, canvas.width, canvas.height), 0, 0);
           }
         }
-      } catch (globalErr) {
-        console.error("Global capture error:", globalErr);
-      } finally {
-        // ALWAYS schedule the next scan, even if loop threw an exception or locked up
-        if (syncActive) {
-          setTimeout(captureAndOCR, 1000);
-        }
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+        payload[fieldMap[key]] = dataUrl;
       }
+
+      sendUpdate(payload);
+      setTimeout(opticalStreamLoop, 120);
     }
 
-    // Transmit state to cloud
+    // Transmit stream to Firebase / Server / BroadcastChannel
     function sendUpdate(payload) {
       const user = document.getElementById('session-input').value || 'default';
 
-      // Determine target environment
       let target = syncTarget;
       if (target === 'auto') {
         const host = window.location.hostname;
@@ -1371,71 +944,81 @@
         }
       }
 
-      // Map local camera OCR keys to standard database/API schema keys
-      const mapped = {};
-      if (payload.clock != null) mapped.clock = payload.clock;
-      if (payload.home != null) mapped.homeScore = payload.home;
-      if (payload.away != null) mapped.awayScore = payload.away;
-      if (payload.period != null) mapped.period = payload.period;
-      if (payload.shotClock != null) mapped.shotClock = payload.shotClock;
+      if (bc) {
+        bc.postMessage({ type: 'stream', data: payload });
+      }
 
       if (target === 'firebase' && db) {
-        // Direct Firebase write (Vercel serverless mode)
         const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
-        db.ref(`ocr/${fbUser}`).update(mapped)
+        db.ref(`ocr/${fbUser}`).update(payload)
           .then(() => {
-            document.getElementById('status-text').textContent = `Syncing (Firebase)... (${JSON.stringify(mapped)})`;
-            document.getElementById('status-text').style.color = '#16c784';
+            const statusEl = document.getElementById('status-text');
+            if (statusEl && syncActive) {
+              statusEl.textContent = 'Optical Bridge (Streaming Live)';
+              statusEl.style.color = '#16c784';
+            }
           })
           .catch(() => {
-            document.getElementById('status-text').textContent = 'Firebase Sync Error';
-            document.getElementById('status-text').style.color = '#ef4444';
+            const statusEl = document.getElementById('status-text');
+            if (statusEl) {
+              statusEl.textContent = 'Firebase Connection Error';
+              statusEl.style.color = '#ef4444';
+            }
           });
         return;
       }
 
-      // API POST targeting (Local Offline or OnRender Cloud)
-      let url = `/api/ocr?user=${encodeURIComponent(user)}`;
+      let url = `/api/stream?user=${encodeURIComponent(user)}`;
       if (target === 'api-onrender') {
-        url = `https://basketball-scoreboard-o0c7.onrender.com/api/ocr?user=${encodeURIComponent(user)}`;
+        url = `https://basketball-scoreboard-o0c7.onrender.com/api/stream?user=${encodeURIComponent(user)}`;
       }
 
       fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(mapped)
+        body: JSON.stringify(payload)
       })
       .then(res => res.json())
       .then(d => {
-        document.getElementById('status-text').textContent = `Syncing (${target === 'api-onrender' ? 'OnRender' : 'API'})... (${JSON.stringify(mapped)})`;
-        document.getElementById('status-text').style.color = '#16c784';
+        const statusEl = document.getElementById('status-text');
+        if (statusEl && syncActive) {
+          statusEl.textContent = `Optical Bridge (${target === 'api-onrender' ? 'OnRender' : 'Local'})`;
+          statusEl.style.color = '#16c784';
+        }
       })
       .catch(() => {
-        document.getElementById('status-text').textContent = 'API Connection Error';
-        document.getElementById('status-text').style.color = '#ef4444';
+        const statusEl = document.getElementById('status-text');
+        if (statusEl) {
+          statusEl.textContent = 'API Connection Error';
+          statusEl.style.color = '#ef4444';
+        }
       });
     }
 
     function toggleSync() {
-      if (!ocrWorker) {
-        alert('OCR Engine is still loading. Please wait.');
-        return;
-      }
-
       syncActive = !syncActive;
       const btn = document.getElementById('sync-btn');
       
       if (syncActive) {
         btn.textContent = '⏸️ Stop Sync';
         btn.classList.add('active');
-        document.getElementById('status-text').textContent = 'Sync Active';
+        document.getElementById('status-text').textContent = 'Optical Bridge (Streaming Live)';
         document.getElementById('status-text').style.color = '#16c784';
-        captureAndOCR();
+        opticalStreamLoop();
       } else {
         btn.textContent = '🛰️ Start Sync';
         btn.classList.remove('active');
         document.getElementById('status-text').textContent = 'Stopped';
         document.getElementById('status-text').style.color = '#f5c842';
+        
+        sendUpdate({
+          streamActive: false,
+          gameClockStream: null,
+          shotClockStream: null,
+          homeScoreStream: null,
+          awayScoreStream: null,
+          periodStream: null
+        });
       }
     }
 
@@ -1489,18 +1072,12 @@
       
       const videoContainer = document.getElementById('video-container');
       if (videoContainer) {
-        if (batterySaverActive) {
-          // Keep layout size intact (so offsetWidth/offsetHeight do not collapse to 0) but make invisible
-          videoContainer.style.opacity = '0.01';
-        } else {
-          videoContainer.style.opacity = '';
-        }
+        videoContainer.style.opacity = batterySaverActive ? '0.01' : '';
       }
       
       Object.keys(frames).forEach(k => {
         if (frames[k]) {
-          // Use opacity and pointerEvents instead of display:none to preserve layout offsetLeft/offsetTop parameters!
-          frames[k].style.opacity = batterySaverActive ? '0' : '1';
+          frames[k].style.opacity = batterySaverActive ? '0' : (enabledCrops[k] ? '1' : '0.2');
           frames[k].style.pointerEvents = batterySaverActive ? 'none' : 'auto';
         }
       });
@@ -1545,7 +1122,6 @@
         if (select) select.value = savedTarget;
       }
 
-      // Allow URL target override (e.g. ?target=api-onrender)
       const queryTarget = urlParams.get('target');
       if (queryTarget) {
         syncTarget = queryTarget;
@@ -1553,7 +1129,6 @@
         if (select) select.value = queryTarget;
       }
 
-      // Load saved thresholds map
       const savedThresholds = localStorage.getItem('hc_ocr_thresholds');
       if (savedThresholds) {
         try {
@@ -1562,7 +1137,6 @@
       }
       updateThreshold(thresholds[activeCrop] || 120);
 
-      // Restore dilation setting
       const savedDilation = localStorage.getItem('hc_ocr_dilation');
       if (savedDilation !== null) {
         dilationEnabled = savedDilation === 'true';
@@ -1570,7 +1144,6 @@
         if (checkbox) checkbox.checked = dilationEnabled;
       }
 
-      // Restore invert states setting
       const savedInvert = localStorage.getItem('hc_ocr_invert_states');
       if (savedInvert) {
         try {
@@ -1580,19 +1153,19 @@
         } catch(e) {}
       }
 
-      // Auto-show help guide on first visit
+      restoreEnabledCrops();
+
       const helpShown = localStorage.getItem('hc_ocr_help_shown');
       if (!helpShown) {
         toggleHelp();
       }
 
-      // Auto-hide control overlays on inactivity (makes calibration feed full-screen on iPhone landscape/portrait)
       let hideControlsTimeout = null;
 
       function resetHideControlsTimer() {
         showControls();
         clearTimeout(hideControlsTimeout);
-        hideControlsTimeout = setTimeout(hideControls, 4000); // 4 seconds of idle inactivity
+        hideControlsTimeout = setTimeout(hideControls, 4000);
       }
 
       function hideControls() {
@@ -1600,7 +1173,6 @@
         if (helpOverlay && helpOverlay.style.display !== 'none') return;
         if (activeDragFrame || activeResizeFrame) return;
 
-        // Keep controls visible if user is currently typing/focusing an input or select
         const activeEl = document.activeElement;
         if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'SELECT')) {
           clearTimeout(hideControlsTimeout);
@@ -1615,12 +1187,10 @@
         document.body.classList.remove('controls-hidden');
       }
 
-      // Expose globally so startDrag / startResize can trigger them immediately
       window.hideControls = hideControls;
       window.showControls = showControls;
       window.resetHideControlsTimer = resetHideControlsTimer;
 
-      // Tap background to toggle/show controls
       window.addEventListener('click', (e) => {
         const isOverlay = e.target.closest('.controls-overlay') || e.target.closest('.crop-frame') || e.target.closest('#help-overlay');
         if (!isOverlay) {
@@ -1632,7 +1202,6 @@
         }
       });
 
-      // Reset timer only when interacting directly with the menu controls (prevent dragging crop boxes from popping menu up)
       document.querySelectorAll('.controls-overlay').forEach(el => {
         ['mousedown', 'touchstart', 'click'].forEach(evt => {
           el.addEventListener(evt, () => {
@@ -1644,40 +1213,18 @@
 
       restoreCropPositions();
       startCamera();
-      initOCR();
+      
+      toggleSync();
       resetHideControlsTimer();
     });
   </script>
+
   <!-- Battery Saver Blackout Overlay -->
   <div id="saver-overlay" style="display:none; position:fixed; inset:0; background:#000; z-index:1500; flex-direction:column; align-items:center; justify-content:center; padding:20px; font-family:'Barlow Condensed',sans-serif;">
     <div style="text-align:center; margin-bottom:40px;">
       <div style="font-size:48px; margin-bottom:8px; animation: pulseSaver 2s infinite;">🔋</div>
       <div style="font-size:18px; color:#16c784; font-weight:700; letter-spacing:1px; text-transform:uppercase;">Battery Saver Active</div>
-      <div style="font-size:12px; color:var(--grey); margin-top:4px; font-family:sans-serif;">Camera preview is hidden to save GPU/OLED battery power. Sync continues.</div>
-    </div>
-    
-    <!-- Dimmed status dashboard -->
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; max-width:300px; width:100%; border:1px solid #1a1a1a; padding:20px; border-radius:8px; background:#050505; margin-bottom:40px;">
-      <div style="grid-column: span 2; border-bottom:1px solid #1a1a1a; padding-bottom:8px; text-align:center;">
-        <span style="color:var(--grey); font-size:11px; text-transform:uppercase; letter-spacing:1px;">Clock Reading</span>
-        <div id="saver-read-clock" style="font-size:42px; font-weight:bold; color:var(--orange2); margin-top:4px;">--:--</div>
-      </div>
-      <div style="text-align:center; border-right:1px solid #1a1a1a; padding-right:10px;">
-        <span style="color:var(--grey); font-size:10px; text-transform:uppercase;">Home Score</span>
-        <div id="saver-read-home" style="font-size:28px; font-weight:bold; color:#f5c842; margin-top:4px;">--</div>
-      </div>
-      <div style="text-align:center;">
-        <span style="color:var(--grey); font-size:10px; text-transform:uppercase;">Away Score</span>
-        <div id="saver-read-away" style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">--</div>
-      </div>
-      <div style="text-align:center; border-right:1px solid #1a1a1a; padding-right:10px; border-top:1px solid #1a1a1a; padding-top:8px; margin-top:4px;">
-        <span style="color:var(--grey); font-size:10px; text-transform:uppercase;">Period</span>
-        <div id="saver-read-period" style="font-size:24px; font-weight:bold; color:#a855f7; margin-top:4px;">--</div>
-      </div>
-      <div style="text-align:center; border-top:1px solid #1a1a1a; padding-top:8px; margin-top:4px;">
-        <span style="color:var(--grey); font-size:10px; text-transform:uppercase;">Shot Clock</span>
-        <div id="saver-read-shot" style="font-size:24px; font-weight:bold; color:#00d2ff; margin-top:4px;">--</div>
-      </div>
+      <div style="font-size:12px; color:var(--grey); margin-top:4px; font-family:sans-serif;">Camera preview is hidden to save GPU/OLED battery power. Optical Stream continues.</div>
     </div>
 
     <button class="btn" onclick="toggleBatterySaver()" style="padding:12px 24px; border-color:var(--orange); color:var(--orange); border-radius:6px; font-size:14px; font-weight:bold; text-transform:uppercase; letter-spacing:1px; cursor:pointer;">Exit Saver Mode</button>
