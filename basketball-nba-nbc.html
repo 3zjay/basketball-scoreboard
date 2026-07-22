@@ -210,7 +210,13 @@
       line-height: 1;
       font-style: italic;
       text-shadow: 0 2px 6px rgba(0,0,0,0.6);
-      transition: transform 0.15s ease-out, opacity 0.2s ease;
+      transition: transform 0.15s ease-out;
+      mask-size: contain;
+      mask-repeat: no-repeat;
+      mask-position: center;
+      -webkit-mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      -webkit-mask-position: center;
     }
     .score-num.bump {
       transform: scale(1.25);
@@ -249,7 +255,12 @@
       letter-spacing: 0.5px;
       font-variant-numeric: tabular-nums;
       text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-      transition: opacity 0.2s ease;
+      mask-size: contain;
+      mask-repeat: no-repeat;
+      mask-position: center;
+      -webkit-mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      -webkit-mask-position: center;
     }
     #clk.warn { color: #ff4b4b; animation: pulseClk 1s infinite; }
 
@@ -258,7 +269,6 @@
       align-items: center;
       gap: 0.4vw;
       margin-top: 0.15vw;
-      position: relative;
     }
 
     #per {
@@ -266,7 +276,12 @@
       font-weight: 900;
       color: #ffe885;
       letter-spacing: 0.5px;
-      transition: opacity 0.2s ease;
+      mask-size: contain;
+      mask-repeat: no-repeat;
+      mask-position: center;
+      -webkit-mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      -webkit-mask-position: center;
     }
 
     #sc {
@@ -276,7 +291,12 @@
       background: rgba(255,255,255,0.15);
       padding: 0 0.3vw;
       border-radius: 3px;
-      transition: opacity 0.2s ease;
+      mask-size: contain;
+      mask-repeat: no-repeat;
+      mask-position: center;
+      -webkit-mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      -webkit-mask-position: center;
     }
     #sc.warn { color: #ff4b4b; background: rgba(255,75,75,0.25); }
 
@@ -317,17 +337,6 @@
     .venue-highlight {
       color: #ffe885;
     }
-
-    /* Absolutely Positioned Stream Image Layer */
-    .stream-layer {
-      position: absolute;
-      inset: 0;
-      margin: auto;
-      object-fit: contain;
-      filter: drop-shadow(0 0 2px rgba(255,255,255,0.9)) drop-shadow(0 0 4px rgba(0,0,0,0.8));
-      mix-blend-mode: screen;
-      pointer-events: none;
-    }
   </style>
 </head>
 <body>
@@ -364,19 +373,15 @@
     <!-- ③ HOME SCORE  (dark) -->
     <div class="score-seg" id="hScoreSeg">
       <span class="score-num" id="hNum">0</span>
-      <img id="homeScoreStreamImg" class="stream-layer" style="display:none; max-height:85%; max-width:90%;" alt="" />
     </div>
 
     <!-- ④ CENTER -->
     <div id="ctr">
       <img id="hcLogo" src="/hoop-culture-logo.png" alt="HC">
       <div id="clk">10:00</div>
-      <img id="gameClockStreamImg" class="stream-layer" style="display:none; top:1.0vw; height:1.55vw; max-width:90%;" alt="" />
       <div id="prow">
         <span id="per">1ST</span>
-        <img id="periodStreamImg" class="stream-layer" style="display:none; left:0; width:1.8vw; height:0.9vw;" alt="" />
         <span id="sc">24</span>
-        <img id="shotClockStreamImg" class="stream-layer" style="display:none; right:0; width:1.8vw; height:0.9vw;" alt="" />
         <span id="qf"></span>
       </div>
     </div>
@@ -384,7 +389,6 @@
     <!-- ⑤ AWAY SCORE  (bright team color) -->
     <div class="score-seg" id="aScoreSeg">
       <span class="score-num" id="aNum">0</span>
-      <img id="awayScoreStreamImg" class="stream-layer" style="display:none; max-height:85%; max-width:90%;" alt="" />
     </div>
 
     <!-- ⑥ AWAY BRACE — Broadcast Divider & Notched Line -->
@@ -556,73 +560,26 @@ function draw(){
   if(aE&&parseInt(aE.textContent)!==S.awayScore){aE.textContent=S.awayScore;if(lA>=0){aE.classList.remove('bump');void aE.offsetWidth;aE.classList.add('bump');}}
   lH=S.homeScore;lA=S.awayScore;
 
-  /* Optical Camera Stream Crops vs Digital Fallback */
+  /* Optical Camera Masking vs Digital Typography Fallback (0% DOM Image Layering) */
   const isAiOn = S.aiSyncEnabled !== false;
 
-  // Home Score Stream
-  const hImg = $('homeScoreStreamImg');
-  if (hImg && hE) {
-    if (isAiOn && isValidStream(S.homeScoreStream)) {
-      if (hImg.src !== S.homeScoreStream) hImg.src = S.homeScoreStream;
-      hImg.style.display = 'block';
-      hE.style.opacity = '0';
+  // Helper to apply non-invasive mask image
+  function applyMask(el, streamUrl) {
+    if (!el) return;
+    if (isAiOn && isValidStream(streamUrl)) {
+      el.style.webkitMaskImage = `url("${streamUrl}")`;
+      el.style.maskImage = `url("${streamUrl}")`;
     } else {
-      hImg.style.display = 'none';
-      hE.style.opacity = '1';
+      el.style.webkitMaskImage = 'none';
+      el.style.maskImage = 'none';
     }
   }
 
-  // Away Score Stream
-  const aImg = $('awayScoreStreamImg');
-  if (aImg && aE) {
-    if (isAiOn && isValidStream(S.awayScoreStream)) {
-      if (aImg.src !== S.awayScoreStream) aImg.src = S.awayScoreStream;
-      aImg.style.display = 'block';
-      aE.style.opacity = '0';
-    } else {
-      aImg.style.display = 'none';
-      aE.style.opacity = '1';
-    }
-  }
-
-  // Game Clock Stream
-  const cImg = $('gameClockStreamImg'), cClk = $('clk');
-  if (cImg && cClk) {
-    if (isAiOn && isValidStream(S.gameClockStream)) {
-      if (cImg.src !== S.gameClockStream) cImg.src = S.gameClockStream;
-      cImg.style.display = 'block';
-      cClk.style.opacity = '0';
-    } else {
-      cImg.style.display = 'none';
-      cClk.style.opacity = '1';
-    }
-  }
-
-  // Period Stream
-  const pImg = $('periodStreamImg'), pPer = $('per');
-  if (pImg && pPer) {
-    if (isAiOn && isValidStream(S.periodStream)) {
-      if (pImg.src !== S.periodStream) pImg.src = S.periodStream;
-      pImg.style.display = 'block';
-      pPer.style.opacity = '0';
-    } else {
-      pImg.style.display = 'none';
-      pPer.style.opacity = '1';
-    }
-  }
-
-  // Shot Clock Stream
-  const sImg = $('shotClockStreamImg'), sSc = $('sc');
-  if (sImg && sSc) {
-    if (isAiOn && isValidStream(S.shotClockStream)) {
-      if (sImg.src !== S.shotClockStream) sImg.src = S.shotClockStream;
-      sImg.style.display = 'block';
-      sSc.style.opacity = '0';
-    } else {
-      sImg.style.display = 'none';
-      sSc.style.opacity = '1';
-    }
-  }
+  applyMask(hE, S.homeScoreStream);
+  applyMask(aE, S.awayScoreStream);
+  applyMask($('clk'), S.gameClockStream);
+  applyMask($('per'), S.periodStream);
+  applyMask($('sc'), S.shotClockStream);
 
   /* abbr — max 4 chars stacked vertically */
   setStacked('hAbbr', S.homeAbbr || 'HOME');
@@ -754,7 +711,7 @@ function conn(){
 }
 if(useFB&&db){
   db.ref(`states/${FU}`).once('value').then(sn=>{const d=sn.val();if(d){S={...DEF,...d};draw();sync();}}).catch(()=>{}).finally(()=>conn());
-  db.ref(`ocr/${FU}`).once('value').then(sn=>{const d=sn.val();if(d){S={...S,...d};draw();}}).catch(()=>{});
+  db.ref(`ocr/${FU}`).once('value').then(sn=>{const d=sn.val();if(d){S={...DEF,...d};draw();}}).catch(()=>{});
 }
 else{fetch(`${SRV}/state?user=${encodeURIComponent(CU)}`).then(r=>r.json()).then(d=>{if(Object.keys(d).length){S={...DEF,...d};draw();sync();}}).catch(()=>{}).finally(()=>conn());}
 </script>

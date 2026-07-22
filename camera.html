@@ -344,7 +344,7 @@
     
     <!-- Binarization slider and preview monitor -->
     <div style="display:flex; align-items:center; gap:12px; width:100%; border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:8px 0; margin:2px 0;">
-      <canvas id="ocr-preview-canvas" style="width:70px; height:35px; border:1px solid var(--border); background:#fff; border-radius:4px; flex-shrink:0;"></canvas>
+      <canvas id="ocr-preview-canvas" style="width:70px; height:35px; border:1px solid var(--border); background:#000; border-radius:4px; flex-shrink:0;"></canvas>
       <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
         <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--grey); font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:1px; text-transform:uppercase;">
           <span>Binarization Filter:</span>
@@ -757,9 +757,9 @@
 
               if (temp[top] === 0 || temp[bot] === 0 || temp[left] === 0 || temp[right] === 0 ||
                   temp[tl] === 0 || temp[tr] === 0 || temp[bl] === 0 || temp[br] === 0) {
-                data[idx] = 0;
-                data[idx+1] = 0;
-                data[idx+2] = 0;
+                data[idx] = 255;
+                data[idx+1] = 255;
+                data[idx+2] = 255;
               }
             }
           }
@@ -807,6 +807,21 @@
 
       if (dilationEnabled) {
         dilate(data, w, h);
+      }
+
+      // Convert background to 100% Alpha Transparent (PNG) so zero dark rectangular border shadows exist!
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i] === 255 && data[i+1] === 255 && data[i+2] === 255) {
+          data[i] = 255;
+          data[i+1] = 255;
+          data[i+2] = 255;
+          data[i+3] = 255;
+        } else {
+          data[i] = 0;
+          data[i+1] = 0;
+          data[i+2] = 0;
+          data[i+3] = 0; // Pure Transparent Background
+        }
       }
 
       ctx.putImageData(imgData, 0, 0);
@@ -916,22 +931,23 @@
             pCanvas.width = canvas.width;
             pCanvas.height = canvas.height;
             const pCtx = pCanvas.getContext('2d');
+            pCtx.clearRect(0, 0, canvas.width, canvas.height);
             pCtx.putImageData(ctx.getImageData(0, 0, canvas.width, canvas.height), 0, 0);
           }
         }
 
-        // Render to Battery Saver Monitor Canvases if active
         if (batterySaverActive) {
           const sCanvas = document.getElementById(`saver-canvas-${key}`);
           if (sCanvas) {
             sCanvas.width = canvas.width;
             sCanvas.height = canvas.height;
             const sCtx = sCanvas.getContext('2d');
+            sCtx.clearRect(0, 0, canvas.width, canvas.height);
             sCtx.putImageData(ctx.getImageData(0, 0, canvas.width, canvas.height), 0, 0);
           }
         }
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+        const dataUrl = canvas.toDataURL('image/png');
         payload[fieldMap[key]] = dataUrl;
       }
 
