@@ -191,7 +191,7 @@
       height: 100%;
     }
 
-    /* ③ & ⑤ SCORE SEGMENTS */
+    /* ③ & ⑤ SCORE SEGMENTS — Clean Original Design */
     .score-seg {
       width: 5.2vw;
       height: 100%;
@@ -203,30 +203,15 @@
       transition: background 0.4s;
     }
 
-    /* Sleek Framed LED Score Box (White Border + Black Background) */
-    .led-box {
-      width: 4.2vw;
-      height: 2.9vw;
-      background: #000000;
-      border: 1.5px solid rgba(255, 255, 255, 0.9);
-      border-radius: 5px;
-      box-shadow: inset 0 0 6px rgba(0,0,0,0.8), 0 2px 6px rgba(0,0,0,0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      overflow: hidden;
-    }
-
     .score-num {
-      font-size: 2.6vw;
+      font-size: 2.8vw;
       font-weight: 900;
       color: #ffffff;
       letter-spacing: -1px;
       line-height: 1;
       font-style: italic;
       text-shadow: 0 2px 6px rgba(0,0,0,0.6);
-      transition: transform 0.15s ease-out, opacity 0.2s ease;
+      transition: transform 0.15s ease-out;
     }
     .score-num.bump {
       transform: scale(1.25);
@@ -249,21 +234,6 @@
       padding: 0.2vw 0;
     }
 
-    .clk-led-box {
-      width: 7.6vw;
-      height: 1.85vw;
-      background: #000000;
-      border: 1.5px solid rgba(255, 255, 255, 0.9);
-      border-radius: 4px;
-      box-shadow: inset 0 0 6px rgba(0,0,0,0.8), 0 2px 4px rgba(0,0,0,0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      overflow: hidden;
-      margin: 0.1vw 0;
-    }
-
     #hcLogo {
       height: 1.0vw;
       width: auto;
@@ -273,14 +243,13 @@
     }
 
     #clk {
-      font-size: 1.45vw;
+      font-size: 1.55vw;
       font-weight: 900;
       color: #ffffff;
       line-height: 0.9;
       letter-spacing: 0.5px;
       font-variant-numeric: tabular-nums;
       text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-      transition: opacity 0.2s ease;
     }
     #clk.warn { color: #ff4b4b; animation: pulseClk 1s infinite; }
 
@@ -345,16 +314,6 @@
     .venue-highlight {
       color: #ffe885;
     }
-
-    /* Stream Monitor Canvas Layers */
-    .stream-canvas {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      pointer-events: none;
-    }
   </style>
 </head>
 <body>
@@ -390,19 +349,13 @@
 
     <!-- ③ HOME SCORE  (dark) -->
     <div class="score-seg" id="hScoreSeg">
-      <div class="led-box" id="hLedBox">
-        <span class="score-num" id="hNum">0</span>
-        <canvas id="hCanvas" class="stream-canvas" style="display:none;"></canvas>
-      </div>
+      <span class="score-num" id="hNum">0</span>
     </div>
 
     <!-- ④ CENTER -->
     <div id="ctr">
       <img id="hcLogo" src="/hoop-culture-logo.png" alt="HC">
-      <div class="clk-led-box" id="clkLedBox">
-        <div id="clk">10:00</div>
-        <canvas id="clkCanvas" class="stream-canvas" style="display:none;"></canvas>
-      </div>
+      <div id="clk">10:00</div>
       <div id="prow">
         <span id="per">1ST</span>
         <span id="sc">24</span>
@@ -412,10 +365,7 @@
 
     <!-- ⑤ AWAY SCORE  (bright team color) -->
     <div class="score-seg" id="aScoreSeg">
-      <div class="led-box" id="aLedBox">
-        <span class="score-num" id="aNum">0</span>
-        <canvas id="aCanvas" class="stream-canvas" style="display:none;"></canvas>
-      </div>
+      <span class="score-num" id="aNum">0</span>
     </div>
 
     <!-- ⑥ AWAY BRACE — Broadcast Divider & Notched Line -->
@@ -476,9 +426,7 @@ const DEF={
   quarter:1,
   rp1Title:'BROADCAST',rp1Value:'',
   rp2Title:'VENUE',rp2Value:'',
-  aiSyncEnabled:true,
-  gameClockStream:null,shotClockStream:null,
-  homeScoreStream:null,awayScoreStream:null,periodStream:null
+  aiSyncEnabled:true
 };
 
 let S={...DEF};
@@ -490,16 +438,13 @@ const bc=typeof BroadcastChannel!=='undefined'?new BroadcastChannel('basketball_
 if(bc){
   bc.onmessage=e=>{
     if(e.data){
-      if(e.data.type==='state'){
+      if(e.data.type==='state'||e.data.type==='stream'){
         _lastLocalMsgTime=Date.now();
         _ll=Date.now();
         stop();
         S={...DEF,...e.data.data};
         draw();
         sync();
-      }else if(e.data.type==='stream'){
-        S={...S,...e.data.data};
-        draw();
       }
     }
   };
@@ -508,10 +453,6 @@ if(bc){
 function $(i){return document.getElementById(i);}
 function tx(i,v){const e=$(i);if(e)e.textContent=v;}
 function isHex(c){return/^#[0-9A-F]{6}$/i.test(c);}
-
-function isValidStream(url) {
-  return typeof url === 'string' && url.length > 50 && url.startsWith('data:image/');
-}
 
 /* Hex Darkener Helper */
 function dk(hex, factor) {
@@ -586,38 +527,6 @@ function draw(){
   if(hE&&parseInt(hE.textContent)!==S.homeScore){hE.textContent=S.homeScore;if(lH>=0){hE.classList.remove('bump');void hE.offsetWidth;hE.classList.add('bump');}}
   if(aE&&parseInt(aE.textContent)!==S.awayScore){aE.textContent=S.awayScore;if(lA>=0){aE.classList.remove('bump');void aE.offsetWidth;aE.classList.add('bump');}}
   lH=S.homeScore;lA=S.awayScore;
-
-  /* Optical Stream Canvas Rendering inside Framed Box (Saver Mode Tech) */
-  const isAiOn = S.aiSyncEnabled !== false;
-
-  function renderStreamCanvas(canvasId, textEl, url) {
-    const cvs = $(canvasId);
-    if (!cvs || !textEl) return;
-    if (isAiOn && isValidStream(url)) {
-      if (cvs.dataset.url !== url) {
-        cvs.dataset.url = url;
-        const img = new Image();
-        img.onload = () => {
-          cvs.width = img.width;
-          cvs.height = img.height;
-          const ctx = cvs.getContext('2d');
-          ctx.clearRect(0, 0, cvs.width, cvs.height);
-          ctx.drawImage(img, 0, 0);
-        };
-        img.src = url;
-      }
-      cvs.style.display = 'block';
-      textEl.style.opacity = '0';
-    } else {
-      cvs.style.display = 'none';
-      cvs.dataset.url = '';
-      textEl.style.opacity = '1';
-    }
-  }
-
-  renderStreamCanvas('hCanvas', hE, S.homeScoreStream);
-  renderStreamCanvas('aCanvas', aE, S.awayScoreStream);
-  renderStreamCanvas('clkCanvas', $('clk'), S.gameClockStream);
 
   /* abbr — max 4 chars stacked vertically */
   setStacked('hAbbr', S.homeAbbr || 'HOME');
@@ -739,17 +648,15 @@ function sbuzz(){ _shotBuzzer.currentTime = 0; _shotBuzzer.play().catch(()=>{});
 function conn(){
   if(useFB&&db){
     db.ref(`states/${FU}`).on('value',sn=>{if(Date.now()-_ll<2000)return;const d=sn.val();if(!d)return;stop();S={...DEF,...d};draw();sync();});
-    db.ref(`ocr/${FU}`).on('value',sn=>{const d=sn.val();if(!d)return;S={...S,...d};draw();});
     db.ref(`buzz/${FU}`).on('value',sn=>{if(Date.now()-_ll<2000)return;const m=sn.val();if(!m||m.timestamp<=_lb)return;_lb=m.timestamp;m.kind==='game'?gbuzz():sbuzz();});
     return;
   }
   const es=new EventSource(`${SRV}/events?user=${encodeURIComponent(CU)}`);
-  es.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='buzz'){if(Date.now()-_ll<2000)return;m.kind==='game'?gbuzz():sbuzz();}else if(m.type==='state'){if(Date.now()-_ll<2000)return;stop();S={...DEF,...m.data};draw();sync();}else if(m.type==='stream'){S={...S,...m.data};draw();}}catch(err){}};
+  es.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='buzz'){if(Date.now()-_ll<2000)return;m.kind==='game'?gbuzz():sbuzz();}else if(m.type==='state'){if(Date.now()-_ll<2000)return;stop();S={...DEF,...m.data};draw();sync();}}catch(err){}};
   es.onerror=()=>{es.close();setTimeout(conn,2000);};
 }
 if(useFB&&db){
   db.ref(`states/${FU}`).once('value').then(sn=>{const d=sn.val();if(d){S={...DEF,...d};draw();sync();}}).catch(()=>{}).finally(()=>conn());
-  db.ref(`ocr/${FU}`).once('value').then(sn=>{const d=sn.val();if(d){S={...S,...d};draw();}}).catch(()=>{});
 }
 else{fetch(`${SRV}/state?user=${encodeURIComponent(CU)}`).then(r=>r.json()).then(d=>{if(Object.keys(d).length){S={...DEF,...d};draw();sync();}}).catch(()=>{}).finally(()=>conn());}
 </script>
