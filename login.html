@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    // Global Storage Shield — prevents WebKit SecurityError exceptions on blocked localStorage/sessionStorage
+    (function() {
+      try {
+        localStorage.setItem('__test_ls__', '1');
+        localStorage.removeItem('__test_ls__');
+      } catch (e) {
+        console.warn("localStorage is blocked. Injecting in-memory fallback.");
+        var store = {};
+        Object.defineProperty(window, 'localStorage', {
+          value: {
+            getItem: function(k) { return store[k] === undefined ? null : store[k]; },
+            setItem: function(k, v) { store[k] = String(v); },
+            removeItem: function(k) { delete store[k]; },
+            clear: function() { store = {}; },
+            key: function(i) { return Object.keys(store)[i] || null; },
+            get length() { return Object.keys(store).length; }
+          },
+          configurable: true, writable: true
+        });
+      }
+      try {
+        sessionStorage.setItem('__test_ss__', '1');
+        sessionStorage.removeItem('__test_ss__');
+      } catch (e) {
+        console.warn("sessionStorage is blocked. Injecting in-memory fallback.");
+        var store = {};
+        Object.defineProperty(window, 'sessionStorage', {
+          value: {
+            getItem: function(k) { return store[k] === undefined ? null : store[k]; },
+            setItem: function(k, v) { store[k] = String(v); },
+            removeItem: function(k) { delete store[k]; },
+            clear: function() { store = {}; },
+            key: function(i) { return Object.keys(store)[i] || null; },
+            get length() { return Object.keys(store).length; }
+          },
+          configurable: true, writable: true
+        });
+      }
+    })();
+
+    // Self-healing: Unregister any legacy service workers that are caching broken pages on phones
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        if (registrations.length > 0) {
+          for (var i = 0; i < registrations.length; i++) {
+            registrations[i].unregister();
+          }
+          // Force a clean reload from the network
+          window.location.reload(true);
+        }
+      }).catch(function(e) {});
+    }
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hoop Culture — Admin Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script src="/firebase-config.js"></script>
+  <style>
+    :root {
+      --bg: #080605;
+      --bg2: #100d0a;
+      --bg3: #1a1410;
+      --orange: #e8430a;
+      --orange2: #ff6b1a;
+      --fire1: #ff4500;
+      --fire2: #ff6a00;
+      --fire3: #ffa500;
+      --white: #f2ede8;
+      --grey: #a09080;
+      --border: #2a1e14;
+      --border2: #3a2818;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Ambient background glows matching website design */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(232, 67, 10, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .login-container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 2.5rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      text-align: center;
+    }
+
+    .login-container::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--fire1), var(--fire3));
+      border-radius: 16px 16px 0 0;
+    }
+
+    /* Logo */
+    .brand-logo {
+      height: 110px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 0 15px rgba(255, 100, 0, 0.7));
+      margin-bottom: 1.5rem;
+      transition: filter 0.2s;
+    }
+
+    .brand-logo:hover {
+      filter: drop-shadow(0 0 20px rgba(255, 150, 0, 0.8));
+    }
+
+    .login-title {
+      font-family: 'Anton', sans-serif;
+      font-size: 2.2rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+      color: var(--white);
+    }
+
+    .login-subtitle {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--grey);
+      margin-bottom: 2.5rem;
+    }
+
+    /* Form Fields */
+    .input-group {
+      text-align: left;
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    .input-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--grey);
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .input-field {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-family: 'Barlow', sans-serif;
+      font-size: 14px;
+      color: var(--white);
+      transition: all 0.2s;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--orange2);
+      box-shadow: 0 0 8px rgba(255, 107, 26, 0.25);
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    /* Checkbox & Forgot Password */
+    .form-options {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      font-size: 12px;
+    }
+
+    .remember-me {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--grey);
+      cursor: pointer;
+    }
+
+    .remember-me input {
+      accent-color: var(--orange2);
+      cursor: pointer;
+    }
+
+    .forgot-link {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--orange2);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .forgot-link:hover {
+      color: var(--white);
+    }
+
+    /* Submit Button */
+    .btn-submit {
+      width: 100%;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 14px;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--fire1), var(--fire2), var(--fire3), var(--fire2), var(--fire1));
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(232, 67, 10, 0.3);
+      transition: all 0.2s;
+    }
+
+    .btn-submit:hover {
+      background: var(--orange2);
+      box-shadow: 0 6px 20px rgba(232, 67, 10, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .btn-submit:active {
+      transform: translateY(0);
+    }
+
+    /* Helper message */
+    .login-footer {
+      margin-top: 2rem;
+      font-size: 11px;
+      color: var(--grey);
+      font-family: 'Barlow Condensed', sans-serif;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* Google Sign-In Styles */
+    .btn-google {
+      width: 100%;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 14px;
+      border: 1px solid var(--border2);
+      cursor: pointer;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      transition: all 0.2s;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn-google:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--grey);
+      transform: translateY(-2px);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 1.5rem 0;
+      color: var(--grey);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .divider:not(:empty)::before {
+      margin-right: .5em;
+    }
+
+    .divider:not(:empty)::after {
+      margin-left: .5em;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    
+    <!-- Hoop Culture Logo -->
+    <img src="/hoop-culture-logo.png" alt="Hoop Culture Logo" class="brand-logo">
+    
+    <h1 class="login-title">League Login</h1>
+    <div class="login-subtitle">Scoreboard Administration</div>
+
+    <!-- Auth Error Alert Banner -->
+    <div id="authErrorBanner" style="display:none; margin-bottom: 1.5rem; padding: 12px 14px; background: rgba(229, 57, 53, 0.15); border: 1px solid var(--red); border-radius: 6px; color: #ff8a80; font-size: 13px; text-align: left; line-height: 1.4;"></div>
+
+    <!-- Google Login (Shown only in Cloud Mode) -->
+    <div id="googleLoginArea" style="display:none;">
+      <button class="btn-google" type="button" onclick="handleGoogleSignIn()">
+        <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        Continue with Google
+      </button>
+    </div>
+
+    <!-- Divider Line -->
+    <div id="dividerLine" class="divider" style="display:none;">
+      <span>or offline admin login</span>
+    </div>
+
+    <!-- Login Form -->
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      
+      <!-- Email Field -->
+      <div class="input-group">
+        <label class="input-label" for="email">League Email</label>
+        <input class="input-field" type="email" id="email" required placeholder="admin@league.com">
+      </div>
+
+      <!-- Password Field -->
+      <div class="input-group">
+        <label class="input-label" for="password">Password</label>
+        <input class="input-field" type="password" id="password" required placeholder="••••••••">
+      </div>
+
+      <!-- Form Options -->
+      <div class="form-options">
+        <label class="remember-me">
+          <input type="checkbox" id="remember"> Keep me signed in
+        </label>
+        <a href="#" class="forgot-link">Forgot?</a>
+      </div>
+
+      <!-- Submit Button -->
+      <button class="btn-submit" type="submit">Sign In</button>
+
+    </form>
+
+    <div class="login-footer">
+      Hoop Culture Network • GTA Basketball
+    </div>
+
+  </div>
+
+  <script>
+    // Redirect Loop Buster Safeguard
+    try {
+      const redirectCount = parseInt(sessionStorage.getItem('hc_redirect_loop_count') || '0', 10);
+      if (redirectCount > 4) {
+        console.warn("Redirect loop detected. Clearing session to stabilize.");
+        localStorage.removeItem('hc_session_user');
+        sessionStorage.setItem('hc_redirect_loop_count', '0');
+      } else {
+        sessionStorage.setItem('hc_redirect_loop_count', (redirectCount + 1).toString());
+        // Reset after 6 seconds of stability
+        setTimeout(() => {
+          try { sessionStorage.setItem('hc_redirect_loop_count', '0'); } catch(e) {}
+        }, 6000);
+      }
+    } catch (e) {}
+
+    // Auto-bypass login in local offline mode
+    const isLocalHost = window.location.hostname === 'localhost' ||
+                        window.location.hostname === '127.0.0.1' ||
+                        !window.location.hostname.includes('.') ||
+                        window.location.hostname.startsWith('192.168.') ||
+                        window.location.hostname.startsWith('10.') ||
+                        window.location.hostname.startsWith('172.') ||
+                        window.location.hostname.endsWith('.local') ||
+                        window.location.hostname.endsWith('.ngrok.io') ||
+                        window.location.hostname.endsWith('.ngrok-free.dev') ||
+                        window.location.hostname.endsWith('.loca.lt') ||
+                        window.location.hostname.endsWith('.trycloudflare.com') ||
+                        window.location.hostname.endsWith('.run.app') ||
+                        window.location.hostname.endsWith('.googleusercontent.com');
+    if (isLocalHost) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectUrl = urlParams.get('redirect') || '/control';
+      window.location.href = redirectUrl;
+    }
+
+    // Initialize Firebase
+    let db = null;
+    let auth = null;
+    const useFirebase = window.location.hostname.includes('vercel.app') ||
+                        window.location.hostname.includes('vercel.sh') ||
+                        window.location.hostname.includes('onrender.com');
+
+    try {
+      if (typeof firebase !== 'undefined' && typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured) {
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        auth = firebase.auth();
+      }
+    } catch(e) {
+      console.warn("Firebase initialization failed in login page:", e);
+    }
+
+    // Toggle Google button visibility based on environment/config
+    if (typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured) {
+      document.getElementById('googleLoginArea').style.display = 'block';
+      document.getElementById('dividerLine').style.display = 'flex';
+    }
+
+    // Safe localStorage wrappers to prevent iOS incognito/private mode crashes
+    function safeGetItem(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function safeSetItem(key, val) {
+      try { localStorage.setItem(key, val); } catch (e) {}
+    }
+
+    function getSessionFromCookie() {
+      try {
+        const match = document.cookie.match(new RegExp('(^| )hc_session_user=([^;]+)'));
+        return match ? decodeURIComponent(match[2]) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function performSecureRedirect(email) {
+      safeSetItem('hc_session_user', email);
+      try {
+        document.cookie = "hc_session_user=" + encodeURIComponent(email) + "; path=/; max-age=86400; SameSite=Lax; Secure";
+      } catch (e) {}
+
+      const urlParams = new URLSearchParams(window.location.search);
+      let redirectUrl = urlParams.get('redirect') || '/control';
+      const separator = redirectUrl.includes('?') ? '&' : '?';
+      redirectUrl += separator + 'user=' + encodeURIComponent(email);
+
+      try { sessionStorage.setItem('hc_redirect_loop_count', '0'); } catch(e) {}
+      window.location.href = redirectUrl;
+    }
+
+    // Time-based Redirect Loop Buster Safeguard
+    let isLooping = false;
+    try {
+      const now = Date.now();
+      const lastLoad = parseInt(sessionStorage.getItem('hc_last_load_time') || '0', 10);
+      const redirectCount = parseInt(sessionStorage.getItem('hc_redirect_loop_count') || '0', 10);
+      
+      sessionStorage.setItem('hc_last_load_time', now.toString());
+
+      if (now - lastLoad < 1500) {
+        if (redirectCount > 4) {
+          isLooping = true;
+          console.warn("Redirect loop detected. Clearing session to stabilize.");
+          localStorage.removeItem('hc_session_user');
+          document.cookie = "hc_session_user=; path=/; max-age=0; SameSite=Lax; Secure";
+          sessionStorage.setItem('hc_redirect_loop_count', '0');
+        } else {
+          sessionStorage.setItem('hc_redirect_loop_count', (redirectCount + 1).toString());
+        }
+      } else {
+        // Reset counter on slow/normal loads (user interaction)
+        sessionStorage.setItem('hc_redirect_loop_count', '0');
+      }
+    } catch (e) {}
+
+    // Auto-redirect if session already exists
+    if (!isLooping) {
+      const activeSession = safeGetItem('hc_session_user') || getSessionFromCookie();
+      if (activeSession) {
+        performSecureRedirect(activeSession);
+      }
+    }
+
+    // Google Sign-In Handler
+    function handleGoogleSignIn() {
+      if (!auth || !db) {
+        alert("Google Sign-In is currently unavailable (missing Firebase credentials).");
+        return;
+      }
+
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider)
+        .then((result) => {
+          const email = result.user.email.toLowerCase();
+          
+          // Super-admin bypass: always allow admin@hoopculture.ca
+          if (email === 'admin@hoopculture.ca') {
+            performSecureRedirect(email);
+            return;
+          }
+
+          // Check whitelist database
+          const safeKey = email.replace(/[\.\#\$\[\]]/g, '_');
+          db.ref(`authorized_users/${safeKey}`).once('value')
+            .then((snapshot) => {
+              if (snapshot.exists()) {
+                performSecureRedirect(email);
+              } else {
+                alert(`Access Denied: ${email} is not authorized in this league. Please contact your administrator to whitelist your Google account.`);
+                auth.signOut();
+              }
+            })
+            .catch((err) => {
+              console.error(err);
+              alert("Verification failed: " + err.message);
+              auth.signOut();
+            });
+        })
+        .catch((error) => {
+          console.error("Firebase Auth Error:", error);
+          const errBanner = document.getElementById('authErrorBanner');
+          if (error.code === 'auth/unauthorized-domain') {
+            const domain = window.location.hostname;
+            if (errBanner) {
+              errBanner.style.display = 'block';
+              errBanner.innerHTML = `<strong>Domain Authorization Notice:</strong> The current domain (<code>${domain}</code>) is not authorized for Google OAuth in Firebase.<br><br>👉 Use the <strong>League Email & Password</strong> below to log in: <code>admin@hoopculture.ca</code> / <code>hoopculture2026</code>`;
+            }
+            // Auto-fill admin credentials for single-click login
+            const emailInput = document.getElementById('email');
+            const passInput = document.getElementById('password');
+            if (emailInput) emailInput.value = "admin@hoopculture.ca";
+            if (passInput) passInput.value = "hoopculture2026";
+          } else if (error.code === 'auth/popup-closed-by-user') {
+            if (errBanner) {
+              errBanner.style.display = 'block';
+              errBanner.innerHTML = `<strong>Sign In Cancelled:</strong> The Google sign-in window was closed before completing authentication.`;
+            }
+          } else {
+            if (errBanner) {
+              errBanner.style.display = 'block';
+              errBanner.innerHTML = `<strong>Sign In Failed:</strong> ${error.message}`;
+            } else {
+              alert("Sign in failed: " + error.message);
+            }
+          }
+        });
+    }
+
+    // Offline Credentials Login Handler
+    function handleLogin(event) {
+      event.preventDefault();
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      const password = document.getElementById('password').value;
+
+      // Define target credentials
+      const validEmail = "admin@hoopculture.ca";
+      const validPassword = "hoopculture2026";
+
+      if (email === validEmail && password === validPassword) {
+        performSecureRedirect(email);
+      } else {
+        alert("Invalid League Email or Password! Please check your credentials and try again.");
+      }
+    }
+  </script>
+
+</body>
+</html>

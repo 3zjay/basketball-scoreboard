@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shot Clock Display</title>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script src="/firebase-config.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  width:100%; height:100%; overflow:hidden;
+  background:#000; user-select:none;
+}
+
+/* ── UNLOCK OVERLAY ── */
+#unlock {
+  position:fixed; inset:0; z-index:9999;
+  background:rgba(0,0,0,0.93);
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:4vh;
+  cursor:pointer;
+}
+#unlock h2 {
+  font-family:'Teko',sans-serif; font-size:clamp(32px,8vh,64px);
+  color:#fff; letter-spacing:4px; text-transform:uppercase;
+}
+#unlock button {
+  font-family:'Teko',sans-serif;
+  font-size:clamp(20px,5vh,40px); font-weight:700; letter-spacing:3px;
+  text-transform:uppercase; background:#ff1a1a; color:#fff;
+  border:none; padding:2.5vh 10vw; border-radius:2vh; cursor:pointer;
+}
+
+/* ── NO SIGNAL ── */
+#noSignal {
+  position:fixed; inset:0; z-index:100;
+  background:#000;
+  display:none; align-items:center; justify-content:center;
+  font-family:'Teko',sans-serif; font-size:clamp(24px,6vh,48px);
+  color:#222; letter-spacing:4px; text-transform:uppercase;
+}
+#noSignal.show { display:flex; }
+
+/* ── BUZZ FLASH ── */
+.buzz-flash {
+  position:fixed; inset:0; z-index:50; pointer-events:none; opacity:0;
+  background:radial-gradient(ellipse 80% 60% at 50% 50%, rgba(255,0,0,0.3), transparent 70%);
+}
+@keyframes buzzFlash { 0%{opacity:0} 15%{opacity:1} 100%{opacity:0} }
+.buzz-flash.flash { animation:buzzFlash 0.8s ease forwards; }
+
+/* ── MAIN DISPLAY ── */
+.display {
+  width:100vw; height:100vh;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+}
+
+.shot-label {
+  font-family:'Teko',sans-serif;
+  font-size:clamp(14px,3.5vh,28px); font-weight:700;
+  letter-spacing:1.5vw; color:#2a0000; text-transform:uppercase;
+}
+
+.shot-number {
+  font-family:'Teko',sans-serif;
+  /* Fill ~85% of screen height */
+  font-size:clamp(120px,80vh,90vw);
+  font-weight:700; line-height:0.88;
+  color:#ff1a1a;
+  text-shadow:0 0 8vw rgba(255,20,20,0.4);
+  font-variant-numeric:tabular-nums;
+  text-align:center; width:100%;
+  transition:color 0.15s;
+}
+.shot-number.danger {
+  color:#ff0000;
+  text-shadow:0 0 10vw rgba(255,0,0,0.8);
+  animation:dangerPulse 0.4s ease infinite alternate;
+}
+.shot-number.zero {
+  color:#ff0000;
+  text-shadow:0 0 15vw rgba(255,0,0,1);
+}
+@keyframes dangerPulse { to { opacity:0.3; } }
+
+/* ── STATUS ── */
+.status-bar {
+  display:flex; align-items:center; gap:2vw; margin-top:1vh;
+}
+.run-dot {
+  width:clamp(8px,1.5vw,14px); height:clamp(8px,1.5vw,14px);
+  border-radius:50%; background:#1a0000;
+  transition:background 0.2s, box-shadow 0.2s;
+}
+.run-dot.running {
+  background:#22c55e; box-shadow:0 0 2vw #22c55e;
+  animation:dotPulse 0.9s ease infinite alternate;
+}
+@keyframes dotPulse { from{transform:scale(1)} to{transform:scale(1.5)} }
+.run-label {
+  font-family:'Teko',sans-serif;
+  font-size:clamp(12px,2.5vh,24px); font-weight:700;
+  letter-spacing:0.5vw; color:#2a0000; text-transform:uppercase;
+}
+.run-label.running { color:#22c55e; }
+
+/* ── FULLSCREEN BTN ── */
+#fsBtn {
+  position:fixed; bottom:2vh; right:2vw; z-index:200;
+  width:clamp(32px,5vh,48px); height:clamp(32px,5vh,48px);
+  border-radius:50%;
+  background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1);
+  color:rgba(255,255,255,0.3); font-size:clamp(14px,2.5vh,22px);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:color 0.2s, border-color 0.2s;
+}
+#fsBtn:hover { color:#fff; border-color:rgba(255,255,255,0.4); }
+</style>
+</head>
+<body>
+
+<div id="unlock" onclick="initAudio()">
+  <h2>⏱ Shot Clock</h2>
+  <button>TAP TO ACTIVATE</button>
+</div>
+
+<div id="noSignal" class="show">NO SIGNAL</div>
+<div class="buzz-flash" id="buzzFlash"></div>
+
+<div class="display">
+  <div class="shot-label">SHOT CLOCK</div>
+  <div class="shot-number" id="shotNum">24</div>
+  <div class="status-bar">
+    <div class="run-dot" id="runDot"></div>
+    <div class="run-label" id="runLabel">STOPPED</div>
+  </div>
+</div>
+
+<button id="fsBtn" onclick="toggleFullscreen()">⛶</button>
+
+<script>
+'use strict';
+
+const SERVER_URL = (
+  window.location.hostname.includes('vercel.app') ||
+  window.location.hostname.includes('vercel.sh')
+) ? 'https://basketball-scoreboard-o0c7.onrender.com' : (
+  window.location.protocol === 'file:' ? 'http://localhost:3000' : ''
+);
+
+const useFirebase = window.location.hostname.includes('vercel.app') ||
+                    window.location.hostname.includes('vercel.sh');
+let db = null;
+if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+  } catch(e) { console.warn('Firebase init failed:', e); }
+}
+
+const urlParams = new URLSearchParams(window.location.search);
+const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
+const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
+
+let _lastLocalMsgTime = 0;
+const bc = new BroadcastChannel('hc_scoreboard_sync');
+bc.onmessage = (e) => {
+  const msg = e.data;
+  if (!msg || msg.user !== fbUser) return;
+  _lastLocalMsgTime = Date.now();
+  if (msg.type === 'state') {
+    if (msg.data.shotSeconds != null) shotSeconds = msg.data.shotSeconds;
+    shotRunning = !!msg.data.shotRunning;
+    render();
+  } else if (msg.type === 'buzz') {
+    if (msg.kind === 'shot' && msg.timestamp > _lastBuzzTime) {
+      _lastBuzzTime = msg.timestamp;
+      playBuzz();
+    }
+  }
+};
+
+let shotSeconds = 24;
+let shotRunning = false;
+
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  // Pre-warm buzzer
+  const a = new Audio('/buzzer.mp3'); a.volume = 0;
+  a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => {});
+  document.getElementById('unlock').style.display = 'none';
+}
+
+document.addEventListener('touchstart', () => {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}, { passive: true });
+
+function playBuzz() {
+  const a = new Audio('/buzzer.mp3');
+  a.volume = 1;
+  a.play().catch(() => {});
+  // Flash screen
+  const fl = document.getElementById('buzzFlash');
+  fl.classList.remove('flash');
+  void fl.offsetWidth;
+  fl.classList.add('flash');
+}
+
+// ── Render (server is source of truth — no local tick) ──
+function render() {
+  const numEl   = document.getElementById('shotNum');
+  const dotEl   = document.getElementById('runDot');
+  const lblEl   = document.getElementById('runLabel');
+
+  numEl.textContent = shotSeconds;
+
+  numEl.className = 'shot-number';
+  if      (shotSeconds === 0)  numEl.classList.add('zero');
+  else if (shotSeconds <= 5)   numEl.classList.add('danger');
+
+  if (shotRunning) {
+    dotEl.classList.add('running');
+    lblEl.textContent = 'RUNNING'; lblEl.classList.add('running');
+  } else {
+    dotEl.classList.remove('running');
+    lblEl.textContent = 'STOPPED'; lblEl.classList.remove('running');
+  }
+}
+
+// ── SSE ── Server pushes every second — no local tick needed ──
+let _lastBuzzTime = 0;
+function connectSSE() {
+  if (useFirebase && db) {
+    const ns = document.getElementById('noSignal');
+    ns.classList.remove('show');
+    db.ref(`states/${fbUser}`).on('value', snapshot => {
+      if (Date.now() - _lastLocalMsgTime < 2000) return;
+      const d = snapshot.val();
+      if (!d) return;
+      if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
+      shotRunning = !!d.shotRunning;
+      render();
+    });
+    db.ref(`buzz/${fbUser}`).on('value', snapshot => {
+      if (Date.now() - _lastLocalMsgTime < 2000) return;
+      const msg = snapshot.val();
+      if (!msg || msg.timestamp <= _lastBuzzTime) return;
+      _lastBuzzTime = msg.timestamp;
+      if (msg.kind === 'shot') playBuzz();
+    });
+    return;
+  }
+  const ns = document.getElementById('noSignal');
+  ns.classList.add('show');
+
+  const es = new EventSource(`${SERVER_URL}/events?user=${encodeURIComponent(currentUser)}`);
+
+  es.onopen = () => ns.classList.remove('show');
+
+  es.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'state') {
+        if (Date.now() - _lastLocalMsgTime < 2000) return;
+        const d = msg.data;
+        shotSeconds = d.shotSeconds != null ? d.shotSeconds : shotSeconds;
+        shotRunning = !!d.shotRunning;
+        render();
+      } else if (msg.type === 'buzz' && msg.kind === 'shot') {
+        if (Date.now() - _lastLocalMsgTime < 2000) return;
+        playBuzz();
+      }
+    } catch (_) {}
+  };
+
+  es.onerror = () => {
+    ns.classList.add('show');
+    es.close();
+    setTimeout(connectSSE, 2000);
+  };
+}
+
+// ── Fullscreen ──
+function toggleFullscreen() {
+  const btn = document.getElementById('fsBtn');
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+    if (btn) btn.textContent = '✕';
+  } else {
+    document.exitFullscreen();
+    if (btn) btn.textContent = '⛶';
+  }
+}
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('fsBtn');
+  if (btn) btn.textContent = document.fullscreenElement ? '✕' : '⛶';
+});
+
+// ── Init ──
+if (useFirebase && db) {
+  db.ref(`states/${fbUser}`).once('value').then(d => {
+    const data = d.val();
+    if (data) {
+      if (data.shotSeconds != null) shotSeconds = data.shotSeconds;
+      shotRunning = !!data.shotRunning;
+      render();
+    }
+  }).catch(() => {}).finally(() => connectSSE());
+} else {
+  fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`)
+    .then(r => r.json())
+    .then(d => {
+      if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
+      shotRunning = !!d.shotRunning;
+      render();
+    })
+    .catch(() => {})
+    .finally(() => connectSSE());
+}
+</script>
+</body>
+</html>

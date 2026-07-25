@@ -1,0 +1,2495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+  // Global Storage Shield — prevents WebKit SecurityError exceptions on blocked localStorage/sessionStorage
+  (function() {
+    try {
+      localStorage.setItem('__test_ls__', '1');
+      localStorage.removeItem('__test_ls__');
+    } catch (e) {
+      console.warn("localStorage is blocked. Injecting in-memory fallback.");
+      var store = {};
+      Object.defineProperty(window, 'localStorage', {
+        value: {
+          getItem: function(k) { return store[k] === undefined ? null : store[k]; },
+          setItem: function(k, v) { store[k] = String(v); },
+          removeItem: function(k) { delete store[k]; },
+          clear: function() { store = {}; },
+          key: function(i) { return Object.keys(store)[i] || null; },
+          get length() { return Object.keys(store).length; }
+        },
+        configurable: true, writable: true
+      });
+    }
+    try {
+      sessionStorage.setItem('__test_ss__', '1');
+      sessionStorage.removeItem('__test_ss__');
+    } catch (e) {
+      console.warn("sessionStorage is blocked. Injecting in-memory fallback.");
+      var store = {};
+      Object.defineProperty(window, 'sessionStorage', {
+        value: {
+          getItem: function(k) { return store[k] === undefined ? null : store[k]; },
+          setItem: function(k, v) { store[k] = String(v); },
+          removeItem: function(k) { delete store[k]; },
+          clear: function() { store = {}; },
+          key: function(i) { return Object.keys(store)[i] || null; },
+          get length() { return Object.keys(store).length; }
+        },
+        configurable: true, writable: true
+      });
+    }
+  })();
+
+  // Time-based Redirect Loop Buster Safeguard
+  let stopRedirect = false;
+  try {
+    const now = Date.now();
+    const lastLoad = parseInt(sessionStorage.getItem('hc_last_load_time') || '0', 10);
+    const redirectCount = parseInt(sessionStorage.getItem('hc_redirect_loop_count') || '0', 10);
+    
+    sessionStorage.setItem('hc_last_load_time', now.toString());
+
+    if (now - lastLoad < 1500) {
+      if (redirectCount > 4) {
+        stopRedirect = true;
+        console.warn("Redirect loop detected. Halting redirects to stabilize.");
+        localStorage.removeItem('hc_session_user');
+        document.cookie = "hc_session_user=; path=/; max-age=0; SameSite=Lax; Secure";
+        sessionStorage.setItem('hc_redirect_loop_count', '0');
+      } else {
+        sessionStorage.setItem('hc_redirect_loop_count', (redirectCount + 1).toString());
+      }
+    } else {
+      // Reset counter on slow/normal loads (user interaction)
+      sessionStorage.setItem('hc_redirect_loop_count', '0');
+    }
+  } catch (e) {}
+
+  function getSessionFromCookie() {
+    try {
+      const match = document.cookie.match(new RegExp('(^| )hc_session_user=([^;]+)'));
+      return match ? decodeURIComponent(match[2]) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  let hasUserSession = false;
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userParam = urlParams.get('user');
+    hasUserSession = !!localStorage.getItem('hc_session_user') || 
+                     !!getSessionFromCookie() || 
+                     (userParam && userParam !== 'default');
+  } catch (e) {
+    console.warn("Storage access failed:", e);
+  }
+
+  const isLocal = window.location.hostname === 'localhost' ||
+                  window.location.hostname === '127.0.0.1' ||
+                  !window.location.hostname.includes('.') ||
+                  window.location.hostname.startsWith('192.168.') ||
+                  window.location.hostname.startsWith('10.') ||
+                  window.location.hostname.startsWith('172.') ||
+                  window.location.hostname.endsWith('.local') ||
+                  window.location.hostname.endsWith('.ngrok.io') ||
+                  window.location.hostname.endsWith('.ngrok-free.dev') ||
+                  window.location.hostname.endsWith('.loca.lt') ||
+                  window.location.hostname.endsWith('.trycloudflare.com') ||
+                  window.location.hostname.endsWith('.run.app') ||
+                  window.location.hostname.endsWith('.googleusercontent.com');
+  if (!isLocal && !hasUserSession && !stopRedirect) {
+    const currentPath = window.location.pathname + window.location.search;
+    window.location.href = '/login?redirect=' + encodeURIComponent(currentPath);
+  }
+</script>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script src="/firebase-config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Scoreboard">
+<meta name="theme-color" content="#0d1117">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
+<title>🏀 Scoreboard Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg:       #0d1117;
+  --surface:  #161b26;
+  --surface2: #1e2535;
+  --border:   #2a3347;
+  --border2:  #364059;
+  --text:     #e8eaf0;
+  --text2:    #8a95a8;
+  --text3:    #4a5568;
+  --accent:   #e8a800;
+  --accent2:  #f5c842;
+  --green:    #22c55e;
+  --blue:     #3b82f6;
+  --red:      #ef4444;
+  --orange:   #f97316;
+}
+
+body {
+  background: var(--bg);
+  font-family: 'Barlow Condensed', sans-serif;
+  color: var(--text);
+  min-height: 100vh;
+  padding: 24px 20px 48px;
+}
+
+/* ── PAGE HEADER ── */
+.page-header {
+  max-width: 980px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 28px;
+  background: var(--surface);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.page-logo-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.page-logo-title img {
+  height: 42px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(232, 67, 10, 0.6));
+  transition: transform 0.2s ease;
+}
+
+.page-title {
+  font-family: 'Teko', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--text);
+  white-space: nowrap;
+  margin: 0;
+}
+
+.page-title span { color: var(--accent); }
+
+.live-badge {
+  display: flex; align-items: center; gap: 8px;
+  background: #2a1515; border: 1px solid #7f1d1d;
+  border-radius: 20px; padding: 6px 16px;
+  transition: background 0.4s, border-color 0.4s;
+}
+.live-badge.connecting { background:#1a1a0a; border-color:#5a4e00; }
+.live-badge.connected  { background:#0a2a0a; border-color:#166534; }
+.live-badge.offline    { background:#2a1515; border-color:#7f1d1d; }
+.live-dot { width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 8px #ef4444;animation:livePulse 1.2s ease infinite; transition: background 0.4s, box-shadow 0.4s; }
+.live-badge.connecting .live-dot { background:#facc15;box-shadow:0 0 8px #facc15;animation:livePulse 0.6s ease infinite; }
+.live-badge.connected  .live-dot { background:#22c55e;box-shadow:0 0 8px #22c55e; }
+.live-badge.offline    .live-dot { background:#ef4444;box-shadow:0 0 8px #ef4444; }
+@keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.6)}}
+.live-text { font-size:12px;font-weight:800;letter-spacing:3px;color:#ef4444;text-transform:uppercase; transition: color 0.4s; }
+.live-badge.connecting .live-text { color:#facc15; }
+.live-badge.connected  .live-text { color:#22c55e; }
+.live-badge.offline    .live-text { color:#ef4444; }
+
+/* ── MAIN GRID ── */
+.main {
+  max-width: 980px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ── CARD ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.card-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface2);
+}
+
+.card-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: var(--text3);
+  text-transform: uppercase;
+}
+
+.card-body { padding: 18px 20px; }
+
+/* ── TEAM CARD ── */
+.team-top {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.logo-btn {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  border: 2px dashed var(--border2);
+  background: var(--surface2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; overflow: hidden; flex-shrink: 0;
+  transition: border-color 0.2s, background 0.2s;
+}
+.logo-btn:hover { border-color: var(--accent); background: #2a2210; }
+.logo-btn img { width:100%;height:100%;object-fit:contain; }
+.lbtext { font-size:9px;font-weight:700;color:var(--text3);text-align:center;line-height:1.4;text-transform:uppercase; }
+
+.field-group { display:flex;flex-direction:column;gap:4px;flex:1; }
+.field-label { font-size:10px;font-weight:800;letter-spacing:2px;color:var(--text3);text-transform:uppercase; }
+
+.inp {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Barlow Condensed';
+  font-size: 15px;
+  font-weight: 700;
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  letter-spacing: 0.5px;
+  width: 100%;
+}
+.inp:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,168,0,0.12); }
+
+.inp-row { display:flex;gap:8px;margin-top:6px; }
+.inp.rec { width:90px;flex-shrink:0; }
+.inp.col { width:44px;height:38px;padding:2px;cursor:pointer;border-radius:7px;flex-shrink:0; }
+/* Hide number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+input[type="number"] { -moz-appearance: textfield; }
+
+/* Score display */
+.score-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 18px;
+  margin-bottom: 10px;
+}
+.score-big {
+  font-family: 'Teko', sans-serif;
+  font-size: 56px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+  letter-spacing: 1px;
+}
+.score-label { font-size:10px;font-weight:800;letter-spacing:2px;color:var(--text3);text-transform:uppercase; }
+
+.score-btns { display:grid;grid-template-columns:repeat(6,1fr);gap:6px; }
+
+.btn {
+  border-radius: 8px;
+  font-family: 'Barlow Condensed';
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 1px;
+  padding: 10px 4px;
+  cursor: pointer;
+  transition: all 0.14s;
+  text-transform: uppercase;
+  border: 1.5px solid transparent;
+}
+.btn:hover { transform:translateY(-1px); filter:brightness(1.15); }
+.btn:active { transform:none; }
+
+.btn.g { background:#0f2a1a;border-color:#22c55e;color:#22c55e; }
+.btn.g:hover { background:#163b24; }
+.btn.b { background:#0f1e3a;border-color:#3b82f6;color:#3b82f6; }
+.btn.b:hover { background:#162847; }
+.btn.y { background:#2a1f00;border-color:#e8a800;color:#e8a800; }
+.btn.y:hover { background:#382900; }
+.btn.r { background:#2a0f0f;border-color:#ef4444;color:#ef4444; }
+.btn.r:hover { background:#381515; }
+.btn.primary { background:#2a1f00;border-color:var(--accent);color:var(--accent); }
+.btn.primary:hover { background:#382900; }
+.btn.danger  { background:#2a0f0f;border-color:#ef4444;color:#ef4444; }
+.btn.danger:hover  { background:#381515; }
+
+/* ── FULL-WIDTH CARD ── */
+.card.full { grid-column: 1 / -1; }
+
+/* ── CLOCKS CARD ── */
+.clocks-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+.sec-label { font-size:10px;font-weight:800;letter-spacing:3px;color:var(--text3);text-transform:uppercase;margin-bottom:8px; }
+
+.clock-display {
+  font-family: 'Teko', sans-serif;
+  font-size: 42px;
+  color: var(--text);
+  letter-spacing: 4px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  text-align: center;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.time-inputs { display:flex;align-items:center;gap:6px;margin-bottom:8px; }
+.tinput {
+  background:var(--surface2);border:1.5px solid var(--border);border-radius:7px;
+  color:var(--text);font-family:'Teko';font-size:22px;font-weight:700;
+  width:56px;text-align:center;outline:none;padding:5px;
+  transition:border-color 0.2s;
+}
+.tinput:focus { border-color:var(--accent); }
+.tsep { color:var(--text3);font-size:26px;line-height:1; }
+.two { display:grid;grid-template-columns:1fr 1fr;gap:6px; }
+
+.shot-display {
+  font-family:'Teko',sans-serif;font-size:52px;color:var(--accent);
+  text-align:center;background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:8px;padding:4px 12px;margin-bottom:8px;line-height:1;font-weight:700;
+}
+
+.qtr-btns { display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px; }
+.qbtn {
+  background:var(--surface2);border:1.5px solid var(--border);border-radius:7px;
+  color:var(--text3);font-family:'Barlow Condensed';font-weight:800;font-size:13px;
+  letter-spacing:1px;padding:7px 14px;cursor:pointer;transition:all 0.14s;text-transform:uppercase;
+}
+.qbtn.active { background:#2a1f00;border-color:var(--accent);color:var(--accent); }
+.qbtn:hover:not(.active) { background:var(--bg);color:var(--text);border-color:var(--border2); }
+
+/* ── POSSESSION ── */
+.poss-row {
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin-top: 4px;
+}
+
+.poss-btn {
+  flex:1;display:flex;align-items:center;justify-content:center;gap:10px;
+  background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;
+  padding:14px 10px;cursor:pointer;transition:all 0.2s;
+}
+.poss-btn:hover { background:var(--bg); }
+.poss-btn.active { background:#2a1f00;border-color:var(--accent); }
+
+.poss-btn-label {
+  font-family:'Barlow Condensed';font-weight:800;font-size:18px;
+  letter-spacing:2px;color:var(--text2);text-transform:uppercase;
+  transition:color 0.2s;
+}
+.poss-btn.active .poss-btn-label { color:var(--accent); }
+
+.poss-none-btn {
+  background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;
+  color:var(--text3);font-family:'Barlow Condensed';font-weight:800;font-size:13px;
+  letter-spacing:2px;padding:14px 16px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;
+}
+.poss-none-btn:hover { background:var(--bg);color:var(--text); }
+.poss-none-btn.active { background:var(--surface2);border-color:var(--border2);color:var(--text); }
+
+/* ── SETTINGS CARD ── */
+.settings-grid { display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px; }
+
+/* ── RESET ── */
+.reset-btn {
+  width:100%;background:#2a0f0f;border:1.5px solid #ef4444;border-radius:10px;
+  color:#ef4444;font-family:'Barlow Condensed';font-weight:800;font-size:14px;
+  letter-spacing:2px;padding:13px;cursor:pointer;text-transform:uppercase;transition:all 0.2s;
+  margin-top:4px;
+}
+.reset-btn:hover { background:#381515; }
+
+/* ── MODE TOGGLE ── */
+.mode-toggle {
+  background: var(--surface2);
+  border: 1.5px solid var(--border2);
+  border-radius: 20px;
+  color: var(--text2);
+  font-family: 'Barlow Condensed';
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.mode-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+/* iOS Install Tooltip */
+#iosInstallBanner {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e2535;
+  border: 1.5px solid #3b82f6;
+  border-radius: 14px;
+  padding: 14px 20px;
+  z-index: 9999;
+  width: calc(100% - 40px);
+  max-width: 420px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp { from{transform:translateX(-50%) translateY(20px);opacity:0} to{transform:translateX(-50%) translateY(0);opacity:1} }
+#iosInstallBanner .ios-title {
+  font-size: 14px; font-weight: 800; letter-spacing: 1px;
+  color: #fff; margin-bottom: 6px;
+}
+#iosInstallBanner .ios-steps {
+  font-size: 13px; color: #8a95a8; line-height: 1.7;
+}
+#iosInstallBanner .ios-steps span { color: #fff; font-weight: 700; }
+#iosInstallBanner .ios-close {
+  position: absolute; top: 10px; right: 14px;
+  background: none; border: none; color: #8a95a8;
+  font-size: 18px; cursor: pointer; padding: 0;
+}
+#iosInstallBanner .ios-arrow {
+  position: absolute; bottom: -10px; left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid #3b82f6;
+}
+body.light {
+  --bg:       #f0f2f5;
+  --surface:  #ffffff;
+  --surface2: #f7f8fa;
+  --border:   #dde1e9;
+  --border2:  #c8cdd8;
+  --text:     #1a1f2e;
+  --text2:    #5a6278;
+  --text3:    #9aa0b2;
+}
+
+body.light .live-badge.connecting { background:#fefce8; border-color:#fef08a; }
+body.light .live-badge.connected  { background:#f0fdf4; border-color:#bbf7d0; }
+body.light .live-badge.offline    { background:#fff5f5; border-color:#fecaca; }
+body.light .btn.g { background:#f0fdf4; border-color:#86efac; color:#16a34a; }
+body.light .btn.g:hover { background:#dcfce7; }
+body.light .btn.b { background:#eff6ff; border-color:#93c5fd; color:#2563eb; }
+body.light .btn.b:hover { background:#dbeafe; }
+body.light .btn.y { background:#fffbeb; border-color:#fcd34d; color:#d97706; }
+body.light .btn.y:hover { background:#fef3c7; }
+body.light .btn.r { background:#fff5f5; border-color:#fca5a5; color:#dc2626; }
+body.light .btn.r:hover { background:#fee2e2; }
+body.light .btn.primary { background:#fffbeb; border-color:var(--accent); color:var(--accent); }
+body.light .btn.primary:hover { background:#fef3c7; }
+body.light .btn.danger  { background:#fff5f5; border-color:#fca5a5; color:#dc2626; }
+body.light .btn.danger:hover { background:#fee2e2; }
+body.light .btn:hover { filter:brightness(0.96); }
+body.light .qbtn.active { background:#fffbeb; border-color:var(--accent); color:var(--accent); }
+body.light .poss-btn.active { background:#fffbeb; border-color:var(--accent); }
+body.light .logo-btn:hover { background:#fffbeb; }
+body.light .reset-btn { background:#fff5f5; border-color:#fca5a5; color:#dc2626; }
+body.light .reset-btn:hover { background:#fee2e2; }
+.footer {
+  max-width:980px;margin:16px auto 0;
+  text-align:center;font-size:11px;color:var(--text3);letter-spacing:1px;
+  padding:14px;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;
+}
+.footer span { color:var(--accent);font-weight:700; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  body { padding: 12px 10px 40px; }
+
+  .page-header {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .page-title { font-size: 22px; }
+  .mode-toggle { font-size: 11px; padding: 5px 10px; }
+
+  .main { grid-template-columns: 1fr; gap: 12px; }
+
+  .clocks-grid { grid-template-columns: 1fr; gap: 14px; }
+  .settings-grid { grid-template-columns: 1fr; gap: 12px; }
+
+  .score-big { font-size: 44px; }
+  .score-btns { grid-template-columns: repeat(6,1fr); gap: 5px; }
+  .btn { font-size: 14px; padding: 12px 4px; }
+
+  .clock-display { font-size: 36px; }
+  .shot-display  { font-size: 44px; }
+
+  .poss-row { gap: 6px; }
+  .poss-btn { padding: 12px 6px; }
+  .poss-btn-label { font-size: 15px; }
+
+  .footer { display: none; }
+}
+
+@media (max-width: 480px) {
+  body { padding: 8px 8px 32px; }
+
+  .page-header { padding: 10px 12px; }
+  .page-title { font-size: 18px; }
+
+  .card-body { padding: 14px 12px; }
+
+  .score-big { font-size: 38px; }
+  .btn { font-size: 13px; padding: 11px 2px; }
+
+  .tinput { width: 48px; font-size: 20px; }
+
+  .qtr-btns { gap: 4px; }
+  .qbtn { padding: 6px 10px; font-size: 12px; }
+
+  .poss-none-btn { padding: 12px 10px; font-size: 12px; }
+
+  .inp { font-size: 14px; padding: 8px 10px; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- AUDIO UNLOCK BANNER FOR MOBILE BROWSERS -->
+<div id="audioUnlockBanner" style="display:none;position:fixed;top:100px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;padding:14px 28px;border-radius:30px;z-index:9999;font-family:'Barlow Condensed',sans-serif;font-weight:800;letter-spacing:1px;box-shadow:0 10px 30px rgba(232,67,10,0.6);cursor:pointer;border:2px solid #fff;text-align:center;text-transform:uppercase;animation:pulse 2s infinite;" onclick="unlockAudioManual()">
+  🔊 TAP HERE TO ENABLE BUZZER SOUNDS
+</div>
+
+<!-- HEADER -->
+<div class="page-header">
+  <div class="page-logo-title">
+    <img src="/hoop-culture-logo.png" alt="Hoop Culture">
+    <div class="page-title"><span>Scoreboard</span> Control</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end;">
+    <button class="mode-toggle" id="installBtn" onclick="installApp()" style="display:none;border-color:#22c55e;color:#22c55e;">📲 Install App</button>
+    <a href="/admin" id="adminPanelLink" class="mode-toggle" style="text-decoration:none;display:none;border-color:var(--orange);color:var(--orange);align-items:center;justify-content:center;">⚙️ Admin</a>
+    <a href="/" class="mode-toggle" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">🏠 Home</a>
+    <button class="mode-toggle" onclick="logout()" style="border-color:var(--red);color:var(--red);">🚪 Logout</button>
+    <button class="mode-toggle" id="fsToggle" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+    <button class="mode-toggle" id="modeToggle" onclick="toggleMode()">☀️ Light Mode</button>
+    <button class="mode-toggle" id="audioToggle" onclick="toggleLocalAudio()">Tablet Sound: On</button>
+    <label class="mode-toggle" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;border-color:var(--orange);color:var(--orange);padding:6px 12px;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:0;">
+      <input type="checkbox" id="aiSyncToggle" onchange="toggleAiSync(this.checked)" style="accent-color:var(--orange);cursor:pointer;width:14px;height:14px;margin:0;">
+      🤖 AI Sync
+    </label>
+    <a href="#" id="scannerLink" onclick="openScannerModal(event)" class="mode-toggle" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:4px;border-color:#16c784;color:#16c784;">
+      📱 Scanner
+    </a>
+    <div class="live-badge connecting" id="liveBadge">
+      <div class="live-dot"></div>
+      <div class="live-text" id="liveText">Connecting…</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- HOME TEAM -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Home Team</div>
+    </div>
+    <div class="card-body">
+      <div class="team-top">
+        <div class="logo-btn" onclick="document.getElementById('homeFile').click()">
+          <div id="homeLogoCtrl"><div class="lbtext">Upload<br>Logo</div></div>
+        </div>
+        <input type="file" id="homeFile" accept="image/*" onchange="setLogo('home',this)" style="display:none;position:absolute;width:0;height:0;opacity:0;">
+        <button class="btn r" onclick="clearLogos()" style="font-size:10px;padding:2px 7px;letter-spacing:0.5px;margin-top:4px;align-self:flex-start;" title="Clear all cached logo data and re-upload fresh">🗑 Reset Logos</button>
+        <div class="field-group">
+          <div class="field-label">Team Name</div>
+          <div style="display:flex;gap:6px;">
+            <select class="inp" id="homeAbbrIn" onchange="updateTeam('home')" style="text-transform:uppercase;flex:1;">
+              <option value="HARINA">HARINA</option>
+              <option value="KUY'S RYAN">KUY'S RYAN</option>
+              <option value="FREEDOM">FREEDOM</option>
+              <option value="BARBERCUTZ">BARBERCUTZ</option>
+              <option value="ARTECH">ARTECH</option>
+              <option value="RICKY D'S">RICKY D'S</option>
+            </select>
+            <button class="btn r" style="padding:0 10px;font-size:13px;" onclick="deleteCustomOption('homeAbbrIn','custom_teams')" title="Delete selected custom team">🗑</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <input class="inp" id="homeTeamCustom" placeholder="Custom team name..." style="flex:1;text-transform:uppercase;">
+            <button class="btn" style="padding:0 10px;font-size:12px;" onclick="saveCustomTeam('home')">Save</button>
+          </div>
+          <div class="inp-row" style="margin-top:6px;">
+            <input class="inp rec" id="homeRecIn" value="0-0" placeholder="W-L" oninput="updateTeam('home')" maxlength="10">
+            <input type="color" class="inp col" id="homeColorIn" value="#f5c842" onchange="updateColors()">
+            <button class="btn" style="padding:0 8px;font-size:11px;letter-spacing:0.5px;" onclick="saveTeamColor('home')" title="Save this color for the selected team">💾</button>
+            <span style="font-size:11px;color:var(--text3);align-self:center;">Color</span>
+          </div>
+        </div>
+      </div>
+      <div class="score-display">
+        <input type="number" class="score-big" id="homeScoreCtrl" value="0" min="0" max="999"
+          oninput="setScoreDirect('home',this.value)"
+          style="background:none;border:none;outline:none;width:100%;color:var(--text);font-family:'Teko',sans-serif;font-size:56px;font-weight:700;letter-spacing:1px;line-height:1;-moz-appearance:textfield;">
+        <div class="score-label">Score</div>
+      </div>
+      <div class="score-btns">
+        <button class="btn g" onclick="addScore('home',1)">+1</button>
+        <button class="btn b" onclick="addScore('home',2)">+2</button>
+        <button class="btn y" onclick="addScore('home',3)">+3</button>
+        <button class="btn r" onclick="addScore('home',-1)">−1</button>
+        <button class="btn r" onclick="addScore('home',-2)">−2</button>
+        <button class="btn r" onclick="addScore('home',-3)">−3</button>
+      </div>
+      <!-- FOULS -->
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+        <span style="font-family:'Teko',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--text3);text-transform:uppercase;flex-shrink:0;">FOULS</span>
+        <button class="btn r" style="padding:0 12px;font-size:16px;" onclick="addFouls('home',-1)">−</button>
+        <span id="homeFoulsCtrl" style="font-family:'Teko',sans-serif;font-size:28px;font-weight:700;color:#ff9900;min-width:32px;text-align:center;line-height:1;">0</span>
+        <button class="btn g" style="padding:0 12px;font-size:16px;" onclick="addFouls('home',1)">+</button>
+        <button class="btn" style="padding:0 10px;font-size:11px;margin-left:4px;" onclick="resetFouls('home')">Reset</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Away Team</div>
+    </div>
+    <div class="card-body">
+      <div class="team-top">
+        <div class="logo-btn" onclick="document.getElementById('awayFile').click()">
+          <div id="awayLogoCtrl"><div class="lbtext">Upload<br>Logo</div></div>
+        </div>
+        <input type="file" id="awayFile" accept="image/*" onchange="setLogo('away',this)" style="display:none;position:absolute;width:0;height:0;opacity:0;">
+        <div class="field-group">
+          <div class="field-label">Team Name</div>
+          <div style="display:flex;gap:6px;">
+            <select class="inp" id="awayAbbrIn" onchange="updateTeam('away')" style="text-transform:uppercase;flex:1;">
+              <option value="HARINA">HARINA</option>
+              <option value="KUY'S RYAN">KUY'S RYAN</option>
+              <option value="FREEDOM">FREEDOM</option>
+              <option value="BARBERCUTZ">BARBERCUTZ</option>
+              <option value="ARTECH">ARTECH</option>
+              <option value="RICKY D'S">RICKY D'S</option>
+            </select>
+            <button class="btn r" style="padding:0 10px;font-size:13px;" onclick="deleteCustomOption('awayAbbrIn','custom_teams')" title="Delete selected custom team">🗑</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <input class="inp" id="awayTeamCustom" placeholder="Custom team name..." style="flex:1;text-transform:uppercase;">
+            <button class="btn" style="padding:0 10px;font-size:12px;" onclick="saveCustomTeam('away')">Save</button>
+          </div>
+          <div class="inp-row" style="margin-top:6px;">
+            <input class="inp rec" id="awayRecIn" value="0-0" placeholder="W-L" oninput="updateTeam('away')" maxlength="10">
+            <input type="color" class="inp col" id="awayColorIn" value="#c8102e" onchange="updateColors()">
+            <button class="btn" style="padding:0 8px;font-size:11px;letter-spacing:0.5px;" onclick="saveTeamColor('away')" title="Save this color for the selected team">💾</button>
+            <span style="font-size:11px;color:var(--text3);align-self:center;">Color</span>
+          </div>
+        </div>
+      </div>
+      <div class="score-display">
+        <input type="number" class="score-big" id="awayScoreCtrl" value="0" min="0" max="999"
+          oninput="setScoreDirect('away',this.value)"
+          style="background:none;border:none;outline:none;width:100%;color:var(--text);font-family:'Teko',sans-serif;font-size:56px;font-weight:700;letter-spacing:1px;line-height:1;-moz-appearance:textfield;">
+        <div class="score-label">Score</div>
+      </div>
+      <div class="score-btns">
+        <button class="btn g" onclick="addScore('away',1)">+1</button>
+        <button class="btn b" onclick="addScore('away',2)">+2</button>
+        <button class="btn y" onclick="addScore('away',3)">+3</button>
+        <button class="btn r" onclick="addScore('away',-1)">−1</button>
+        <button class="btn r" onclick="addScore('away',-2)">−2</button>
+        <button class="btn r" onclick="addScore('away',-3)">−3</button>
+      </div>
+      <!-- FOULS -->
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+        <span style="font-family:'Teko',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--text3);text-transform:uppercase;flex-shrink:0;">FOULS</span>
+        <button class="btn r" style="padding:0 12px;font-size:16px;" onclick="addFouls('away',-1)">−</button>
+        <span id="awayFoulsCtrl" style="font-family:'Teko',sans-serif;font-size:28px;font-weight:700;color:#ff9900;min-width:32px;text-align:center;line-height:1;">0</span>
+        <button class="btn g" style="padding:0 12px;font-size:16px;" onclick="addFouls('away',1)">+</button>
+        <button class="btn" style="padding:0 10px;font-size:11px;margin-left:4px;" onclick="resetFouls('away')">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLOCKS + PERIOD -->
+  <div class="card full">
+    <div class="card-header">
+      <div class="card-title">Clocks &amp; Period</div>
+    </div>
+    <div class="card-body">
+      <div class="clocks-grid">
+
+        <!-- Game Clock -->
+        <div>
+          <div class="sec-label">Game Clock</div>
+          <div class="clock-display" id="gameClkCtrl">10:00</div>
+          <div class="time-inputs">
+            <input type="number" class="tinput" id="clkMin" min="0" max="99" value="10" oninput="setClockManual()">
+            <span class="tsep">:</span>
+            <input type="number" class="tinput" id="clkSec" min="0" max="59" value="0" oninput="setClockManual()">
+          </div>
+          <div class="two">
+            <button class="btn primary" id="gClkBtn" onclick="toggleGameClock()">▶ Start</button>
+            <button class="btn danger"  onclick="resetGameClock()">↺ Reset</button>
+          </div>
+          <button class="btn" style="width:100%;margin-top:6px;background:var(--surface2);border-color:#f5c842;color:#f5c842;" onclick="setTimerPreset()">⏱ Set as Period Timer</button>
+        </div>
+
+        <!-- Shot Clock -->
+        <div>
+          <div class="sec-label">Shot Clock</div>
+          <div class="shot-display" id="shotCtrl">24</div>
+          <div class="two" style="margin-bottom:6px;">
+            <button class="btn primary" id="sClkBtn" onclick="toggleShotClock()">▶ Start</button>
+            <button class="btn danger"  onclick="resetShot(24)">↺ 24</button>
+          </div>
+          <div class="two" style="margin-bottom:6px;">
+            <button class="btn" style="background:var(--surface2);border-color:var(--border);color:var(--text2);" onclick="resetShot(14)">Reset 14</button>
+          </div>
+          <div class="two" style="align-items:center;gap:6px;">
+            <input type="number" id="shotCustomIn" min="1" max="60" value="24" style="
+              flex:1; background:var(--surface2); border:1px solid var(--border);
+              color:var(--text); border-radius:8px; padding:8px 6px;
+              font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700;
+              text-align:center; outline:none; -moz-appearance:textfield;
+            ">
+            <button class="btn" style="background:var(--surface2);border-color:var(--border);color:var(--text2);white-space:nowrap;" onclick="resetShotCustom()">↺ Set</button>
+          </div>
+        </div>
+
+        <!-- Period -->
+        <div>
+          <div class="sec-label">Period</div>
+          <div class="qtr-btns" id="qbtns">
+            <button class="qbtn active" onclick="setQtr(1)">1ST</button>
+            <button class="qbtn"        onclick="setQtr(2)">2ND</button>
+            <button class="qbtn"        onclick="setQtr(3)">3RD</button>
+            <button class="qbtn"        onclick="setQtr(4)">4TH</button>
+            <button class="qbtn"        onclick="setQtr('OT')">OT</button>
+            <button class="qbtn"        onclick="setQtr('2OT')">2OT</button>
+          </div>
+          <button class="btn primary" style="width:100%;" onclick="nextQtr()">Next Period →</button>
+          <button id="refBuzzerBtn2" onclick="refBuzzer()" style="
+            width:100%; height:56px; border-radius:50px;
+            background:#2a0f0f; border:2px solid #ef4444;
+            color:#ef4444; cursor:pointer; margin-top:6px;
+            display:flex; align-items:center; justify-content:center; gap:8px;
+            box-shadow:0 0 14px rgba(239,68,68,0.4);
+            font-family:'Barlow Condensed'; font-weight:800; font-size:15px; letter-spacing:2px;
+            text-transform:uppercase; transition:all 0.15s;
+          ">🔔 SOUND BUZZER</button>
+        </div>
+
+      </div>
+
+  <!-- POSSESSION -->
+  <div class="card full">
+    <div class="card-header">
+      <div class="card-title">Possession</div>
+    </div>
+    <div class="card-body">
+      <div class="poss-row">
+        <button class="poss-btn" id="possHomeBtn" onclick="setPoss('home')">
+          <svg viewBox="0 0 80 54" style="width:36px;height:24px;flex-shrink:0;">
+            <polygon points="74,27 6,3 6,51" fill="#d1d5db" id="possHomeBtnArrow"/>
+          </svg>
+          <span class="poss-btn-label" id="possHomeBtnLabel">HOME</span>
+        </button>
+        <button class="poss-none-btn" id="possNoneBtn" onclick="setPoss(null)">NONE</button>
+        <button class="poss-btn" id="possAwayBtn" onclick="setPoss('away')" style="flex-direction:row-reverse;">
+          <svg viewBox="0 0 80 54" style="width:36px;height:24px;flex-shrink:0;">
+            <polygon points="6,27 74,3 74,51" fill="#d1d5db" id="possAwayBtnArrow"/>
+          </svg>
+          <span class="poss-btn-label" id="possAwayBtnLabel">AWAY</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+    <div class="card-header">
+      <div class="card-title">Live Bar Settings</div>
+    </div>
+    <div class="card-body">
+      <div class="settings-grid">
+        <div>
+          <div class="sec-label">Broadcast</div>
+          <div style="display:flex;gap:6px;margin-top:4px;">
+            <select class="inp" id="rp1VIn" onchange="updateRP()" style="flex:1;">
+              <option value="—">— None —</option>
+              <option value="YouTube">YouTube</option>
+              <option value="Facebook" selected>Facebook</option>
+            </select>
+            <button class="btn r" style="padding:0 10px;font-size:13px;" onclick="deleteCustomOption('rp1VIn','custom_rp1VIn')" title="Delete selected">🗑</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <input class="inp" id="rp1Custom" placeholder="Custom broadcast..." style="flex:1;">
+            <button class="btn" style="padding:0 10px;font-size:12px;" onclick="saveCustomOption('rp1VIn','rp1Custom')">Save</button>
+          </div>
+        </div>
+        <div>
+          <div class="sec-label">Venue</div>
+          <div style="display:flex;gap:6px;margin-top:4px;">
+            <select class="inp" id="rp2VIn" onchange="updateRP()" style="flex:1;">
+              <option value="—">— None —</option>
+              <option value="DMC">DMC</option>
+              <option value="Willowood">Willowood</option>
+              <option value="TAT Stadium">TAT Stadium</option>
+              <option value="La Liga">La Liga</option>
+              <option value="Audley" selected>Audley</option>
+            </select>
+            <button class="btn r" style="padding:0 10px;font-size:13px;" onclick="deleteCustomOption('rp2VIn','custom_rp2VIn')" title="Delete selected">🗑</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <input class="inp" id="rp2Custom" placeholder="Custom venue..." style="flex:1;">
+            <button class="btn" style="padding:0 10px;font-size:12px;" onclick="saveCustomOption('rp2VIn','rp2Custom')">Save</button>
+          </div>
+        </div>
+        <div>
+          <div class="sec-label">Bar Background</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+            <input type="color" class="inp col" id="barColorIn" value="#0d1117" onchange="updateBarColor()">
+            <span style="font-size:12px;color:var(--text3);">Background color</span>
+          </div>
+        </div>
+      </div>
+      <button class="reset-btn" onclick="resetAll()">⚠ Reset Full Game</button>
+    </div>
+  </div>
+
+  <!-- ── QUICK LAUNCH ── -->
+  <div class="card" style="margin-top:0;">
+    <div class="card-header">
+      <div class="card-title">🚀 Quick Launch</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;">
+      <button class="btn primary" onclick="window.open('/display?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:14px 10px;font-size:13px;letter-spacing:1px;">
+        🖥️ Venue Display
+      </button>
+      <button class="btn primary" onclick="window.open('/display2?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:14px 10px;font-size:13px;letter-spacing:1px;">
+        🖥️ Venue Display 2
+      </button>
+      <button class="btn primary" onclick="window.open('/shotclock-display?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:14px 10px;font-size:13px;letter-spacing:1px;background:rgba(255,170,0,0.1);border-color:rgba(255,170,0,0.4);color:#ffaa00;">
+        ⏱ Shot Clock Display
+      </button>
+      <button class="btn primary" onclick="window.open('/shotclock?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:14px 10px;font-size:13px;letter-spacing:1px;background:rgba(255,170,0,0.07);border-color:rgba(255,170,0,0.3);color:#ff9900;">
+        📱 Shot Clock Ctrl
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
+      <button class="btn" onclick="window.open('/fullscreen?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
+        📡 OBS Fullscreen
+      </button>
+      <button class="btn" onclick="window.open('/nbc?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
+        📺 NBA – NBC Overlay
+      </button>
+      <button class="btn" onclick="window.open('/nbaoverlay?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
+        📡 NBA Scorebug
+      </button>
+      <button class="btn" onclick="window.open('/nbaoverlay2?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
+        📡 NBA Scorebug 2
+      </button>
+    </div>
+  </div>
+
+  <!-- ── INTERNET SHARING (CLOUDFLARE) ── -->
+  <div class="card" style="margin-top:12px;" id="tunnelCard">
+    <div class="card-header">
+      <div class="card-title">🌐 Internet Sharing (Cloudflare)</div>
+    </div>
+    <div style="margin-top:4px;">
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button class="btn primary" id="ltToggleBtn" onclick="toggleLtTunnel()" style="flex:1;padding:10px;font-size:12px;letter-spacing:0.5px;">
+          Start Tunnel
+        </button>
+        <div id="ltStatusIndicator" style="width:12px;height:12px;border-radius:50%;background:#ef4444;box-shadow:0 0 6px #ef4444;" title="Offline"></div>
+      </div>
+      <div id="ltUrlContainer" style="display:none;margin-top:12px;padding:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:4px;">
+        <span style="font-size:11px;color:var(--text3);display:block;margin-bottom:2px;">Public Controller URL:</span>
+        <a id="ltPublicLink" href="#" target="_blank" style="color:var(--accent);font-weight:700;font-size:12px;text-decoration:none;word-break:break-all;"></a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  OBS Fullscreen → <a id="obsBarLink" href="https://basketball-scoreboard-o0c7.onrender.com/fullscreen" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/fullscreen</a>
+  &nbsp;·&nbsp;
+  Venue Display → <a id="venueDisplayLink" href="https://basketball-scoreboard-o0c7.onrender.com/display" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/display</a>
+  <br style="margin-top:8px;">
+  <span style="color:var(--text2);font-size:10px;letter-spacing:1px;">
+    ⌨️ &nbsp;HOME: <span style="color:var(--accent)">Q</span>+1 &nbsp;<span style="color:var(--accent)">W</span>+2 &nbsp;<span style="color:var(--accent)">E</span>+3 &nbsp;<span style="color:var(--accent)">A</span>−1 &nbsp;<span style="color:var(--accent)">S</span>−2 &nbsp;&nbsp;
+    AWAY: <span style="color:var(--accent)">U</span>+1 &nbsp;<span style="color:var(--accent)">I</span>+2 &nbsp;<span style="color:var(--accent)">O</span>+3 &nbsp;<span style="color:var(--accent)">J</span>−1 &nbsp;<span style="color:var(--accent)">K</span>−2 &nbsp;&nbsp;
+    GAME CLOCK: <span style="color:var(--accent)">SPACE</span> &nbsp;&nbsp;
+    SHOT CLOCK: <span style="color:var(--accent)">ENTER</span> &nbsp;
+    RESET 24: <span style="color:var(--accent)">R</span> &nbsp;
+    RESET 14: <span style="color:var(--accent)">T</span> &nbsp;
+    BUZZER: <span style="color:var(--accent)">B</span>
+  </span>
+</div>
+
+<!-- iOS Install Banner -->
+<div id="iosInstallBanner">
+  <button class="ios-close" onclick="dismissIOSBanner()">✕</button>
+  <div class="ios-title">📲 Install Scoreboard App</div>
+  <div class="ios-steps">
+    1. Tap the <span>Share</span> button (□↑) at the bottom of Safari<br>
+    2. Scroll down and tap <span>Add to Home Screen</span><br>
+    3. Tap <span>Add</span> — done!
+  </div>
+  <div class="ios-arrow"></div>
+</div>
+
+<script>
+const SERVER_URL = (
+  window.location.hostname.includes('vercel.app') ||
+  window.location.hostname.includes('vercel.sh')
+) ? 'https://basketball-scoreboard-o0c7.onrender.com' : '';
+
+const urlParams = new URLSearchParams(window.location.search);
+const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
+// Firebase-safe key (Firebase paths cannot contain ".", "#", "$", "[", or "]")
+const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
+
+const bc = new BroadcastChannel('hc_scoreboard_sync');
+function broadcastState() {
+  bc.postMessage({ type: 'state', user: fbUser, data: S });
+}
+
+// ── Firebase Environment Detection ──
+const useFirebase = window.location.hostname.includes('vercel.app') ||
+                    window.location.hostname.includes('vercel.sh');
+let db = null;
+if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+}
+
+// Warn if using Vercel but Firebase isn't configured
+window.addEventListener('DOMContentLoaded', () => {
+  // Update footer links dynamically to match current environment and user parameter
+  const origin = window.location.origin;
+  const suffix = `?user=${encodeURIComponent(currentUser)}`;
+  
+  const obsLink = document.getElementById('obsBarLink');
+  if (obsLink) {
+    const url = `${origin}/fullscreen${suffix}`;
+    obsLink.href = url;
+    obsLink.textContent = url;
+  }
+  const venueLink = document.getElementById('venueDisplayLink');
+  if (venueLink) {
+    const url = `${origin}/display${suffix}`;
+    venueLink.href = url;
+    venueLink.textContent = url;
+  }
+  const scannerLink = document.getElementById('scannerLink');
+  if (scannerLink) {
+    scannerLink.href = `${origin}/camera${suffix}`;
+  }
+
+  if (currentUser === 'admin@hoopculture.ca') {
+    const adminLink = document.getElementById('adminPanelLink');
+    if (adminLink) adminLink.style.display = 'inline-flex';
+  }
+
+  if (useFirebase && !isFirebaseConfigured) {
+    const banner = document.createElement('div');
+    banner.style.position = 'fixed';
+    banner.style.top = '0';
+    banner.style.left = '0';
+    banner.style.right = '0';
+    banner.style.background = '#e53935';
+    banner.style.color = '#fff';
+    banner.style.textAlign = 'center';
+    banner.style.padding = '12px';
+    banner.style.zIndex = '10000';
+    banner.style.fontFamily = 'sans-serif';
+    banner.style.fontSize = '14px';
+    banner.style.fontWeight = 'bold';
+    banner.innerHTML = '⚠️ Firebase is not configured! Please set up your Firebase project credentials in <strong>firebase-config.js</strong> to enable Vercel Cloud Sync.';
+    document.body.appendChild(banner);
+  }
+
+  if (useFirebase) {
+    const tCard = document.getElementById('tunnelCard');
+    if (tCard) tCard.style.display = 'none';
+  } else {
+    checkTunnelStatus();
+  }
+});
+
+function logout() {
+  localStorage.removeItem('hc_session_user');
+  window.location.href = '/login';
+}
+
+const DEF = {
+  homeScore:0, awayScore:0,
+  homeFouls:0, awayFouls:0,
+  homeAbbr:'HOME', homeRecord:'0-0', homeColor:'#f5c842', homeLogo:null,
+  awayAbbr:'AWAY', awayRecord:'0-0', awayColor:'#c8102e', awayLogo:null,
+  quarter:1,
+  gameSeconds:600, shotSeconds:24,
+  gameRunning:false, shotRunning:false,
+  timerPresetSeconds: 600,
+  rp1Title:'BROADCAST', rp1Value:'Facebook',
+  rp2Title:'VENUE', rp2Value:'Audley',
+  barColor:'#0d1117',
+  possession:null,
+  aiSyncEnabled:false
+};
+
+let S = {...DEF};
+let _saveTimer = null;
+
+// Debounced save — always resets timer so the latest value is always pushed
+function save(){
+  try{ localStorage.setItem('bball_v3', JSON.stringify(S)); }catch(e){}
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(()=>{ pushState(); }, 300);
+}
+// Immediate save — for discrete actions (period change, team name, etc.)
+function saveNow(){
+  try{ localStorage.setItem('bball_v3', JSON.stringify(S)); }catch(e){}
+  clearTimeout(_saveTimer);
+  pushState();
+}
+// Push non-clock state to server. Clock state is server-owned — never sent here.
+function pushState(){
+  // Send full high-quality 200x200 PNG logos to overlays via database/SSE sync
+  const toSend = {...S};
+  // homeLogoThumb / awayLogoThumb remain in toSend — they flow to all devices via SSE
+  delete toSend.gameRunning; delete toSend.shotRunning;
+  delete toSend.gameSeconds; delete toSend.shotSeconds;
+
+  // Local sync
+  broadcastState();
+
+  if (useFirebase && db) {
+    db.ref(`states/${fbUser}`).update(toSend).catch(e => console.error(e));
+    return;
+  }
+
+  fetch(`${SERVER_URL}/update?user=${encodeURIComponent(currentUser)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(toSend)
+  }).catch(()=>{});
+}
+// Send a clock command to the server
+function cmd(command, seconds){
+  const body = seconds != null ? {cmd: command, seconds} : {cmd: command};
+  if (useFirebase && db) {
+    handleLocalCommand(command, seconds);
+    return;
+  }
+  fetch(`${SERVER_URL}/cmd?user=${encodeURIComponent(currentUser)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).catch(()=>{});
+}
+
+function handleLocalCommand(command, seconds) {
+  window.lastManualActionTime = Date.now();
+  if (command === 'game_start') {
+    S.gameRunning = true;
+    startLocalGameTick();
+  } else if (command === 'game_stop') {
+    S.gameRunning = false;
+    stopLocalGameTick();
+  } else if (command === 'game_reset') {
+    S.gameRunning = false;
+    stopLocalGameTick();
+    S.gameSeconds = seconds || S.timerPresetSeconds || 600;
+  } else if (command === 'game_set') {
+    if (!S.gameRunning) {
+      S.gameSeconds = seconds != null ? seconds : (S.gameSeconds || 600);
+    }
+  } else if (command === 'shot_start') {
+    S.shotRunning = true;
+    startLocalShotTick();
+  } else if (command === 'shot_stop') {
+    S.shotRunning = false;
+    stopLocalShotTick();
+  } else if (command === 'shot_reset') {
+    S.shotRunning = false;
+    stopLocalShotTick();
+    S.shotSeconds = seconds || 24;
+    S.shotRunning = true;
+    startLocalShotTick();
+  } else if (command === 'reset_all') {
+    S.gameRunning = false;
+    S.shotRunning = false;
+    stopLocalGameTick();
+    stopLocalShotTick();
+    S.gameSeconds = S.timerPresetSeconds || 600;
+    S.shotSeconds = 24;
+    S.homeScore = 0;
+    S.awayScore = 0;
+    S.homeFouls = 0;
+    S.awayFouls = 0;
+  }
+  
+  renderGameClock();
+  renderShotClock();
+  renderAll();
+  
+  // Local sync
+  broadcastState();
+
+  if (db) {
+    db.ref(`states/${fbUser}`).set(S).catch(e => console.error(e));
+  }
+}
+function load(){
+  try{
+    const r=localStorage.getItem('bball_v3');
+    if(r){ S={...DEF,...JSON.parse(r)}; S.gameRunning=false; S.shotRunning=false; }
+  }catch(e){}
+}
+
+const PERIODS=['1ST','2ND','3RD','4TH','OT','2OT'];
+const QTRS=[1,2,3,4,'OT','2OT'];
+
+function renderAll(){
+  // Score inputs — use .value not .textContent
+  const hScoreEl = document.getElementById('homeScoreCtrl');
+  const aScoreEl = document.getElementById('awayScoreCtrl');
+  if(hScoreEl && document.activeElement !== hScoreEl) hScoreEl.value = S.homeScore;
+  if(aScoreEl && document.activeElement !== aScoreEl) aScoreEl.value = S.awayScore;
+
+  // Fouls display
+  const hfEl = document.getElementById('homeFoulsCtrl');
+  const afEl = document.getElementById('awayFoulsCtrl');
+  if(hfEl) hfEl.textContent = S.homeFouls || 0;
+  if(afEl) afEl.textContent = S.awayFouls || 0;
+
+  const qL = typeof S.quarter==='number' ? (PERIODS[S.quarter-1]||`Q${S.quarter}`) : S.quarter;
+  document.querySelectorAll('.qbtn').forEach(b=>b.classList.toggle('active', b.textContent===qL));
+
+  renderGameClock(); renderShotClock(); renderPossession();
+
+  // Sync all text inputs — skip only if that field is actively focused
+  const syncInp = (id, val) => {
+    const e = document.getElementById(id);
+    if(e && document.activeElement !== e) e.value = val || '';
+  };
+  syncInp('homeAbbrIn',  S.homeAbbr);
+  syncInp('awayAbbrIn',  S.awayAbbr);
+  syncInp('homeRecIn',   S.homeRecord);
+  syncInp('awayRecIn',   S.awayRecord);
+  syncInp('rp1VIn', S.rp1Value);
+  syncInp('rp2VIn', S.rp2Value);
+
+  if(S.homeLogo) applyLogo('home', S.homeLogo);
+  else if(S.homeLogoThumb) applyLogo('home', S.homeLogoThumb);
+  if(S.awayLogo) applyLogo('away', S.awayLogo);
+  else if(S.awayLogoThumb) applyLogo('away', S.awayLogoThumb);
+
+  // Sync color pickers — SSE can deliver new colors from another device
+  const hcEl = document.getElementById('homeColorIn');
+  const acEl = document.getElementById('awayColorIn');
+  if(hcEl && document.activeElement !== hcEl) hcEl.value = S.homeColor || '#f5c842';
+  if(acEl && document.activeElement !== acEl) acEl.value = S.awayColor || '#c8102e';
+
+  // Sync AI Sync checkbox state
+  const aiToggleEl = document.getElementById('aiSyncToggle');
+  if(aiToggleEl) aiToggleEl.checked = S.aiSyncEnabled || false;
+}
+
+function t(id,val){ if(val===null)return; const e=document.getElementById(id); if(e) e.textContent=val; }
+
+function renderGameClock(){
+  const m=Math.floor(S.gameSeconds/60), sec=S.gameSeconds%60;
+  const txt=`${m}:${sec.toString().padStart(2,'0')}`;
+  t('gameClkCtrl', txt);
+  if(document.activeElement!==document.getElementById('clkMin')) document.getElementById('clkMin').value=m;
+  if(document.activeElement!==document.getElementById('clkSec')) document.getElementById('clkSec').value=sec;
+  const btn=document.getElementById('gClkBtn');
+  if(btn) btn.textContent=S.gameRunning?'⏸ Pause':'▶ Start';
+}
+
+function renderShotClock(){
+  t('shotCtrl', S.shotSeconds);
+  const btn=document.getElementById('sClkBtn');
+  if(btn) btn.textContent=S.shotRunning?'⏸ Pause':'▶ Start';
+}
+
+function renderPossession(){
+  const homeOn = S.possession==='home';
+  const awayOn = S.possession==='away';
+  const noneOn = !homeOn && !awayOn;
+
+  const ha=document.getElementById('possHomeBtnArrow');
+  const aa=document.getElementById('possAwayBtnArrow');
+  if(ha) ha.setAttribute('fill', homeOn ? '#e8a800' : '#d1d5db');
+  if(aa) aa.setAttribute('fill', awayOn ? '#e8a800' : '#d1d5db');
+
+  document.getElementById('possHomeBtn')?.classList.toggle('active', homeOn);
+  document.getElementById('possAwayBtn')?.classList.toggle('active', awayOn);
+  document.getElementById('possNoneBtn')?.classList.toggle('active', noneOn);
+
+  const hl=document.getElementById('possHomeBtnLabel');
+  const al=document.getElementById('possAwayBtnLabel');
+  if(hl) hl.textContent=(S.homeAbbr||'HOME').toUpperCase();
+  if(al) al.textContent=(S.awayAbbr||'AWAY').toUpperCase();
+}
+
+function setScoreDirect(team, val){
+  const n = parseInt(val);
+  if(isNaN(n) || n < 0) return;
+  S[team+'Score'] = n;
+  _lastStateCmd = Date.now();
+  save(); renderAll();
+}
+
+
+async function checkTunnelStatus() {
+  try {
+    const res = await fetch('/api/tunnel/status');
+    const data = await res.json();
+    updateLtUI(data.active, data.url);
+  } catch(e) {
+    console.error('Error checking tunnel status:', e);
+  }
+}
+
+function updateLtUI(active, url) {
+  const btn = document.getElementById('ltToggleBtn');
+  const indicator = document.getElementById('ltStatusIndicator');
+  const container = document.getElementById('ltUrlContainer');
+  const link = document.getElementById('ltPublicLink');
+
+  if (!btn || !indicator || !container || !link) return;
+
+  if (active) {
+    btn.textContent = 'Stop Tunnel';
+    btn.style.background = '#e53935';
+    btn.style.borderColor = '#d32f2f';
+    btn.style.color = '#fff';
+    indicator.style.background = '#22c55e';
+    indicator.style.boxShadow = '0 0 6px #22c55e';
+    indicator.title = 'Online';
+    container.style.display = 'block';
+    
+    const fullUrl = `${url}?user=${encodeURIComponent(currentUser)}`;
+    link.href = fullUrl;
+    link.textContent = fullUrl;
+  } else {
+    btn.textContent = 'Start Tunnel';
+    btn.style.background = 'var(--accent)';
+    btn.style.borderColor = 'var(--accent)';
+    btn.style.color = '#111';
+    indicator.style.background = '#ef4444';
+    indicator.style.boxShadow = '0 0 6px #ef4444';
+    indicator.title = 'Offline';
+    container.style.display = 'none';
+  }
+}
+
+let isLtLoading = false;
+async function toggleLtTunnel() {
+  if (isLtLoading) return;
+  const btn = document.getElementById('ltToggleBtn');
+  if (!btn) return;
+
+  if (btn.textContent.trim() === 'Start Tunnel') {
+    isLtLoading = true;
+    btn.textContent = 'Starting...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/tunnel/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      if (data.error) {
+        alert('Failed to start tunnel:\n' + data.error);
+        updateLtUI(false);
+      } else {
+        updateLtUI(true, data.url);
+      }
+    } catch(e) {
+      alert('Network error starting tunnel.');
+      updateLtUI(false);
+    } finally {
+      isLtLoading = false;
+      btn.disabled = false;
+    }
+  } else {
+    isLtLoading = true;
+    btn.textContent = 'Stopping...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/tunnel/stop', { method: 'POST' });
+      const data = await res.json();
+      if (data.error) {
+        alert('Failed to stop tunnel:\n' + data.error);
+      } else {
+        updateLtUI(false);
+      }
+    } catch(e) {
+      alert('Network error stopping tunnel.');
+    } finally {
+      isLtLoading = false;
+      btn.disabled = false;
+    }
+  }
+}
+
+
+// Cache compatibility aliases to handle older browser versions of the page
+function toggleNgrokTunnel() { return toggleLtTunnel(); }
+function saveNgrokToken() { return saveLtSettings(); }
+function updateNgrokUI(active, url) { return updateLtUI(active, url); }
+
+// Scores
+function addScore(team,pts){
+  S[team+'Score']=Math.max(0,S[team+'Score']+pts);
+  const el = document.getElementById(team+'ScoreCtrl');
+  if(el) el.value = S[team+'Score'];
+  bump(team+'ScoreCtrl');
+  _lastStateCmd = Date.now();
+  save(); renderAll();
+}
+function addFouls(team, n){
+  S[team+'Fouls'] = Math.max(0, (S[team+'Fouls']||0) + n);
+  _lastStateCmd = Date.now();
+  save(); renderAll();
+}
+function resetFouls(team){
+  S[team+'Fouls'] = 0;
+  _lastStateCmd = Date.now();
+  save(); renderAll();
+}
+function bump(id){
+  const e=document.getElementById(id); if(!e)return;
+  e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump');
+}
+
+// Team
+function updateTeam(t2){
+  const abbr = document.getElementById(t2+'AbbrIn').value;
+  S[t2+'Abbr']  = abbr;
+  S[t2+'Record'] = document.getElementById(t2+'RecIn').value;
+  // Auto-load saved color for this team name if one exists
+  loadSavedTeamColor(t2, abbr);
+  save(); renderAll();
+}
+function updateColors(){
+  S.homeColor=document.getElementById('homeColorIn').value;
+  S.awayColor=document.getElementById('awayColorIn').value;
+  _lastStateCmd = Date.now();
+  save();
+}
+function updateBarColor(){ S.barColor=document.getElementById('barColorIn').value; save(); }
+
+// Save the current color associated with the currently selected team name
+function saveTeamColor(team){
+  const abbr = (team==='home'
+    ? document.getElementById('homeAbbrIn').value
+    : document.getElementById('awayAbbrIn').value
+  ).trim().toUpperCase();
+  if(!abbr) return;
+  const color = document.getElementById(team+'ColorIn').value;
+  try{
+    const saved = JSON.parse(localStorage.getItem('team_colors')||'{}');
+    saved[abbr] = color;
+    localStorage.setItem('team_colors', JSON.stringify(saved));
+  }catch(e){}
+  // Visual feedback
+  const btn = event.currentTarget;
+  const orig = btn.textContent;
+  btn.textContent='✓'; btn.style.color='#00ee44';
+  setTimeout(()=>{ btn.textContent=orig; btn.style.color=''; },1200);
+}
+
+// Load saved color for a team name if one exists
+function loadSavedTeamColor(team, abbr){
+  try{
+    const saved = JSON.parse(localStorage.getItem('team_colors')||'{}');
+    const color = saved[abbr.trim().toUpperCase()];
+    if(color){
+      const inp = document.getElementById(team+'ColorIn');
+      if(inp){ inp.value = color; }
+      if(team==='home') S.homeColor = color;
+      else              S.awayColor = color;
+      save();
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+// Dominant color extraction from logo
+function getDominantColor(canvas){
+  const ctx = canvas.getContext('2d');
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const colorMap = {};
+  for(let i = 0; i < data.length; i += 4){
+    const a = data[i+3];
+    if(a < 128) continue; // skip transparent/semi-transparent
+    const r = data[i], g = data[i+1], b = data[i+2];
+    // Skip near-white (backgrounds)
+    if(r > 220 && g > 220 && b > 220) continue;
+    // Skip near-black
+    if(r < 20 && g < 20 && b < 20) continue;
+    // Skip very low-saturation (grey tones)
+    const max = Math.max(r,g,b), min = Math.min(r,g,b);
+    if(max === 0) continue;
+    const saturation = (max - min) / max;
+    if(saturation < 0.15) continue; // lowered threshold to catch muted brand colors
+    // Weight each pixel by saturation so vivid colors outrank muted ones
+    const weight = Math.round(saturation * 4) + 1; // 1-5 votes per pixel
+    // Quantize to 20-step buckets for better grouping
+    const qr = Math.round(r / 20) * 20;
+    const qg = Math.round(g / 20) * 20;
+    const qb = Math.round(b / 20) * 20;
+    const key = `${qr},${qg},${qb}`;
+    colorMap[key] = (colorMap[key] || 0) + weight;
+  }
+  // Find most frequent weighted color
+  let maxCount = 0, dominant = null;
+  for(const [key, count] of Object.entries(colorMap)){
+    if(count > maxCount){ maxCount = count; dominant = key; }
+  }
+  if(!dominant) return null;
+  const [r,g,b] = dominant.split(',').map(Number);
+  return '#' + [r,g,b].map(v => Math.min(255,v).toString(16).padStart(2,'0')).join('');
+}
+
+// Logos — resize to 600x600 PNG for crisp local/overlay display (sharp at 4K), 250x250 JPEG thumbnail for cross-device sync
+function setLogo(team, input){
+  const f = input.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      // Helper to draw image while maintaining aspect ratio (contain fitting)
+      // Uses imageSmoothingQuality=high for best downscaling quality
+      const drawContain = (canvas, targetSize) => {
+        canvas.width = targetSize;
+        canvas.height = targetSize;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.clearRect(0, 0, targetSize, targetSize);
+        const ratio = Math.min(targetSize / img.width, targetSize / img.height);
+        const nw = img.width * ratio;
+        const nh = img.height * ratio;
+        const x = (targetSize - nw) / 2;
+        const y = (targetSize - nh) / 2;
+        ctx.drawImage(img, x, y, nw, nh);
+      };
+
+      // Full-size 600x600 PNG — sharp at any overlay size up to 4K
+      // If the source image is smaller than 600px, use it at its native size to avoid upscaling artifacts
+      const fullSize = Math.min(600, Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      drawContain(canvas, fullSize);
+      const resized = canvas.toDataURL('image/png');
+      S[team+'Logo'] = resized;
+
+      // 250x250 JPEG at 92% quality — crisp cross-device sync via SSE broadcast (~20-40 KB)
+      const thumb = document.createElement('canvas');
+      drawContain(thumb, 250);
+      S[team+'LogoThumb'] = thumb.toDataURL('image/jpeg', 0.92);
+
+      applyLogo(team, resized);
+
+      // Auto-detect and apply dominant color
+      const dominant = getDominantColor(canvas);
+      if(dominant){
+        S[team+'Color'] = dominant;
+        _lastStateCmd = Date.now(); // protect from SSE race before pushState fires
+        const colorInput = document.getElementById(team+'ColorIn');
+        if(colorInput) colorInput.value = dominant;
+      }
+
+      save();
+      renderAll();
+      fetch(`${SERVER_URL}/logo/${team}?user=${encodeURIComponent(currentUser)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logo: resized })
+      }).catch(err => console.warn('Logo sync failed:', err));
+    };
+    img.src = e.target.result;
+  };
+  r.readAsDataURL(f);
+}
+function applyLogo(team, src){
+  const img = `<img src="${src}" alt="logo">`;
+  const ct = document.getElementById(team+'LogoCtrl');
+  if(ct) ct.innerHTML = img;
+}
+
+// Clear all cached logo data — localStorage, server memory, and Firebase
+// Use this when logos appear blurry (old low-res data cached from previous sessions)
+function clearLogos() {
+  if(!confirm('Reset both team logos? You will need to re-upload them.')) return;
+  // 1. Wipe from in-memory state
+  ['home','away'].forEach(t => {
+    S[t+'Logo'] = null;
+    S[t+'LogoThumb'] = null;
+    // Reset the logo button UI
+    const ct = document.getElementById(t+'LogoCtrl');
+    if(ct) ct.innerHTML = '<div class="lbtext">Upload<br>Logo</div>';
+  });
+  // 2. Wipe from localStorage
+  save();
+  // 3. Wipe from server memory via DELETE /logo
+  fetch(`${SERVER_URL}/logo?user=${encodeURIComponent(currentUser)}`, { method: 'DELETE' })
+    .catch(err => console.warn('Logo clear on server failed:', err));
+  // 4. Wipe from Firebase if connected
+  if(typeof db !== 'undefined' && db) {
+    try {
+      const ref = db.ref ? db.ref(`scoreboards/${currentUser}`) : null;
+      if(ref) ref.update({ homeLogo: null, awayLogo: null, homeLogoThumb: null, awayLogoThumb: null });
+    } catch(e) { console.warn('Firebase logo clear failed:', e); }
+  }
+  renderAll();
+  console.log('✅ Logo cache cleared. Re-upload logos to apply new high-res versions.');
+}
+
+// ── BUZZER SOUNDS ──────────────────────────────────────────
+// Preload both buzzer instances once at startup — eliminates per-trigger
+// network download so the sound fires as soon as the SSE event arrives.
+const _gameBuzzer = new Audio('/buzzer.mp3');
+_gameBuzzer.volume = 1.0;
+_gameBuzzer.load();
+
+const _shotBuzzer = new Audio('/buzzer.mp3');
+_shotBuzzer.volume = 1.0;
+_shotBuzzer.load();
+
+// Unlock preloaded audio on first user interaction (required for mobile/Safari)
+function _unlockBuzzers(){
+  [_gameBuzzer, _shotBuzzer].forEach(a => {
+    a.play().then(() => { 
+      a.pause(); 
+      a.currentTime = 0; 
+      // Hide banner if successfully unlocked
+      document.getElementById('audioUnlockBanner').style.display = 'none';
+    }).catch(()=>{});
+  });
+}
+document.addEventListener('touchstart', _unlockBuzzers, { once: true, passive: true });
+document.addEventListener('click',      _unlockBuzzers, { once: true, passive: true });
+
+function unlockAudioManual() {
+  [_gameBuzzer, _shotBuzzer].forEach(a => {
+    a.play().then(() => {
+      a.pause();
+      a.currentTime = 0;
+      document.getElementById('audioUnlockBanner').style.display = 'none';
+      console.log("Audio successfully unlocked manually.");
+    }).catch(e => {
+      console.warn("Manual unlock failed:", e);
+    });
+  });
+}
+
+function showAudioUnlock() {
+  const banner = document.getElementById('audioUnlockBanner');
+  if (banner) banner.style.display = 'block';
+}
+
+let localAudioMuted = localStorage.getItem('localAudioMuted') === 'true';
+
+function updateAudioToggleButton() {
+  const btn = document.getElementById('audioToggle');
+  if (btn) {
+    btn.innerHTML = localAudioMuted ? 'Tablet Sound: Off' : 'Tablet Sound: On';
+    btn.style.borderColor = localAudioMuted ? 'var(--red)' : 'var(--green)';
+    btn.style.color = localAudioMuted ? 'var(--red)' : 'var(--green)';
+  }
+}
+
+function toggleLocalAudio() {
+  localAudioMuted = !localAudioMuted;
+  localStorage.setItem('localAudioMuted', localAudioMuted);
+  updateAudioToggleButton();
+}
+
+// Call updateAudioToggleButton on startup
+window.addEventListener('DOMContentLoaded', updateAudioToggleButton);
+
+function playGameBuzzer(){
+  if (localAudioMuted) return;
+  _gameBuzzer.currentTime = 0;
+  _gameBuzzer.play().catch(e => {
+    console.warn("Local game buzzer blocked, showing unlock banner:", e);
+    showAudioUnlock();
+  });
+}
+
+function playShotBuzzer(){
+  if (localAudioMuted) return;
+  _shotBuzzer.currentTime = 0;
+  _shotBuzzer.play().catch(e => {
+    console.warn("Local shot buzzer blocked, showing unlock banner:", e);
+    showAudioUnlock();
+  });
+}
+
+
+
+function triggerBuzz(kind) {
+  // Play locally immediately
+  if(kind === 'game') playGameBuzzer(); else playShotBuzzer();
+  const timestamp = Date.now();
+  bc.postMessage({ type: 'buzz', user: fbUser, kind, timestamp });
+  // Broadcast to all other devices via server or Firebase
+  if (useFirebase && db) {
+    db.ref(`buzz/${fbUser}`).set({
+      kind: kind,
+      timestamp: timestamp
+    }).catch(e => console.error(e));
+    return;
+  }
+  fetch(`${SERVER_URL}/buzz?user=${encodeURIComponent(currentUser)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind })
+  }).catch(()=>{});
+}
+
+// Local tick — makes clocks move immediately on the control panel without waiting for SSE
+let _localGameTick = null;
+let _localShotTick = null;
+function startLocalGameTick(){
+  if(_localGameTick) return;
+  _localGameTick = setInterval(()=>{
+    if(S.gameRunning && S.gameSeconds > 0){ 
+      S.gameSeconds--; 
+      renderGameClock(); 
+      if (useFirebase && db) {
+        db.ref(`states/${fbUser}`).update({ gameSeconds: S.gameSeconds });
+      }
+      broadcastState();
+    }
+    else { 
+      stopLocalGameTick(); 
+      if (useFirebase && S.gameSeconds === 0 && S.gameRunning) {
+        triggerBuzz('game');
+      }
+    }
+  }, 1000);
+}
+function stopLocalGameTick(){ clearInterval(_localGameTick); _localGameTick = null; }
+function startLocalShotTick(){
+  if(_localShotTick) return;
+  _localShotTick = setInterval(()=>{
+    if(S.shotRunning && S.shotSeconds > 0){ 
+      S.shotSeconds--; 
+      renderShotClock(); 
+      if (useFirebase && db) {
+        db.ref(`states/${fbUser}`).update({ shotSeconds: S.shotSeconds });
+      }
+      broadcastState();
+    }
+    else { 
+      stopLocalShotTick(); 
+      if (useFirebase && S.shotSeconds === 0 && S.shotRunning) {
+        triggerBuzz('shot');
+        setTimeout(() => {
+          S.shotSeconds = 24;
+          cmd('shot_start');
+        }, 500);
+      }
+    }
+  }, 1000);
+}
+function stopLocalShotTick(){ clearInterval(_localShotTick); _localShotTick = null; }
+
+let _lastClockCmd = 0;
+let _lastStateCmd = 0; // for score/foul/non-clock changes
+function toggleGameClock(){
+  _lastClockCmd = Date.now();
+  if(S.gameRunning){
+    S.gameRunning = false;
+    stopLocalGameTick();
+    renderGameClock();
+    cmd('game_stop');
+  } else {
+    if(S.gameSeconds <= 0) return;
+    S.gameRunning = true;
+    startLocalGameTick();
+    renderGameClock();
+    cmd('game_start');
+  }
+}
+function toggleShotClock(){
+  _lastClockCmd = Date.now();
+  if(S.shotRunning){
+    S.shotRunning = false;
+    stopLocalShotTick();
+    renderShotClock();
+    cmd('shot_stop');
+  } else {
+    if(S.shotSeconds <= 0) return;
+    S.shotRunning = true;
+    startLocalShotTick();
+    renderShotClock();
+    cmd('shot_start');
+  }
+}
+// Reset always starts the shot clock immediately
+function resetShot(n){
+  _lastClockCmd = Date.now();
+  stopLocalShotTick();
+  S.shotSeconds = n; S.shotRunning = true;
+  startLocalShotTick();
+  renderShotClock();
+  cmd('shot_reset', n);
+}
+function resetShotCustom(){
+  const n = parseInt(document.getElementById('shotCustomIn').value);
+  if(isNaN(n) || n < 1 || n > 60) return;
+  resetShot(n);
+}
+function setTimerPreset(){
+  const mins = parseInt(document.getElementById('clkMin').value)||0;
+  const secs = Math.min(59, parseInt(document.getElementById('clkSec').value)||0);
+  S.timerPresetSeconds = mins*60 + secs;
+  saveNow(); // immediate — user might press Reset right after
+  const btn = document.querySelector('[onclick="setTimerPreset()"]');
+  if(btn){ const orig=btn.textContent; btn.textContent='✓ Saved!'; btn.style.borderColor='#00ee44'; btn.style.color='#00ee44'; setTimeout(()=>{ btn.textContent=orig; btn.style.borderColor='#f5c842'; btn.style.color='#f5c842'; },1200); }
+}
+function resetGameClock(){
+  const preset = S.timerPresetSeconds;
+  let seconds;
+  if(preset != null && preset > 0){
+    seconds = preset;
+    document.getElementById('clkMin').value = Math.floor(preset/60);
+    document.getElementById('clkSec').value = preset%60;
+  } else {
+    seconds=(parseInt(document.getElementById('clkMin').value)||10)*60+(parseInt(document.getElementById('clkSec').value)||0);
+  }
+  // Update locally immediately so Start works right away after a reset
+  S.gameSeconds = seconds;
+  S.gameRunning = false;
+  stopLocalGameTick();
+  _lastClockCmd = Date.now();
+  renderGameClock();
+  cmd('game_reset', seconds);
+}
+function setLiveStatus(status){ // 'connecting' | 'connected' | 'offline'
+  const badge = document.getElementById('liveBadge');
+  const text  = document.getElementById('liveText');
+  if(!badge) return;
+  badge.className = 'live-badge ' + status;
+  if(status === 'connecting') text.textContent = 'Connecting…';
+  else if(status === 'connected') text.textContent = 'Live';
+  else text.textContent = 'Offline';
+}
+
+function setClockManual(){
+  const seconds=(parseInt(document.getElementById('clkMin').value)||0)*60+Math.min(59,parseInt(document.getElementById('clkSec').value)||0);
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(()=>{ cmd('game_set', seconds); }, 600);
+}
+
+
+// Quarter
+function setQtr(q){ S.quarter=q; _lastStateCmd=Date.now(); save(); renderAll(); }
+function nextQtr(){ const i=QTRS.indexOf(S.quarter); if(i<QTRS.length-1)S.quarter=QTRS[i+1]; _lastStateCmd=Date.now(); save(); renderAll(); }
+
+// Right panel
+function updateRP(){
+  S.rp1Title='BROADCAST';
+  S.rp1Value=document.getElementById('rp1VIn').value;
+  S.rp2Title='VENUE';
+  S.rp2Value=document.getElementById('rp2VIn').value;
+  save();
+}
+
+function deleteCustomOption(selectId, storageKey){
+  const select = document.getElementById(selectId);
+  const val = select.value;
+
+  // Built-in values that cannot be deleted
+  const builtIn = {
+    'homeAbbrIn': ['HARINA','KUY\'S RYAN','FREEDOM','BARBERCUTZ','ARTECH','RICKY D\'S'],
+    'awayAbbrIn': ['HARINA','KUY\'S RYAN','FREEDOM','BARBERCUTZ','ARTECH','RICKY D\'S'],
+    'rp1VIn': ['—','YouTube','Facebook'],
+    'rp2VIn': ['—','DMC','Willowood','TAT Stadium','La Liga','Audley'],
+  };
+  if((builtIn[selectId]||[]).includes(val)){
+    alert('Built-in options cannot be deleted.');
+    return;
+  }
+
+  // Remove from localStorage
+  const saved = JSON.parse(localStorage.getItem(storageKey)||'[]');
+  const updated = saved.filter(v => v !== val);
+  localStorage.setItem(storageKey, JSON.stringify(updated));
+
+  // Remove from all matching dropdowns
+  const targets = selectId.includes('Abbr') ? ['homeAbbrIn','awayAbbrIn'] : [selectId];
+  targets.forEach(sid => {
+    const sel = document.getElementById(sid);
+    const opt = [...sel.options].find(o => o.value === val);
+    if(opt) sel.removeChild(opt);
+  });
+}
+
+function saveCustomTeam(team){
+  const inputId = team+'TeamCustom';
+  const selectId = team+'AbbrIn';
+  const input = document.getElementById(inputId);
+  const select = document.getElementById(selectId);
+  const val = input.value.trim().toUpperCase();
+  if(!val) return;
+
+  const key = 'custom_teams';
+  const saved = JSON.parse(localStorage.getItem(key)||'[]');
+  if(!saved.includes(val)){ saved.push(val); localStorage.setItem(key, JSON.stringify(saved)); }
+
+  // Add to both home and away dropdowns
+  ['homeAbbrIn','awayAbbrIn'].forEach(sid => {
+    const sel = document.getElementById(sid);
+    if(![...sel.options].some(o=>o.value===val)){
+      const opt = document.createElement('option');
+      opt.value = opt.textContent = val;
+      sel.appendChild(opt);
+    }
+  });
+
+  select.value = val;
+  input.value = '';
+  updateTeam(team);
+}
+
+function saveCustomOption(selectId, inputId){
+  const input = document.getElementById(inputId);
+  const select = document.getElementById(selectId);
+  const val = input.value.trim();
+  if(!val) return;
+
+  // Save to localStorage
+  const key = 'custom_'+selectId;
+  const saved = JSON.parse(localStorage.getItem(key)||'[]');
+  if(!saved.includes(val)){ saved.push(val); localStorage.setItem(key, JSON.stringify(saved)); }
+
+  // Add to dropdown if not already there
+  if(![...select.options].some(o=>o.value===val)){
+    const opt = document.createElement('option');
+    opt.value = opt.textContent = val;
+    select.appendChild(opt);
+  }
+
+  // Select it and update
+  select.value = val;
+  input.value = '';
+  updateRP();
+}
+
+function loadCustomOptions(){
+  // Load custom broadcast/venue
+  ['rp1VIn','rp2VIn'].forEach(selectId => {
+    const key = 'custom_'+selectId;
+    const saved = JSON.parse(localStorage.getItem(key)||'[]');
+    const select = document.getElementById(selectId);
+    saved.forEach(val => {
+      if(![...select.options].some(o=>o.value===val)){
+        const opt = document.createElement('option');
+        opt.value = opt.textContent = val;
+        select.appendChild(opt);
+      }
+    });
+  });
+  // Load custom teams into both dropdowns
+  const savedTeams = JSON.parse(localStorage.getItem('custom_teams')||'[]');
+  savedTeams.forEach(val => {
+    ['homeAbbrIn','awayAbbrIn'].forEach(sid => {
+      const sel = document.getElementById(sid);
+      if(sel && ![...sel.options].some(o=>o.value===val)){
+        const opt = document.createElement('option');
+        opt.value = opt.textContent = val;
+        sel.appendChild(opt);
+      }
+    });
+  });
+}
+
+// Referee manual buzzer
+let _lastLocalBuzz = 0;
+function refBuzzer(){
+  _lastLocalBuzz = Date.now();
+  playGameBuzzer(); // play locally immediately
+  if (useFirebase && db) {
+    db.ref(`buzz/${fbUser}`).set({
+      kind: 'game',
+      timestamp: Date.now()
+    }).catch(e => console.error(e));
+  } else {
+    fetch(`${SERVER_URL}/buzz?user=${encodeURIComponent(currentUser)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'game' })
+    }).catch(()=>{});
+  }
+  const btn = document.getElementById('refBuzzerBtn2');
+  if(btn){
+    btn.style.background = '#6a1515';
+    btn.style.boxShadow = '0 0 28px rgba(239,68,68,0.95)';
+    btn.style.transform = 'scale(0.97)';
+    setTimeout(() => {
+      btn.style.background = '#2a0f0f';
+      btn.style.boxShadow = '0 0 14px rgba(239,68,68,0.4)';
+      btn.style.transform = 'scale(1)';
+    }, 3000);
+  }
+}
+
+// Possession
+function setPoss(side){ S.possession=side; _lastStateCmd=Date.now(); save(); renderAll(); }
+
+// Reset
+function resetAll(){
+  if(!confirm('Reset scores & clocks? Team setup will be kept.'))return;
+  document.getElementById('clkMin').value=10;
+  document.getElementById('clkSec').value=0;
+  cmd('reset_all');
+  // Preserve team setup — only reset game state
+  S = {
+    ...DEF,
+    homeAbbr:   S.homeAbbr,   awayAbbr:   S.awayAbbr,
+    homeRecord: S.homeRecord, awayRecord: S.awayRecord,
+    homeColor:  S.homeColor,  awayColor:  S.awayColor,
+    homeLogo:   S.homeLogo,   awayLogo:   S.awayLogo,
+    rp1Title:   S.rp1Title,   rp1Value:   S.rp1Value,
+    rp2Title:   S.rp2Title,   rp2Value:   S.rp2Value,
+    barColor:   S.barColor,
+    timerPresetSeconds: S.timerPresetSeconds,
+  };
+  saveNow(); renderAll();
+}
+
+// Load from server first (so tablet gets live state, not stale localStorage)
+loadCustomOptions();
+if (useFirebase && db) {
+  setLiveStatus('connecting');
+  
+  // Real-time connection listener
+  db.ref('.info/connected').on('value', snapshot => {
+    if (snapshot.val() === true) {
+      setLiveStatus('connected');
+    } else {
+      setLiveStatus('connecting');
+    }
+  });
+
+  db.ref(`states/${fbUser}`).once('value').then(snapshot => {
+    const data = snapshot.val();
+    let localLogos = {};
+    try {
+      const localRaw = localStorage.getItem('bball_v3');
+      if(localRaw){
+        const local = JSON.parse(localRaw);
+        if(local.homeLogo) localLogos.homeLogo = local.homeLogo;
+        if(local.awayLogo) localLogos.awayLogo = local.awayLogo;
+      }
+    } catch(e){}
+    if (data) {
+      S = {...DEF, ...data};
+    } else {
+      db.ref(`states/${fbUser}`).set(S);
+    }
+    if(localLogos.homeLogo) S.homeLogo = localLogos.homeLogo;
+    if(localLogos.awayLogo) S.awayLogo = localLogos.awayLogo;
+    if(S.gameRunning) startLocalGameTick();
+    if(S.shotRunning) startLocalShotTick();
+    renderAll();
+  }).catch((err)=>{
+    console.error("Firebase load failed:", err);
+    try {
+      const localRaw = localStorage.getItem('bball_v3');
+      if(localRaw){ S={...DEF,...JSON.parse(localRaw)}; S.gameRunning=false; S.shotRunning=false; }
+    } catch(e){}
+    renderAll();
+  }).finally(()=>{ connectSSE(); });
+} else {
+  setLiveStatus('connecting');
+  fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`).then(r=>r.json()).then(data=>{
+    let localLogos = {};
+    try {
+      const localRaw = localStorage.getItem('bball_v3');
+      if(localRaw){
+        const local = JSON.parse(localRaw);
+        if(local.homeLogo) localLogos.homeLogo = local.homeLogo;
+        if(local.awayLogo) localLogos.awayLogo = local.awayLogo;
+      }
+    } catch(e){}
+    if(Object.keys(data).length){ S={...DEF,...data}; }
+    if(localLogos.homeLogo) S.homeLogo = localLogos.homeLogo;
+    if(localLogos.awayLogo) S.awayLogo = localLogos.awayLogo;
+    if(S.gameRunning) startLocalGameTick();
+    if(S.shotRunning) startLocalShotTick();
+    renderAll();
+  }).catch(()=>{
+    try {
+      const localRaw = localStorage.getItem('bball_v3');
+      if(localRaw){ S={...DEF,...JSON.parse(localRaw)}; S.gameRunning=false; S.shotRunning=false; }
+    } catch(e){}
+    renderAll();
+  }).finally(()=>{ connectSSE(); });
+}
+
+// SSE — server pushes state every second while clocks run, instantly on any action
+function connectSSE(){
+  if (useFirebase && db) {
+    db.ref(`states/${fbUser}`).on('value', snapshot => {
+      const d = snapshot.val();
+      if (!d) return;
+      
+      const now = Date.now();
+      const sinceClockCmd = now - _lastClockCmd;
+      const sinceStateCmd = now - _lastStateCmd;
+
+      if(sinceClockCmd < 1500){
+        d.gameRunning = S.gameRunning;
+        d.shotRunning = S.shotRunning;
+      }
+
+      if(!d.gameRunning) stopLocalGameTick();
+      if(!d.shotRunning) stopLocalShotTick();
+
+      if(sinceStateCmd < 1200){
+        d.homeScore  = S.homeScore;
+        d.awayScore  = S.awayScore;
+        d.homeFouls  = S.homeFouls;
+        d.awayFouls  = S.awayFouls;
+        d.possession = S.possession;
+        d.quarter    = S.quarter;
+        d.homeColor  = S.homeColor;
+        d.awayColor  = S.awayColor;
+      }
+
+      const prevHomeLogo    = S.homeLogo;
+      const prevAwayLogo    = S.awayLogo;
+
+      const runGameChanged = d.gameRunning !== S.gameRunning;
+      const runShotChanged = d.shotRunning !== S.shotRunning;
+
+      S = {...DEF, ...d};
+      if(!S.homeLogo && prevHomeLogo) S.homeLogo = prevHomeLogo;
+      if(!S.awayLogo && prevAwayLogo) S.awayLogo = prevAwayLogo;
+      
+      if (runGameChanged) {
+        if (S.gameRunning) startLocalGameTick();
+        else stopLocalGameTick();
+      }
+      if (runShotChanged) {
+        if (S.shotRunning) startLocalShotTick();
+        else stopLocalShotTick();
+      }
+      renderAll();
+    });
+
+    db.ref(`ocr/${fbUser}`).on('value', snapshot => {
+      // Guard manual actions from being overwritten by delayed OCR updates
+      if (window.lastManualActionTime && (Date.now() - window.lastManualActionTime) < 5000) return;
+      
+      if (S.aiSyncEnabled) {
+        const incoming = snapshot.val();
+        if (!incoming) return;
+        let updated = {};
+
+        if (incoming.clock != null) {
+          const clockStr = String(incoming.clock).replace(/\s/g, '').trim();
+          let incomingSeconds = null;
+          if (clockStr.includes(':')) {
+            const parts = clockStr.split(':');
+            const mins = parseInt(parts[0], 10) || 0;
+            const secs = parseInt(parts[1], 10) || 0;
+            incomingSeconds = mins * 60 + secs;
+          } else if (clockStr.length === 3) {
+            const mins = parseInt(clockStr.substring(0, 1), 10) || 0;
+            const secs = parseInt(clockStr.substring(1), 10) || 0;
+            incomingSeconds = mins * 60 + secs;
+          } else if (clockStr.length === 4) {
+            const mins = parseInt(clockStr.substring(0, 2), 10) || 0;
+            const secs = parseInt(clockStr.substring(2), 10) || 0;
+            incomingSeconds = mins * 60 + secs;
+          } else {
+            const parsedVal = parseFloat(clockStr) || 0;
+            incomingSeconds = Math.round(parsedVal);
+          }
+
+          if (incomingSeconds !== null) {
+            let isRunning = S.gameRunning;
+            if (window.lastAISeconds !== undefined) {
+              if (incomingSeconds < window.lastAISeconds) {
+                isRunning = true;
+              } else {
+                isRunning = false;
+              }
+            }
+            window.lastAISeconds = incomingSeconds;
+            updated.gameRunning = isRunning;
+
+            // Lag compensation (processing roundtrip lag offset)
+            const compensatedSeconds = isRunning ? Math.max(0, incomingSeconds - 1) : incomingSeconds;
+            const drift = Math.abs(S.gameSeconds - compensatedSeconds);
+
+            // Only snap clock if drift is significant (> 3s) or running state changed
+            if (drift > 3 || S.gameRunning !== isRunning) {
+              updated.gameSeconds = compensatedSeconds;
+            }
+          }
+        }
+
+        if (incoming.homeScore != null) {
+          updated.homeScore = parseInt(incoming.homeScore, 10) || 0;
+        }
+        if (incoming.awayScore != null) {
+          updated.awayScore = parseInt(incoming.awayScore, 10) || 0;
+        }
+
+        if (incoming.period != null) {
+          updated.quarter = parseInt(incoming.period, 10) || 1;
+        }
+
+        if (incoming.shotClock != null) {
+          const scStr = String(incoming.shotClock).trim();
+          const incomingShotSeconds = parseInt(scStr, 10) || 24;
+
+          let isShotRunning = S.shotRunning;
+          if (window.lastAIShotSeconds !== undefined) {
+            if (incomingShotSeconds < window.lastAIShotSeconds) {
+              isShotRunning = true;
+            } else {
+              isShotRunning = false;
+            }
+          }
+          window.lastAIShotSeconds = incomingShotSeconds;
+          updated.shotRunning = isShotRunning;
+
+          // Lag compensation (offsetting cloud sync latency)
+          const compensatedShotSeconds = isShotRunning ? Math.max(0, incomingShotSeconds - 1) : incomingShotSeconds;
+          const shotDrift = Math.abs(S.shotSeconds - compensatedShotSeconds);
+
+          // Only snap local shot clock if drift is significant (> 2s) or if running state changed
+          if (shotDrift > 2 || S.shotRunning !== isShotRunning) {
+            updated.shotSeconds = compensatedShotSeconds;
+          }
+        }
+
+        const hasChanges = Object.keys(updated).some(k => S[k] !== updated[k]);
+        if (hasChanges) {
+          S = { ...S, ...updated };
+          
+          if (updated.gameRunning !== undefined) {
+            if (updated.gameRunning) {
+              startLocalGameTick();
+            } else {
+              stopLocalGameTick();
+            }
+          }
+          if (updated.shotRunning !== undefined) {
+            if (updated.shotRunning) {
+              startLocalShotTick();
+            } else {
+              stopLocalShotTick();
+            }
+          }
+          
+          db.ref(`states/${fbUser}`).update({
+            homeScore: S.homeScore,
+            awayScore: S.awayScore,
+            quarter: S.quarter,
+            gameSeconds: S.gameSeconds,
+            shotSeconds: S.shotSeconds,
+            gameRunning: S.gameRunning,
+            shotRunning: S.shotRunning,
+          }).catch(e => console.error(e));
+          renderAll();
+        }
+      }
+    });
+
+    db.ref(`buzz/${fbUser}`).on('value', snapshot => {
+      const msg = snapshot.val();
+      if (!msg) return;
+      const sinceLocal = Date.now() - _lastLocalBuzz;
+      if(sinceLocal > 600 && msg.timestamp > (window.lastBuzzTime || 0)) {
+        window.lastBuzzTime = msg.timestamp;
+        if(msg.kind === 'game') playGameBuzzer();
+        else playShotBuzzer();
+      }
+    });
+    return;
+  }
+
+  setLiveStatus('connecting');
+  const es = new EventSource(`${SERVER_URL}/events?user=${encodeURIComponent(currentUser)}`);
+  es.onopen = () => setLiveStatus('connected');
+  es.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if(msg.type === 'state') {
+        const d = msg.data;
+        const now = Date.now();
+        const sinceClockCmd = now - _lastClockCmd;
+        const sinceStateCmd = now - _lastStateCmd;
+
+        if(sinceClockCmd < 1500){
+          d.gameRunning = S.gameRunning;
+          d.shotRunning = S.shotRunning;
+        }
+
+        if(!d.gameRunning) stopLocalGameTick();
+        if(!d.shotRunning) stopLocalShotTick();
+
+        if(sinceStateCmd < 1200){
+          d.homeScore  = S.homeScore;
+          d.awayScore  = S.awayScore;
+          d.homeFouls  = S.homeFouls;
+          d.awayFouls  = S.awayFouls;
+          d.possession = S.possession;
+          d.quarter    = S.quarter;
+          d.homeColor  = S.homeColor;
+          d.awayColor  = S.awayColor;
+        }
+
+        const prevHomeLogo    = S.homeLogo;
+        const prevAwayLogo    = S.awayLogo;
+
+        S = {...DEF, ...d};
+        if(!S.homeLogo && prevHomeLogo) S.homeLogo = prevHomeLogo;
+        if(!S.awayLogo && prevAwayLogo) S.awayLogo = prevAwayLogo;
+        stopLocalGameTick(); stopLocalShotTick();
+        if(S.gameRunning) startLocalGameTick();
+        if(S.shotRunning) startLocalShotTick();
+        renderAll();
+      } else if(msg.type === 'buzz') {
+        const sinceLocal = Date.now() - _lastLocalBuzz;
+        if(sinceLocal > 600){
+          if(msg.kind === 'game') playGameBuzzer();
+          else playShotBuzzer();
+        }
+      }
+    } catch(err){}
+  };
+  es.onerror = () => { setLiveStatus('offline'); es.close(); setTimeout(connectSSE, 3000); };
+}
+
+function toggleAiSync(enabled) {
+  S.aiSyncEnabled = enabled;
+  
+  // Update toggle checkbox state
+  const checkbox = document.getElementById('aiSyncToggle');
+  if (checkbox) checkbox.checked = enabled;
+
+  saveNow();
+}
+
+// ── KEYBOARD SHORTCUTS ──────────────────────────────────────
+// Home score:  Q=+1  W=+2  E=+3  A=−1  S=−2
+// Away score:  U=+1  I=+2  O=+3  J=−1  K=−2
+// Game clock:  Space = start/pause
+// Shot clock:  Enter = start/pause   R=reset 24   T=reset 14
+document.addEventListener('keydown', (e) => {
+  if(document.activeElement.tagName === 'INPUT') return; // don't fire while typing
+  switch(e.key.toLowerCase()){
+    // Home
+    case 'q': addScore('home', 1);  break;
+    case 'w': addScore('home', 2);  break;
+    case 'e': addScore('home', 3);  break;
+    case 'a': addScore('home', -1); break;
+    case 's': addScore('home', -2); break;
+    // Away
+    case 'u': addScore('away', 1);  break;
+    case 'i': addScore('away', 2);  break;
+    case 'o': addScore('away', 3);  break;
+    case 'j': addScore('away', -1); break;
+    case 'k': addScore('away', -2); break;
+    // Clocks
+    case ' ':
+      e.preventDefault();
+      toggleGameClock(); break;
+    case 'enter':
+      e.preventDefault();
+      toggleShotClock(); break;
+    case 'r': resetShot(24); break;
+    case 't': resetShot(14); break;
+    // Buzzer
+    case 'b': refBuzzer(); break;
+  }
+}); // show if on iOS Safari and not already installed
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isInStandaloneMode = window.navigator.standalone === true;
+const iosDismissed = localStorage.getItem('iosBannerDismissed');
+if(isIOS && !isInStandaloneMode && !iosDismissed){
+  setTimeout(() => {
+    const banner = document.getElementById('iosInstallBanner');
+    if(banner) banner.style.display = 'block';
+  }, 2000);
+}
+function dismissIOSBanner(){
+  const banner = document.getElementById('iosInstallBanner');
+  if(banner) banner.style.display = 'none';
+  localStorage.setItem('iosBannerDismissed', '1');
+}
+
+// PWA Install
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const btn = document.getElementById('installBtn');
+  if(btn) btn.style.display = 'block';
+});
+window.addEventListener('appinstalled', () => {
+  const btn = document.getElementById('installBtn');
+  if(btn) btn.style.display = 'none';
+  deferredInstallPrompt = null;
+});
+function installApp(){
+  if(!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.then(() => {
+    deferredInstallPrompt = null;
+    document.getElementById('installBtn').style.display = 'none';
+  });
+}
+
+// Register PWA service worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+
+// Fullscreen
+function toggleFullscreen(){
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().catch(()=>{});
+    document.getElementById('fsToggle').textContent = '✕ Exit Fullscreen';
+  } else {
+    document.exitFullscreen();
+    document.getElementById('fsToggle').textContent = '⛶ Fullscreen';
+  }
+}
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('fsToggle');
+  if(btn) btn.textContent = document.fullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+});
+
+// Dark/Light mode toggle
+function toggleMode(){
+  const isLight = document.body.classList.toggle('light');
+  document.getElementById('modeToggle').textContent = isLight ? '🌙 Dark Mode' : '☀️ Light Mode';
+  localStorage.setItem('scoreboardMode', isLight ? 'light' : 'dark');
+}
+// Restore saved mode
+(function(){
+  const saved = localStorage.getItem('scoreboardMode');
+  if(saved === 'light'){
+    document.body.classList.add('light');
+    document.getElementById('modeToggle').textContent = '🌙 Dark Mode';
+  }
+})();
+// Fetch server network IP for phone camera QR matching
+let serverNetworkIp = '';
+fetch('/api/ip')
+  .then(res => res.json())
+  .then(data => {
+    if (data && data.ip) {
+      serverNetworkIp = data.ip;
+    }
+  })
+  .catch(() => {});
+
+// QR Scanner Connect Modal Handlers
+function openScannerModal(e) {
+  if (e) e.preventDefault();
+  const suffix = `?user=${encodeURIComponent(currentUser)}`;
+  let scannerUrl = '';
+  
+  if (location.protocol === 'http:' && (location.port === '3000' || location.port === '')) {
+    let host = location.hostname;
+    // Fallback to resolved local network IP if on localhost
+    if ((host === 'localhost' || host === '127.0.0.1') && serverNetworkIp) {
+      host = serverNetworkIp;
+    }
+    scannerUrl = `https://${host}:3001/camera${suffix}`;
+  } else {
+    scannerUrl = `${window.location.origin}/camera${suffix}`;
+  }
+
+  document.getElementById('scannerCopyUrl').value = scannerUrl;
+  document.getElementById('scannerOpenBtn').href = scannerUrl;
+  document.getElementById('scannerQrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(scannerUrl)}`;
+  
+  document.getElementById('scannerModal').style.display = 'flex';
+}
+
+function closeScannerModal() {
+  document.getElementById('scannerModal').style.display = 'none';
+}
+</script>
+
+<!-- Scanner Connect Modal -->
+<div id="scannerModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:11000; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#080605; border:1px solid var(--border); border-radius:12px; max-width:400px; width:100%; padding:24px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+    <div style="font-family:'Barlow Condensed', sans-serif; font-size:20px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:var(--orange2); margin-bottom:12px;">📱 Connect AI Scanner</div>
+    <div style="font-size:12px; color:var(--grey); margin-bottom:20px; font-family:sans-serif; line-height:1.5;">Scan this QR code with your iPhone camera to launch the scanner automatically over secure HTTPS (Offline Port 3001).</div>
+    
+    <div style="background:#fff; padding:15px; border-radius:8px; display:inline-block; margin-bottom:20px; box-shadow:0 4px 15px rgba(0,0,0,0.2);">
+      <img id="scannerQrImage" src="" alt="QR Code" style="width:180px; height:180px; display:block;">
+    </div>
+
+    <div style="margin-bottom:24px;">
+      <span style="display:block; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--grey); margin-bottom:6px;">Scanner URL:</span>
+      <input type="text" id="scannerCopyUrl" readonly style="width:100%; background:#100b08; border:1px solid var(--border); color:#fff; padding:8px 12px; border-radius:6px; font-size:11px; text-align:center; outline:none; font-family:monospace;" onclick="this.select()">
+    </div>
+
+    <div style="display:flex; gap:12px; justify-content:center;">
+      <a id="scannerOpenBtn" href="" target="_blank" class="mode-toggle" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center; border-color:var(--orange); color:var(--orange); padding:8px 16px; border-radius:6px;">Open in Tab</a>
+      <button class="mode-toggle" onclick="closeScannerModal()" style="border-color:var(--grey); color:var(--grey); padding:8px 16px; border-radius:6px;">Close</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

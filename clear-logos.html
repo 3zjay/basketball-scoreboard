@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Clear Logo Cache</title>
+  <style>
+    body { background: #111; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; flex-direction: column; gap: 20px; }
+    button { background: #e03; color: #fff; border: none; padding: 16px 40px; font-size: 20px; border-radius: 10px; cursor: pointer; font-weight: 700; letter-spacing: 1px; }
+    button:hover { background: #f04; }
+    #msg { font-size: 18px; color: #0f0; display: none; text-align: center; }
+  </style>
+</head>
+<body>
+  <h2 style="margin:0;letter-spacing:2px;">🗑 LOGO CACHE CLEANER</h2>
+  <p style="color:#aaa;margin:0;text-align:center;">Clears all old blurry logo data from localStorage<br>and resets the server. Then re-upload your logos.</p>
+  <button onclick="clearAll()">CLEAR ALL LOGO CACHE</button>
+  <div id="msg"></div>
+  <script>
+    function clearAll() {
+      // Auto-detect the logged-in user (same logic as basketball-scoreboard.html)
+      const currentUser = new URLSearchParams(window.location.search).get('user')
+                        || localStorage.getItem('hc_session_user')
+                        || 'default';
+
+      // Clear from localStorage
+      try {
+        const raw = localStorage.getItem('bball_v3');
+        if (raw) {
+          const state = JSON.parse(raw);
+          // Wipe all logo fields
+          state.homeLogo = null;
+          state.awayLogo = null;
+          state.homeLogoThumb = null;
+          state.awayLogoThumb = null;
+          localStorage.setItem('bball_v3', JSON.stringify(state));
+        }
+      } catch(e) {}
+
+      // Also try clearing any other logo keys
+      Object.keys(localStorage).forEach(k => {
+        if (k.toLowerCase().includes('logo')) localStorage.removeItem(k);
+      });
+
+      // Clear from server using the correct user ID
+      fetch(`http://localhost:3000/logo?user=${encodeURIComponent(currentUser)}`, { method: 'DELETE' })
+        .catch(() => {});
+
+      const msg = document.getElementById('msg');
+      msg.style.display = 'block';
+      msg.innerHTML = '✅ Done! Logo cache cleared.<br><br><a href="http://localhost:3000/control" style="color:#4af;">→ Go to Controller to re-upload logos</a>';
+    }
+  </script>
+</body>
+</html>

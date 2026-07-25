@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hoop Culture Scoreboard Ecosystem</title>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #080605;
+      --bg2: #100d0a;
+      --bg3: #1a1410;
+      --bg4: #241c15;
+      --orange: #e8430a;
+      --orange2: #ff6b1a;
+      --gold: #c8841a;
+      --ember: #ff8c00;
+      --fire1: #ff4500;
+      --fire2: #ff6a00;
+      --fire3: #ffa500;
+      --white: #f2ede8;
+      --grey: #a09080;
+      --mid: #604838;
+      --dim: #3a2820;
+      --green: #16c784;
+      --red: #e53935;
+      --blue: #2d5fa6;
+      --border: #2a1e14;
+      --border2: #3a2818;
+      
+      /* Cloud themed variables */
+      --purple: #a855f7;
+      --teal: #14b8a6;
+      --pink: #ec4899;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 1.5rem;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Site Background Glow */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(232, 67, 10, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      max-width: 1200px;
+      width: 100%;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Branded Header styling matching website */
+    .brand-header {
+      margin-bottom: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .logo-container {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+
+    .brand-logo {
+      height: 120px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 0 20px rgba(255, 102, 0, 0.7));
+      transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+
+    .brand-logo:hover {
+      filter: drop-shadow(0 0 35px rgba(255, 102, 0, 0.95));
+      transform: scale(1.05) translateY(-5px);
+    }
+
+    .subtitle {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: var(--orange2);
+      margin-top: 1rem;
+      text-shadow: 0 0 8px rgba(255, 106, 0, 0.4);
+    }
+
+    .main-title {
+      font-family: 'Anton', sans-serif;
+      font-size: 3.2rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--white);
+      margin-top: 0.5rem;
+      text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+    }
+
+    /* Mode Selector Toggles (Segmented Control) */
+    .toggle-container {
+      display: flex;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 6px;
+      margin-bottom: 2.5rem;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      gap: 8px;
+    }
+    
+    .toggle-btn {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 10px 24px;
+      border: none;
+      background: transparent;
+      color: var(--grey);
+      border-radius: 40px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .toggle-btn.active {
+      background: linear-gradient(135deg, var(--fire1), var(--fire2));
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(232, 67, 10, 0.4);
+    }
+    
+    .toggle-btn:hover:not(.active) {
+      color: var(--white);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .btn-icon {
+      font-size: 16px;
+    }
+
+    /* Diagram Animation Wrapper */
+    .diagram-wrapper {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    /* Visual Diagram Layout CSS */
+    .diagram-section {
+      width: 100%;
+      max-width: 1100px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3rem 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      display: none; /* hidden by default */
+      grid-template-columns: 1fr 100px 1.1fr 100px 1fr;
+      align-items: center;
+      position: relative;
+      opacity: 0;
+      transform: translateY(15px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    
+    .diagram-section.active {
+      display: grid;
+    }
+    
+    .diagram-section.fade-in {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 960px) {
+      .diagram-section {
+        grid-template-columns: 1fr !important;
+        gap: 3rem;
+        padding: 3rem 1.5rem;
+      }
+      .connector-arrow {
+        transform: rotate(90deg);
+        margin: 1rem auto;
+      }
+      .feature-bar {
+        grid-column: span 1 !important;
+      }
+    }
+
+    /* Column Styles */
+    .node-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .node-badge {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 1.5rem;
+      display: inline-block;
+    }
+
+    /* Color Badges */
+    .badge-tablet { background: rgba(22, 199, 132, 0.1); color: var(--green); border: 1px solid rgba(22, 199, 132, 0.2); }
+    .badge-laptop { background: rgba(255, 106, 0, 0.1); color: var(--orange2); border: 1px solid rgba(255, 106, 0, 0.2); }
+    .badge-tv { background: rgba(229, 57, 53, 0.1); color: var(--red); border: 1px solid rgba(229, 57, 53, 0.2); }
+    
+    .badge-vercel { background: rgba(168, 85, 247, 0.1); color: var(--purple); border: 1px solid rgba(168, 85, 247, 0.2); }
+    .badge-onrender { background: rgba(20, 184, 166, 0.1); color: var(--teal); border: 1px solid rgba(20, 184, 166, 0.2); }
+    .badge-remote { background: rgba(236, 72, 153, 0.1); color: var(--pink); border: 1px solid rgba(236, 72, 153, 0.2); }
+
+    /* Mockups */
+    .mockup-frame {
+      width: 100%;
+      background: #151515;
+      border: 6px solid #222;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    /* iPad Mockup */
+    .tablet-frame {
+      width: 180px;
+      height: 240px;
+      border-radius: 18px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    .tablet-screen {
+      flex: 1;
+      background: #0f172a;
+      border-radius: 4px;
+      border: 1px solid #333;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-family: 'Barlow Condensed', sans-serif;
+    }
+    .screen-header {
+      font-size: 9px;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 3px;
+    }
+    .screen-clock {
+      font-family: 'Anton', sans-serif;
+      font-size: 26px;
+      color: var(--orange2);
+      margin: 12px 0;
+      text-shadow: 0 0 10px rgba(255, 106, 0, 0.3);
+    }
+    .screen-scores {
+      display: flex;
+      justify-content: space-between;
+      gap: 5px;
+    }
+    .screen-btn {
+      flex: 1;
+      background: var(--orange);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 4px 0;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+    .screen-btn.guest { background: var(--blue); }
+    .screen-footer-btn {
+      background: #1e293b;
+      color: #94a3b8;
+      font-size: 8px;
+      padding: 3px 0;
+      border-radius: 2px;
+      margin-top: 6px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    /* Laptop Mockup */
+    .laptop-frame {
+      width: 240px;
+      height: 150px;
+      border-radius: 10px 10px 0 0;
+      border-width: 8px 8px 0 8px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+    }
+    .laptop-base {
+      width: 270px;
+      height: 10px;
+      background: #333;
+      border-radius: 0 0 10px 10px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+      margin-bottom: 1rem;
+    }
+    .laptop-screen {
+      flex: 1;
+      background: #05070a;
+      border: 1px solid #111;
+      border-radius: 2px;
+      padding: 8px;
+      text-align: left;
+      font-family: monospace;
+      font-size: 8px;
+      line-height: 1.4;
+    }
+    .log-green { color: var(--green); font-weight: bold; }
+    .log-white { color: #fff; }
+    .log-orange { color: var(--orange2); }
+    .log-dim { color: #475569; }
+    .log-purple { color: var(--purple); font-weight: bold; }
+    .log-teal { color: var(--teal); }
+
+    /* TV Mockup */
+    .tv-frame {
+      width: 230px;
+      height: 140px;
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .tv-base {
+      width: 60px;
+      height: 15px;
+      background: #222;
+      margin: 0 auto 1rem auto;
+      clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%);
+    }
+    .tv-screen {
+      flex: 1;
+      background: #020617;
+      border-radius: 4px;
+      border: 1px solid #333;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+    }
+    .tv-overlay-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 9px;
+      font-weight: 800;
+      color: #64748b;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .tv-overlay-content {
+      background: #0f172a;
+      border-radius: 4px;
+      border: 1px solid #1e293b;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      font-family: 'Barlow Condensed', sans-serif;
+    }
+    .tv-team {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .tv-team-name { font-size: 9px; font-weight: 800; color: #94a3b8; }
+    .tv-team-score { font-family: 'Anton', sans-serif; font-size: 20px; color: #fff; }
+    .tv-team-score.red { color: #ef4444; }
+    .tv-team-score.blue { color: #3b82f6; }
+    .tv-clock {
+      font-family: 'Anton', sans-serif;
+      font-size: 16px;
+      color: var(--orange2);
+      text-shadow: 0 0 8px rgba(255, 106, 0, 0.4);
+    }
+
+    /* Labels below Mockups */
+    .node-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      color: var(--white);
+      margin-top: 1rem;
+      letter-spacing: 0.5px;
+    }
+    .node-subtitle {
+      font-size: 0.85rem;
+      color: var(--grey);
+      font-weight: 500;
+      margin-top: 2px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Connecting Arrows with dynamic labels */
+    .connector-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+    .connector-label-top {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--orange2);
+      margin-bottom: 6px;
+    }
+    .connector-label-bottom {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--grey);
+      margin-top: 6px;
+    }
+    .connector-arrow {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .connector-arrow-svg {
+      width: 48px;
+      height: 24px;
+      stroke: var(--orange);
+      stroke-width: 4;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 6px rgba(232, 67, 10, 0.5));
+      animation: slideArrow 2s infinite ease-in-out;
+    }
+    
+    .connector-arrow-svg.cloud-purple {
+      stroke: var(--purple);
+      filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.5));
+    }
+    
+    .connector-arrow-svg.cloud-teal {
+      stroke: var(--teal);
+      filter: drop-shadow(0 0 6px rgba(20, 184, 166, 0.5));
+    }
+
+    @keyframes slideArrow {
+      0%, 100% { transform: translateX(-4px); opacity: 0.6; }
+      50% { transform: translateX(4px); opacity: 1; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+
+    /* Bottom Features Ticker Bar */
+    .feature-bar {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+      padding: 1.2rem 3rem;
+      background: var(--bg3);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      width: 100%;
+    }
+
+    @media (max-width: 600px) {
+      .feature-bar {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1.2rem;
+      }
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--grey);
+    }
+
+    .feature-dot {
+      width: 6px;
+      height: 6px;
+      background-color: var(--fire2);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--fire2);
+    }
+    
+    .feature-dot.purple {
+      background-color: var(--purple);
+      box-shadow: 0 0 8px var(--purple);
+    }
+    
+    .feature-dot.teal {
+      background-color: var(--teal);
+      box-shadow: 0 0 8px var(--teal);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Branded Header with Transparent Logo -->
+    <header class="brand-header">
+      <div class="logo-container">
+        <img src="/hoop-culture-logo.png" alt="Hoop Culture Logo" class="brand-logo">
+      </div>
+      <div class="subtitle">Broadcast Scoreboard System</div>
+      <h1 class="main-title">Ecosystem Workflow</h1>
+    </header>
+
+    <!-- Mode Selector Segmented Control -->
+    <div class="toggle-container">
+      <button class="toggle-btn active" id="btn-offline" onclick="switchMode('offline')">
+        <span class="btn-icon">🔌</span> Offline Local Mode
+      </button>
+      <button class="toggle-btn" id="btn-vercel" onclick="switchMode('vercel')">
+        <span class="btn-icon">⚡</span> Vercel Cloud Mode
+      </button>
+      <button class="toggle-btn" id="btn-onrender" onclick="switchMode('onrender')">
+        <span class="btn-icon">☁️</span> OnRender Cloud Mode
+      </button>
+    </div>
+
+    <!-- Interactive Diagram Area -->
+    <div class="diagram-wrapper">
+      
+      <!-- MODE 1: OFFLINE LOCAL MODE -->
+      <section class="diagram-section active fade-in" id="offline-diagram">
+        
+        <!-- Column 1: Tablet -->
+        <div class="node-col">
+          <span class="node-badge badge-tablet">LOCAL TABLET</span>
+          <div class="mockup-frame tablet-frame">
+            <div class="tablet-screen">
+              <div class="screen-header">
+                <span>● CONTROLLER</span>
+                <span>100%</span>
+              </div>
+              <div style="text-align: center;">
+                <span style="font-size: 7px; color: #64748b; letter-spacing: 0.5px; text-transform: uppercase;">GAME CLOCK</span>
+                <div class="screen-clock">12:34</div>
+                <span style="font-size: 8px; color: #94a3b8; font-weight: bold; text-transform: uppercase;">Q4 - PERIOD 2</span>
+              </div>
+              <div>
+                <div class="screen-scores">
+                  <div class="screen-btn">HOME +</div>
+                  <div class="screen-btn guest">GUEST -</div>
+                </div>
+                <div class="screen-footer-btn">TIMEOUT</div>
+              </div>
+            </div>
+          </div>
+          <h3 class="node-title">Scoreboard Controller</h3>
+          <p class="node-subtitle">NON-TECHNICAL USER APP</p>
+        </div>
+
+        <!-- Connector 1 -->
+        <div class="connector-col">
+          <span class="connector-label-top">DATA SIGNAL</span>
+          <div class="connector-arrow">
+            <svg class="connector-arrow-svg" viewBox="0 0 24 24">
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <polyline points="14 6 22 12 14 18"></polyline>
+            </svg>
+          </div>
+          <span class="connector-label-bottom">COMMANDS</span>
+        </div>
+
+        <!-- Column 2: Laptop -->
+        <div class="node-col">
+          <span class="node-badge badge-laptop">LOCAL SERVER</span>
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="mockup-frame laptop-frame">
+              <div class="laptop-screen">
+                <span class="log-green">&gt; LOCAL SERVER RUNNING</span><br>
+                <span class="log-white">IP ADDRESS: 192.168.1.10</span><br>
+                <span class="log-orange">STATUS: CONNECTED</span><br>
+                <span class="log-green">SCOREBOARD ACTIVE</span><br>
+                <span class="log-dim">&gt; waiting for commands...</span>
+              </div>
+            </div>
+            <div class="laptop-base"></div>
+          </div>
+          <h3 class="node-title">Local Laptop Server</h3>
+          <p class="node-subtitle">IP ADDRESS: 192.168.1.10</p>
+        </div>
+
+        <!-- Connector 2 -->
+        <div class="connector-col">
+          <span class="connector-label-top">DATA FEED</span>
+          <div class="connector-arrow">
+            <svg class="connector-arrow-svg" viewBox="0 0 24 24">
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <polyline points="14 6 22 12 14 18"></polyline>
+            </svg>
+          </div>
+          <span class="connector-label-bottom">UPDATES</span>
+        </div>
+
+        <!-- Column 3: TV Display -->
+        <div class="node-col">
+          <span class="node-badge badge-tv">LOCAL DISPLAY</span>
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="mockup-frame tv-frame">
+              <div class="tv-screen">
+                <div class="tv-overlay-title">🔴 LIVE SCOREBOARD FEED</div>
+                <div class="tv-overlay-content">
+                  <div class="tv-team">
+                    <span class="tv-team-name">BEARS</span>
+                    <span class="tv-team-score red">24</span>
+                  </div>
+                  <div class="tv-clock">08:15</div>
+                  <div class="tv-team">
+                    <span class="tv-team-name">LIONS</span>
+                    <span class="tv-team-score blue">17</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tv-base"></div>
+          </div>
+          <h3 class="node-title">Live Score Overlay</h3>
+          <p class="node-subtitle">HDMI TV & OBS LIVE STREAM</p>
+        </div>
+
+        <!-- Offline Footer Benefits -->
+        <footer class="feature-bar" style="grid-column: span 5; margin-top: 3rem;">
+          <div class="feature-item">
+            <span class="feature-dot"></span>
+            100% Offline Court Wi-Fi
+          </div>
+          <div class="feature-item">
+            <span class="feature-dot"></span>
+            Zero Clock Delay
+          </div>
+          <div class="feature-item">
+            <span class="feature-dot"></span>
+            Auto Team Color Matching
+          </div>
+        </footer>
+
+      </section>
+      
+      <!-- MODE 2: VERCEL CLOUD MODE -->
+      <section class="diagram-section" id="vercel-diagram">
+        
+        <!-- Column 1: Vercel Web Controller -->
+        <div class="node-col">
+          <span class="node-badge badge-vercel">VERCEL OPERATOR</span>
+          <div class="mockup-frame tablet-frame" style="border-color: #2b1f3c;">
+            <div class="tablet-screen" style="background: #090610; border-color: #2b1f4c;">
+              <div class="screen-header" style="border-color: #201332; color: var(--purple);">
+                <span>● VERCEL HOST</span>
+                <span style="color: #4ade80;">☁️ ONLINE</span>
+              </div>
+              <div style="text-align: center;">
+                <span style="font-size: 6px; color: #a855f7; letter-spacing: 0.5px; text-transform: uppercase;">user: admin@hoopculture.ca</span>
+                <div class="screen-clock" style="color: #fff; text-shadow: 0 0 10px rgba(168, 85, 247, 0.4);">12:34</div>
+                <span style="font-size: 8px; color: #a855f7; font-weight: bold; text-transform: uppercase;">Q4 — PERIOD 2</span>
+              </div>
+              <div>
+                <div class="screen-scores">
+                  <div class="screen-btn" style="background: var(--purple);">HOME +</div>
+                  <div class="screen-btn guest" style="background: var(--blue);">GUEST -</div>
+                </div>
+                <div class="screen-footer-btn" style="background: #1c0e2a; color: #c084fc;">🔥 FIREBASE SYNCED</div>
+              </div>
+            </div>
+          </div>
+          <h3 class="node-title">Vercel Controller</h3>
+          <p class="node-subtitle">VERCEL.APP — STATELESS EDGE</p>
+        </div>
+
+        <!-- Connector 1 -->
+        <div class="connector-col">
+          <span class="connector-label-top" style="color: var(--purple);">WRITES STATE</span>
+          <div class="connector-arrow">
+            <svg class="connector-arrow-svg cloud-purple" viewBox="0 0 24 24">
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <polyline points="14 6 22 12 14 18"></polyline>
+            </svg>
+          </div>
+          <span class="connector-label-bottom" style="color: var(--purple);">RTDB PUSH</span>
+        </div>
+
+        <!-- Column 2: Firebase Realtime Database -->
+        <div class="node-col">
+          <span class="node-badge" style="background:rgba(255,160,0,0.1);color:#ffb300;border:1px solid rgba(255,160,0,0.25);">🔥 FIREBASE RTDB</span>
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="mockup-frame laptop-frame" style="width: 240px; height: 150px; padding: 12px 16px; border-color: #2a1e00;">
+              <div class="laptop-screen" style="background: #0d0900; border-color: #2a1a00; padding: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a1a00; padding-bottom: 4px; margin-bottom: 4px;">
+                  <span style="color: #ffb300; font-size: 8px; font-weight: bold; letter-spacing: 0.5px;">🔥 FIREBASE CLOUD</span>
+                  <span style="color: #22c55e; font-size: 7px; animation: pulse 1.5s infinite;">● LIVE SYNC</span>
+                </div>
+                <div style="flex: 1; font-family: monospace; font-size: 7px; color: #94a3b8; line-height: 1.35;">
+                  <span style="color: #ffb300;">states/default/</span><br>
+                  <span class="log-white">homeScore: 24 | awayScore: 17</span><br>
+                  <span style="color: #a855f7;">gameSeconds: 495 | Q: 2</span><br>
+                  <span class="log-orange;">shotSeconds: 14 | running: true</span><br>
+                  <span class="log-dim">&gt; Real-time push to subscribers...</span>
+                </div>
+              </div>
+            </div>
+            <div style="width: 270px; height: 12px; background: #1a1000; border-radius: 0 0 6px 6px; box-shadow: 0 8px 16px rgba(0,0,0,0.6); margin-bottom: 1rem;"></div>
+          </div>
+          <h3 class="node-title">Firebase Database</h3>
+          <p class="node-subtitle">GOOGLE CLOUD — REALTIME SYNC</p>
+        </div>
+
+        <!-- Connector 2 -->
+        <div class="connector-col">
+          <span class="connector-label-top" style="color: #ffb300;">LIVE STREAM</span>
+          <div class="connector-arrow">
+            <svg class="connector-arrow-svg" viewBox="0 0 24 24" style="stroke: #ffb300; filter: drop-shadow(0 0 6px rgba(255,160,0,0.6));">
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <polyline points="14 6 22 12 14 18"></polyline>
+            </svg>
+          </div>
+          <span class="connector-label-bottom" style="color: #ffb300;">RTDB SUBSCRIBE</span>
+        </div>
+
+        <!-- Column 3: Remote OBS Display —Firebase powered -->
+        <div class="node-col">
+          <span class="node-badge badge-vercel">VERCEL OVERLAY</span>
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="mockup-frame tv-frame" style="border-color: #2b1f3c;">
+              <div class="tv-screen" style="background: #090610; border-color: #2b1f4c;">
+                <div class="tv-overlay-title" style="color: var(--purple);">🔴 FIREBASE LIVE (?user=...)</div>
+                <div class="tv-overlay-content" style="background: #100820; border-color: #2b1f4c;">
+                  <div class="tv-team">
+                    <span class="tv-team-name">BEARS</span>
+                    <span class="tv-team-score red" style="color: #a855f7;">24</span>
+                  </div>
+                  <div class="tv-clock" style="color: #fff; text-shadow: 0 0 8px rgba(168,85,247,0.5);">08:15</div>
+                  <div class="tv-team">
+                    <span class="tv-team-name">LIONS</span>
+                    <span class="tv-team-score blue" style="color: #c084fc;">17</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tv-base" style="background: #2b1f3c;"></div>
+          </div>
+          <h3 class="node-title">OBS Overlay / TV</h3>
+          <p class="node-subtitle">SYNCED VIA FIREBASE — GLOBAL</p>
+        </div>
+
+        <!-- Vercel Footer Benefits -->
+        <footer class="feature-bar" style="grid-column: span 5; margin-top: 3rem;">
+          <div class="feature-item">
+            <span class="feature-dot purple"></span>
+            Vercel Global CDN Edge
+          </div>
+          <div class="feature-item">
+            <span class="feature-dot" style="background:#ffb300;box-shadow:0 0 8px #ffb300;"></span>
+            Firebase Realtime Database Sync
+          </div>
+          <div class="feature-item">
+            <span class="feature-dot purple"></span>
+            No Server — Fully Serverless
+          </div>
+        </footer>
+
+      </section>
+      
+      <!-- MODE 3: ONRENDER CLOUD MODE -->
+      <section class="diagram-section" id="onrender-diagram">
+        
+        <!-- Column 1: OnRender Web Controller -->
+        <div class="node-col">
+          <span class="node-badge badge-onrender">ONRENDER FRONTEND</span>
+          <div class="mockup-frame tablet-frame" style="border-color: #1a2c28;">
+            <div class="tablet-screen" style="background: #050b0a; border-color: #1a2c38;">
+              <div class="screen-header" style="border-color: #0c1815; color: var(--teal);">
+                <span>● ONRENDER HOST</span>
+                <span style="color: var(--green);">● ONLINE</span>
+              </div>
+              <div style="text-align: center;">
+                <span style="font-size: 6px; color: var(--teal); letter-spacing: 0.5px; text-transform: uppercase;">user: admin@hoopculture.ca</span>
+                <div class="screen-clock" style="color: #fff; text-shadow: 0 0 10px rgba(20, 184, 166, 0.4);">12:34</div>
+                <span style="font-size: 8px; color: var(--teal); font-weight: bold; text-transform: uppercase;">Q4 - PERIOD 2</span>
+              </div>
+              <div>
+                <div class="screen-scores">
+                  <div class="screen-btn" style="background: var(--teal);">HOME +</div>
+                  <div class="screen-btn guest" style="background: var(--blue);">GUEST -</div>
+                </div>
+                <div class="screen-footer-btn" style="background: #0f1e1a; color: #5eead4;">LOGOUT</div>
+              </div>
+            </div>
+          </div>
+          <h3 class="node-title">OnRender Controller</h3>
+          <p class="node-subtitle">ONRENDER.COM (RELATIVE PATHS)</p>
+        </div>
+
+        <!-- Connector 1 -->
+        <div class="connector-col">
+          <span class="connector-label-top" style="color: var(--teal);">RELATIVE PATH API</span>
+          <div class="connector-arrow">
+            <svg class="connector-arrow-svg cloud-teal" viewBox="0 0 24 24">
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <polyline points="14 6 22 12 14 18"></polyline>
+            </svg>
+          </div>
+          <span class="connector-label-bottom" style="color: var(--teal);">INTERNAL REQUESTS</span>
+        </div>
+
+        <!-- Column 2: OnRender Server Brain (Self-contained) -->
+        <div class="node-col">
+          <span class="node-badge badge-onrender">ONRENDER SERVER BRAIN</span>
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="mockup-frame laptop-frame" style="width: 240px; height: 150px; padding: 12px 16px; border-color: #152c28;">
+              <div class="laptop-screen" style="background: #020617; border-color: #1e293b; padding: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 4px; margin-bottom: 4px;">
+                  <span style="color: var(--teal); font-size: 8px; font-weight: bold; letter-spacing: 0.5px;">☁️ ONRENDER FULLSTACK</span>
+                  <span style="color: #22c55e; font-size: 7px; animation: pulse 1.5s infinite;">● ONLINE</span>
+                </div>
+                <div style="flex: 1; font-family: monospace; font-size: 7px; color: #94a3b8; line-height: 1.35;">
+                  <span style="color: var(--teal);">$ node server.js</span><br>
+                  <span class="log-white">Serving files & API on port 443</span><br>
+                  <span style="color: var(--green);">[Static] Served /control page</span><br>
+                  <span class="log-orange">&gt; Local state update partitioned</span><br>
+                  <span class="log-dim">&gt; Streaming relative event channel...</span>
+                </div>
+              </div>
+            </div>
+            <div style="width: 270px; height: 12px; background: #132522; border-radius: 0 0 6px 6px; box-shadow: 0 8px 16px rgba(0,0,0,0.6); margin-bottom: 1rem;"></div>
+          </div>
+          <h3 class="node-title">OnRender Server</h3>
+          <p class="node-subtitle">ONRENDER.COM (SELF-CONTAINED)</p>
+        </div>
+
+        <!-- Connector 2 -->
+        <div class="connector-col">
+          <span class="connector-label-top" style="color: var(--teal);">RELATIVE FEED</span>
+          <div class="connector-arrow">
+            <svg class="connector-arrow-svg cloud-teal" viewBox="0 0 24 24">
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <polyline points="14 6 22 12 14 18"></polyline>
+            </svg>
+          </div>
+          <span class="connector-label-bottom" style="color: var(--teal);">RELATIVE SSE STREAM</span>
+        </div>
+
+        <!-- Column 3: OBS Display directly from OnRender -->
+        <div class="node-col">
+          <span class="node-badge badge-onrender">ONRENDER OVERLAY</span>
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="mockup-frame tv-frame" style="border-color: #1a2c28;">
+              <div class="tv-screen" style="background: #050b09; border-color: #182c23;">
+                <div class="tv-overlay-title" style="color: var(--teal);">🔴 ONRENDER FEED (?user=...)</div>
+                <div class="tv-overlay-content" style="background: #0a1814; border-color: #1a3c30;">
+                  <div class="tv-team">
+                    <span class="tv-team-name">BEARS</span>
+                    <span class="tv-team-score red" style="color: var(--orange);">24</span>
+                  </div>
+                  <div class="tv-clock" style="color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.4);">08:15</div>
+                  <div class="tv-team">
+                    <span class="tv-team-name">LIONS</span>
+                    <span class="tv-team-score blue" style="color: var(--teal);">17</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tv-base" style="background: #142823;"></div>
+          </div>
+          <h3 class="node-title">OBS Overlay / TV</h3>
+          <p class="node-subtitle">DIRECT ONRENDER STREAM</p>
+        </div>
+
+        <!-- OnRender Footer Benefits -->
+        <footer class="feature-bar" style="grid-column: span 5; margin-top: 3rem;">
+          <div class="feature-item">
+            <span class="feature-dot teal"></span>
+            Single Cloud Provider
+          </div>
+          <div class="feature-item">
+            <span class="feature-dot teal"></span>
+            Self-Contained Deployment
+          </div>
+          <div class="feature-item">
+            <span class="feature-dot teal"></span>
+            Zero Cross-Origin Dependencies
+          </div>
+        </footer>
+
+      </section>
+      
+    </div>
+
+  </div>
+
+  <script>
+    function switchMode(mode) {
+      const btnOffline = document.getElementById('btn-offline');
+      const btnVercel = document.getElementById('btn-vercel');
+      const btnOnrender = document.getElementById('btn-onrender');
+      
+      const secOffline = document.getElementById('offline-diagram');
+      const secVercel = document.getElementById('vercel-diagram');
+      const secOnrender = document.getElementById('onrender-diagram');
+
+      const buttons = [btnOffline, btnVercel, btnOnrender];
+      const sections = [secOffline, secVercel, secOnrender];
+
+      // Deactivate all
+      buttons.forEach(btn => btn.classList.remove('active'));
+      sections.forEach(sec => sec.classList.remove('fade-in'));
+
+      // Find selected button & section
+      let targetBtn, targetSec;
+      if (mode === 'offline') {
+        targetBtn = btnOffline;
+        targetSec = secOffline;
+      } else if (mode === 'vercel') {
+        targetBtn = btnVercel;
+        targetSec = secVercel;
+      } else if (mode === 'onrender') {
+        targetBtn = btnOnrender;
+        targetSec = secOnrender;
+      }
+      
+      targetBtn.classList.add('active');
+
+      // Swap section active states with fade out delay
+      setTimeout(() => {
+        sections.forEach(sec => {
+          if (sec !== targetSec) {
+            sec.classList.remove('active');
+          }
+        });
+        targetSec.classList.add('active');
+        setTimeout(() => {
+          targetSec.classList.add('fade-in');
+        }, 50);
+      }, 300);
+    }
+  </script>
+
+</body>
+</html>

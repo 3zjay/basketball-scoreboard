@@ -1,0 +1,6 @@
+{
+  "name": "Hoop Culture Scoreboard",
+  "description": "Live basketball scoreboard, venue system, and stream overlay with real-time sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

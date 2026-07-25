@@ -1,0 +1,1786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    // Global Storage Shield — prevents WebKit SecurityError exceptions on blocked localStorage/sessionStorage
+    (function() {
+      try {
+        localStorage.setItem('__test_ls__', '1');
+        localStorage.removeItem('__test_ls__');
+      } catch (e) {
+        console.warn("localStorage is blocked. Injecting in-memory fallback.");
+        var store = {};
+        Object.defineProperty(window, 'localStorage', {
+          value: {
+            getItem: function(k) { return store[k] === undefined ? null : store[k]; },
+            setItem: function(k, v) { store[k] = String(v); },
+            removeItem: function(k) { delete store[k]; },
+            clear: function() { store = {}; },
+            key: function(i) { return Object.keys(store)[i] || null; },
+            get length() { return Object.keys(store).length; }
+          },
+          configurable: true, writable: true
+        });
+      }
+      try {
+        sessionStorage.setItem('__test_ss__', '1');
+        sessionStorage.removeItem('__test_ss__');
+      } catch (e) {
+        console.warn("sessionStorage is blocked. Injecting in-memory fallback.");
+        var store = {};
+        Object.defineProperty(window, 'sessionStorage', {
+          value: {
+            getItem: function(k) { return store[k] === undefined ? null : store[k]; },
+            setItem: function(k, v) { store[k] = String(v); },
+            removeItem: function(k) { delete store[k]; },
+            clear: function() { store = {}; },
+            key: function(i) { return Object.keys(store)[i] || null; },
+            get length() { return Object.keys(store).length; }
+          },
+          configurable: true, writable: true
+        });
+      }
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hoop Culture Scoreboard — Live Stream & Venue System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #080605;
+      --bg2: #100d0a;
+      --bg3: #1a1410;
+      --bg4: #241c15;
+      --orange: #e8430a;
+      --orange2: #ff6b1a;
+      --gold: #c8841a;
+      --ember: #ff8c00;
+      --fire1: #ff4500;
+      --fire2: #ff6a00;
+      --fire3: #ffa500;
+      --white: #f2ede8;
+      --grey: #a09080;
+      --mid: #604838;
+      --dim: #3a2820;
+      --green: #16c784;
+      --red: #e53935;
+      --blue: #2d5fa6;
+      --border: #2a1e14;
+      --border2: #3a2818;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'Barlow', sans-serif;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient background glows matching website design */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(232, 67, 10, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* NAVIGATION HEADER */
+    nav {
+      background: linear-gradient(180deg, #0d0906 0%, #080605 100%);
+      border-bottom: 2px solid transparent;
+      border-image: linear-gradient(90deg, transparent, var(--fire1), var(--fire3), var(--fire1), transparent) 1;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 2px 20px rgba(232,67,10,0.15);
+      backdrop-filter: blur(10px);
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 90px;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+    }
+
+    .nav-logo img {
+      height: 52px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 0 10px rgba(255,100,0,0.6));
+      transition: all 0.2s ease;
+    }
+
+    .nav-logo:hover img {
+      filter: drop-shadow(0 0 12px rgba(255,150,0,0.8));
+      transform: scale(1.05);
+    }
+
+    .nav-links {
+      display: flex;
+      list-style: none;
+      gap: 2rem;
+    }
+
+    .nav-links a {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--grey);
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--white);
+      text-shadow: 0 0 8px rgba(255,106,0,0.4);
+    }
+
+    /* HERO SECTION */
+    .hero {
+      position: relative;
+      padding: 6rem 1.5rem 4rem 1.5rem;
+      text-align: center;
+      z-index: 10;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .hero-subtitle {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      color: var(--orange2);
+      margin-bottom: 1rem;
+      text-shadow: 0 0 8px rgba(255, 106, 0, 0.4);
+    }
+
+    .hero-title {
+      font-family: 'Anton', sans-serif;
+      font-size: 4rem;
+      line-height: 1.1;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--white);
+      margin-bottom: 1.5rem;
+      text-shadow: 0 4px 15px rgba(0,0,0,0.8);
+    }
+
+    .hero-title em {
+      color: var(--orange);
+      font-style: normal;
+    }
+
+    .hero-desc {
+      font-size: 1.2rem;
+      color: var(--grey);
+      max-width: 700px;
+      margin: 0 auto 2.5rem auto;
+      line-height: 1.6;
+    }
+
+    .hero-actions {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+
+    .btn {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 12px 28px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn.primary {
+      background: linear-gradient(90deg, var(--fire1), var(--fire2), var(--ember), var(--fire2), var(--fire1));
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(232,67,10,0.3);
+    }
+
+    .btn.primary:hover {
+      background: var(--orange2);
+      box-shadow: 0 6px 20px rgba(232,67,10,0.5);
+      transform: translateY(-2px);
+    }
+
+    .btn.secondary {
+      background: transparent;
+      color: var(--white);
+      border: 1px solid var(--border2);
+    }
+
+    .btn.secondary:hover {
+      border-color: var(--grey);
+      background: rgba(255,255,255,0.02);
+      transform: translateY(-2px);
+    }
+
+    /* SECTION TITLE */
+    .section-header {
+      margin: 6rem 0 3rem 0;
+      text-align: center;
+    }
+
+    .section-subtitle {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--orange2);
+      margin-bottom: 0.5rem;
+    }
+
+    .section-title {
+      font-family: 'Anton', sans-serif;
+      font-size: 2.5rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* ECOSYSTEM DIAGRAM SECTION */
+    .diagram-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    .diagram-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3rem 2rem;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      display: grid;
+      grid-template-columns: 1fr 100px 1.1fr 100px 1fr;
+      align-items: center;
+      position: relative;
+    }
+
+    @media (max-width: 960px) {
+      .diagram-card {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+        padding: 3rem 1.5rem;
+      }
+      .connector-arrow {
+        transform: rotate(90deg);
+        margin: 1rem auto;
+      }
+    }
+
+    .node-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .node-badge {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 1.5rem;
+      display: inline-block;
+    }
+
+    .badge-tablet { background: rgba(22, 199, 132, 0.1); color: var(--green); border: 1px solid rgba(22, 199, 132, 0.2); }
+    .badge-laptop { background: rgba(255, 106, 0, 0.1); color: var(--orange2); border: 1px solid rgba(255, 106, 0, 0.2); }
+    .badge-tv { background: rgba(229, 57, 53, 0.1); color: var(--red); border: 1px solid rgba(229, 57, 53, 0.2); }
+
+    .mockup-frame {
+      width: 100%;
+      background: #151515;
+      border: 6px solid #222;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    .tablet-frame {
+      width: 180px;
+      height: 240px;
+      border-radius: 18px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    .tablet-screen {
+      flex: 1;
+      background: #0f172a;
+      border-radius: 4px;
+      border: 1px solid #333;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-family: 'Barlow Condensed', sans-serif;
+    }
+    .screen-header {
+      font-size: 9px;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 3px;
+    }
+    .screen-clock {
+      font-family: 'Anton', sans-serif;
+      font-size: 26px;
+      color: var(--orange2);
+      margin: 12px 0;
+      text-shadow: 0 0 10px rgba(255, 106, 0, 0.3);
+    }
+    .screen-scores {
+      display: flex;
+      justify-content: space-between;
+      gap: 5px;
+    }
+    .screen-btn {
+      flex: 1;
+      background: var(--orange);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 4px 0;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+    .screen-btn.guest { background: var(--blue); }
+    .screen-footer-btn {
+      background: #1e293b;
+      color: #94a3b8;
+      font-size: 8px;
+      padding: 3px 0;
+      border-radius: 2px;
+      margin-top: 6px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .laptop-frame {
+      width: 240px;
+      height: 150px;
+      border-radius: 10px 10px 0 0;
+      border-width: 8px 8px 0 8px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+    }
+    .laptop-base {
+      width: 270px;
+      height: 10px;
+      background: #333;
+      border-radius: 0 0 10px 10px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+      margin-bottom: 1rem;
+    }
+    .laptop-screen {
+      flex: 1;
+      background: #05070a;
+      border: 1px solid #111;
+      border-radius: 2px;
+      padding: 8px;
+      text-align: left;
+      font-family: monospace;
+      font-size: 8px;
+      line-height: 1.4;
+    }
+    .log-green { color: var(--green); font-weight: bold; }
+    .log-white { color: #fff; }
+    .log-orange { color: var(--orange2); }
+    .log-dim { color: #475569; }
+
+    .tv-frame {
+      width: 230px;
+      height: 140px;
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .tv-base {
+      width: 60px;
+      height: 15px;
+      background: #222;
+      margin: 0 auto 1rem auto;
+      clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%);
+    }
+    .tv-screen {
+      flex: 1;
+      background: #020617;
+      border-radius: 4px;
+      border: 1px solid #333;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+    }
+    .tv-overlay-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 9px;
+      font-weight: 800;
+      color: #64748b;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .tv-overlay-content {
+      background: #0f172a;
+      border-radius: 4px;
+      border: 1px solid #1e293b;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      font-family: 'Barlow Condensed', sans-serif;
+    }
+    .tv-team {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .tv-team-name { font-size: 9px; font-weight: 800; color: #94a3b8; }
+    .tv-team-score { font-family: 'Anton', sans-serif; font-size: 20px; color: #fff; }
+    .tv-team-score.red { color: #ef4444; }
+    .tv-team-score.blue { color: #3b82f6; }
+    .tv-clock {
+      font-family: 'Anton', sans-serif;
+      font-size: 16px;
+      color: var(--orange2);
+      text-shadow: 0 0 8px rgba(255, 106, 0, 0.4);
+    }
+
+    .node-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      color: var(--white);
+      margin-top: 1rem;
+      letter-spacing: 0.5px;
+    }
+    .node-subtitle {
+      font-size: 0.85rem;
+      color: var(--grey);
+      font-weight: 500;
+      margin-top: 2px;
+      letter-spacing: 0.5px;
+    }
+
+    .connector-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+    .connector-label-top {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--orange2);
+      margin-bottom: 6px;
+    }
+    .connector-label-bottom {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--grey);
+      margin-top: 6px;
+    }
+    .connector-arrow {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .connector-arrow-svg {
+      width: 48px;
+      height: 24px;
+      stroke: var(--orange);
+      stroke-width: 4;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 6px rgba(232, 67, 10, 0.5));
+      animation: slideArrow 2s infinite ease-in-out;
+    }
+
+    @keyframes slideArrow {
+      0%, 100% { transform: translateX(-4px); opacity: 0.6; }
+      50% { transform: translateX(4px); opacity: 1; }
+    }
+
+    /* SCREENS ROUTE LINK DASHBOARD */
+    .screens-section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .screens-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .screen-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .screen-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: var(--border2);
+      border-radius: 12px 12px 0 0;
+      transition: background 0.3s;
+    }
+
+    .screen-card:hover::before {
+      background: linear-gradient(90deg, var(--fire1), var(--fire3));
+    }
+
+    .screen-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--border2);
+      box-shadow: 0 12px 30px rgba(232,67,10,0.1);
+    }
+
+    .screen-icon {
+      font-size: 2.2rem;
+      margin-bottom: 1rem;
+    }
+
+    .screen-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--white);
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.5px;
+    }
+
+    .screen-desc {
+      font-size: 0.9rem;
+      color: var(--grey);
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+      flex-grow: 1;
+    }
+
+    .screen-link {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--orange2);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.2s;
+    }
+
+    .screen-card:hover .screen-link {
+      color: var(--white);
+    }
+
+    /* CORE FEATURES LIST SECTION */
+    .features-section {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 6rem 1.5rem;
+      margin-top: 6rem;
+    }
+
+    .features-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 3rem;
+    }
+
+    .feature-box {
+      text-align: left;
+    }
+
+    .feature-box-icon {
+      width: 50px;
+      height: 50px;
+      background: rgba(232, 67, 10, 0.08);
+      border: 1px solid rgba(232, 67, 10, 0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .feature-box-svg {
+      width: 24px;
+      height: 24px;
+      stroke: var(--orange2);
+      stroke-width: 2;
+      fill: none;
+    }
+
+    .feature-box-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--white);
+      margin-bottom: 0.75rem;
+      letter-spacing: 0.5px;
+    }
+
+    .feature-box-desc {
+      font-size: 0.95rem;
+      color: var(--grey);
+      line-height: 1.6;
+    }
+
+    /* FOOTER */
+    footer {
+      background: #060402;
+      border-top: 1px solid var(--border);
+      padding: 4rem 1.5rem 3rem 1.5rem;
+      text-align: center;
+    }
+
+    .footer-logo {
+      height: 60px;
+      width: auto;
+      margin-bottom: 1.5rem;
+      filter: drop-shadow(0 0 8px rgba(255,100,0,0.4));
+    }
+
+    .footer-text {
+      font-size: 0.85rem;
+      color: var(--grey);
+      margin-bottom: 0.5rem;
+    }
+
+    .footer-subtext {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--mid);
+    }
+
+    /* DOCUMENTATION MODAL OVERLAY */
+    .doc-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      padding: 20px;
+    }
+
+    .doc-modal-overlay.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .doc-modal-card {
+      background: #080605;
+      border: 1px solid var(--border2);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 40px rgba(232, 67, 10, 0.05);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 900px;
+      height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: scale(0.95);
+      transition: transform 0.3s ease;
+    }
+
+    .doc-modal-overlay.active .doc-modal-card {
+      transform: scale(1);
+    }
+
+    .doc-modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #0d0906;
+    }
+
+    .doc-modal-tabs {
+      display: flex;
+      gap: 10px;
+    }
+
+    .doc-tab-btn {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--grey);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .doc-tab-btn:hover {
+      border-color: var(--grey);
+      color: var(--white);
+    }
+
+    .doc-tab-btn.active {
+      background: linear-gradient(135deg, var(--fire1), var(--fire2));
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(232, 67, 10, 0.3);
+    }
+
+    .doc-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--grey);
+      font-size: 28px;
+      cursor: pointer;
+      line-height: 1;
+      transition: color 0.2s, transform 0.2s;
+    }
+
+    .doc-close-btn:hover {
+      color: var(--fire1);
+      transform: scale(1.1);
+    }
+
+    .doc-modal-body {
+      padding: 30px 40px;
+      overflow-y: auto;
+      flex: 1;
+      font-family: 'Barlow', sans-serif;
+      line-height: 1.7;
+      color: #dfd5cb;
+      font-size: 15px;
+    }
+
+    /* CUSTOM SCROLLBAR FOR MODAL */
+    .doc-modal-body::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .doc-modal-body::-webkit-scrollbar-track {
+      background: #080605;
+    }
+
+    .doc-modal-body::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 4px;
+    }
+
+    .doc-modal-body::-webkit-scrollbar-thumb:hover {
+      background: var(--mid);
+    }
+
+    /* DOCUMENTATION CONTENT STYLING */
+    .doc-view {
+      display: none;
+    }
+
+    .doc-view.active {
+      display: block;
+      animation: docFadeIn 0.3s ease forwards;
+    }
+
+    @keyframes docFadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .doc-view h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--white);
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    .doc-view h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--orange2);
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .doc-view h3 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--white);
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .doc-view p {
+      margin-bottom: 1.2rem;
+    }
+
+    .doc-view ul, .doc-view ol {
+      margin-bottom: 1.5rem;
+      padding-left: 20px;
+    }
+
+    .doc-view li {
+      margin-bottom: 0.6rem;
+    }
+
+    .doc-view code {
+      font-family: monospace;
+      background: rgba(255,255,255,0.06);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: var(--orange2);
+    }
+
+    .doc-view pre {
+      background: #0d0906;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px 20px;
+      overflow-x: auto;
+      margin-bottom: 1.5rem;
+    }
+
+    .doc-view pre code {
+      background: transparent;
+      padding: 0;
+      color: #dfd5cb;
+    }
+
+    /* Alerts */
+    .doc-alert {
+      background: rgba(232, 67, 10, 0.05);
+      border-left: 4px solid var(--orange);
+      padding: 15px 20px;
+      border-radius: 4px;
+      margin-bottom: 1.5rem;
+    }
+
+    .doc-alert-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 12px;
+      margin-bottom: 4px;
+      color: var(--orange2);
+    }
+
+    /* Tables */
+    .doc-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.5rem;
+      font-size: 14px;
+    }
+
+    .doc-table th, .doc-table td {
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    .doc-table th {
+      background: #0d0906;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--white);
+    }
+
+    .doc-table tr:nth-child(even) {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .doc-table tr:hover {
+      background: rgba(232, 67, 10, 0.03);
+    }
+
+    .kbd-btn {
+      background: #1c1815;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      box-shadow: 0 2px 0 rgba(0,0,0,0.5);
+      color: var(--white);
+      display: inline-block;
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      font-weight: bold;
+      line-height: 1.4;
+      padding: 2px 6px;
+      text-shadow: 0 1px 0 rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating Navigation bar -->
+  <nav>
+    <div class="nav-container">
+      <a href="/" class="nav-logo">
+        <img src="/hoop-culture-logo.png" alt="Hoop Culture Logo">
+      </a>
+      <ul class="nav-links">
+        <li><a href="#ecosystem">Ecosystem</a></li>
+        <li><a href="#screens">Screens</a></li>
+        <li><a href="#features">Features</a></li>
+      </ul>
+      <a href="/control" class="btn primary">Launch Panel</a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="hero">
+    <div class="hero-subtitle">Court-Side Live Production</div>
+    <h1 class="hero-title">Hoop Culture <em>Scoreboard</em> System</h1>
+    <p class="hero-desc">
+      A professional broadcast scoreboard powering stadium venues, OBS overlays, and live stream graphics — with <strong style="color:var(--white);">three deployment modes</strong>: fully offline local, OnRender full-stack cloud, and Vercel + Firebase serverless cloud.
+    </p>
+    <div class="hero-actions">
+      <a href="/control" class="btn primary">Start Operator Console</a>
+      <a href="#screens" class="btn secondary">View Overlay Screens</a>
+    </div>
+  </header>
+
+  <!-- Ecosystem / How it works Section -->
+  <section id="ecosystem" class="diagram-container">
+    <div class="section-header">
+      <div class="section-subtitle">Triple-Mode Architecture</div>
+      <h2 class="section-title">Ecosystem Workflow</h2>
+    </div>
+
+    <!-- Mode Tabs -->
+    <div style="display:flex;justify-content:center;margin-bottom:2rem;">
+      <div style="display:flex;background:var(--bg2);border:1px solid var(--border);border-radius:50px;padding:5px;gap:6px;">
+        <button id="lnd-btn-local" onclick="lndSwitch('local')" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:8px 20px;border:none;border-radius:40px;cursor:pointer;background:linear-gradient(135deg,var(--fire1),var(--fire2));color:#fff;box-shadow:0 4px 15px rgba(232,67,10,0.4);" id="lnd-btn-local">
+          🔌 Offline Local
+        </button>
+        <button id="lnd-btn-vercel" onclick="lndSwitch('vercel')" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:8px 20px;border:none;border-radius:40px;cursor:pointer;background:transparent;color:var(--grey);">
+          ⚡ Vercel + Firebase
+        </button>
+        <button id="lnd-btn-onrender" onclick="lndSwitch('onrender')" style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:8px 20px;border:none;border-radius:40px;cursor:pointer;background:transparent;color:var(--grey);">
+          ☁️ OnRender Cloud
+        </button>
+      </div>
+    </div>
+
+    <!-- LOCAL diagram -->
+    <div class="diagram-card" id="lnd-local" style="display:grid;">
+      <div class="node-col">
+        <span class="node-badge badge-tablet">LOCAL TABLET</span>
+        <div class="mockup-frame tablet-frame">
+          <div class="tablet-screen">
+            <div class="screen-header"><span>● CONTROLLER</span><span>100%</span></div>
+            <div style="text-align:center;">
+              <span style="font-size:7px;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;">GAME CLOCK</span>
+              <div class="screen-clock">12:34</div>
+              <span style="font-size:8px;color:#94a3b8;font-weight:bold;text-transform:uppercase;">Q4 - PERIOD 2</span>
+            </div>
+            <div>
+              <div class="screen-scores">
+                <div class="screen-btn">HOME +</div>
+                <div class="screen-btn guest">GUEST -</div>
+              </div>
+              <div class="screen-footer-btn">TIMEOUT</div>
+            </div>
+          </div>
+        </div>
+        <h3 class="node-title">Scoreboard Controller</h3>
+        <p class="node-subtitle">TABLET / PHONE ON LOCAL WIFI</p>
+      </div>
+      <div class="connector-col">
+        <span class="connector-label-top">DATA SIGNAL</span>
+        <div class="connector-arrow">
+          <svg class="connector-arrow-svg" viewBox="0 0 24 24"><line x1="2" y1="12" x2="22" y2="12"></line><polyline points="14 6 22 12 14 18"></polyline></svg>
+        </div>
+        <span class="connector-label-bottom">COMMANDS</span>
+      </div>
+      <div class="node-col">
+        <span class="node-badge badge-laptop">LOCAL SERVER</span>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="mockup-frame laptop-frame">
+            <div class="laptop-screen">
+              <span class="log-green">&gt; LOCAL SERVER RUNNING</span><br>
+              <span class="log-white">IP ADDRESS: 192.168.1.10</span><br>
+              <span class="log-orange">STATUS: CONNECTED</span><br>
+              <span class="log-green">SCOREBOARD ACTIVE</span><br>
+              <span class="log-dim">&gt; waiting for commands...</span>
+            </div>
+          </div>
+          <div class="laptop-base"></div>
+        </div>
+        <h3 class="node-title">Local Laptop Server</h3>
+        <p class="node-subtitle">IP ADDRESS: 192.168.1.10</p>
+      </div>
+      <div class="connector-col">
+        <span class="connector-label-top">DATA FEED</span>
+        <div class="connector-arrow">
+          <svg class="connector-arrow-svg" viewBox="0 0 24 24"><line x1="2" y1="12" x2="22" y2="12"></line><polyline points="14 6 22 12 14 18"></polyline></svg>
+        </div>
+        <span class="connector-label-bottom">UPDATES</span>
+      </div>
+      <div class="node-col">
+        <span class="node-badge badge-tv">TV / BROADCAST</span>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="mockup-frame tv-frame">
+            <div class="tv-screen">
+              <div class="tv-overlay-title">🔴 LIVE SCOREBOARD FEED</div>
+              <div class="tv-overlay-content">
+                <div class="tv-team"><span class="tv-team-name">BEARS</span><span class="tv-team-score red">24</span></div>
+                <div class="tv-clock">08:15</div>
+                <div class="tv-team"><span class="tv-team-name">LIONS</span><span class="tv-team-score blue">17</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="tv-base"></div>
+        </div>
+        <h3 class="node-title">Live Score Overlay</h3>
+        <p class="node-subtitle">HDMI TV &amp; OBS LIVE STREAM</p>
+      </div>
+    </div>
+
+    <!-- VERCEL diagram -->
+    <div class="diagram-card" id="lnd-vercel" style="display:none;border-color:#2b1f3c;">
+      <div class="node-col">
+        <span class="node-badge" style="background:rgba(168,85,247,0.1);color:#a855f7;border:1px solid rgba(168,85,247,0.2);">VERCEL OPERATOR</span>
+        <div class="mockup-frame tablet-frame" style="border-color:#2b1f3c;">
+          <div class="tablet-screen" style="background:#090610;border-color:#2b1f4c;">
+            <div class="screen-header" style="border-color:#201332;color:#a855f7;"><span>● VERCEL HOST</span><span style="color:#4ade80;">☁️ ONLINE</span></div>
+            <div style="text-align:center;">
+              <span style="font-size:6px;color:#a855f7;letter-spacing:0.5px;text-transform:uppercase;">user: admin@hoopculture.ca</span>
+              <div class="screen-clock" style="color:#fff;text-shadow:0 0 10px rgba(168,85,247,0.4);">12:34</div>
+              <span style="font-size:8px;color:#a855f7;font-weight:bold;text-transform:uppercase;">Q4 - PERIOD 2</span>
+            </div>
+            <div>
+              <div class="screen-scores">
+                <div class="screen-btn" style="background:#a855f7;">HOME +</div>
+                <div class="screen-btn guest">GUEST -</div>
+              </div>
+              <div class="screen-footer-btn" style="background:#1c0e2a;color:#c084fc;">🔥 FIREBASE SYNCED</div>
+            </div>
+          </div>
+        </div>
+        <h3 class="node-title">Vercel Controller</h3>
+        <p class="node-subtitle">STATELESS EDGE — NO SERVER</p>
+      </div>
+      <div class="connector-col">
+        <span class="connector-label-top" style="color:#a855f7;">WRITES STATE</span>
+        <div class="connector-arrow">
+          <svg class="connector-arrow-svg" viewBox="0 0 24 24" style="stroke:#a855f7;filter:drop-shadow(0 0 6px rgba(168,85,247,0.5));"><line x1="2" y1="12" x2="22" y2="12"></line><polyline points="14 6 22 12 14 18"></polyline></svg>
+        </div>
+        <span class="connector-label-bottom" style="color:#a855f7;">RTDB PUSH</span>
+      </div>
+      <div class="node-col">
+        <span class="node-badge" style="background:rgba(255,160,0,0.1);color:#ffb300;border:1px solid rgba(255,160,0,0.25);">🔥 FIREBASE RTDB</span>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="mockup-frame laptop-frame" style="border-color:#2a1e00;">
+            <div class="laptop-screen" style="background:#0d0900;border-color:#2a1a00;">
+              <span style="color:#ffb300;">states/default/</span><br>
+              <span class="log-white">homeScore: 24 | awayScore: 17</span><br>
+              <span style="color:#a855f7;">gameSeconds: 495 | Q: 2</span><br>
+              <span class="log-orange">shotSeconds: 14 | running: true</span><br>
+              <span class="log-dim">&gt; Real-time push to all subscribers...</span>
+            </div>
+          </div>
+          <div class="laptop-base" style="background:#2a1e00;"></div>
+        </div>
+        <h3 class="node-title">Firebase Database</h3>
+        <p class="node-subtitle">GOOGLE CLOUD — REALTIME SYNC</p>
+      </div>
+      <div class="connector-col">
+        <span class="connector-label-top" style="color:#ffb300;">LIVE STREAM</span>
+        <div class="connector-arrow">
+          <svg class="connector-arrow-svg" viewBox="0 0 24 24" style="stroke:#ffb300;filter:drop-shadow(0 0 6px rgba(255,160,0,0.6));"><line x1="2" y1="12" x2="22" y2="12"></line><polyline points="14 6 22 12 14 18"></polyline></svg>
+        </div>
+        <span class="connector-label-bottom" style="color:#ffb300;">RTDB SUBSCRIBE</span>
+      </div>
+      <div class="node-col">
+        <span class="node-badge" style="background:rgba(168,85,247,0.1);color:#a855f7;border:1px solid rgba(168,85,247,0.2);">VERCEL OVERLAY</span>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="mockup-frame tv-frame" style="border-color:#2b1f3c;">
+            <div class="tv-screen" style="background:#090610;border-color:#2b1f4c;">
+              <div class="tv-overlay-title" style="color:#a855f7;">🔴 FIREBASE LIVE (?user=...)</div>
+              <div class="tv-overlay-content" style="background:#100820;border-color:#2b1f4c;">
+                <div class="tv-team"><span class="tv-team-name">BEARS</span><span class="tv-team-score" style="color:#a855f7;">24</span></div>
+                <div class="tv-clock" style="color:#fff;">08:15</div>
+                <div class="tv-team"><span class="tv-team-name">LIONS</span><span class="tv-team-score" style="color:#c084fc;">17</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="tv-base" style="background:#2b1f3c;"></div>
+        </div>
+        <h3 class="node-title">OBS Overlay / TV</h3>
+        <p class="node-subtitle">SYNCED VIA FIREBASE — GLOBAL</p>
+      </div>
+    </div>
+
+    <!-- ONRENDER diagram -->
+    <div class="diagram-card" id="lnd-onrender" style="display:none;border-color:#1a2c28;">
+      <div class="node-col">
+        <span class="node-badge" style="background:rgba(20,184,166,0.1);color:#14b8a6;border:1px solid rgba(20,184,166,0.2);">ONRENDER OPERATOR</span>
+        <div class="mockup-frame tablet-frame" style="border-color:#1a2c28;">
+          <div class="tablet-screen" style="background:#050b0a;border-color:#1a2c38;">
+            <div class="screen-header" style="border-color:#0c1815;color:#14b8a6;"><span>● ONRENDER HOST</span><span style="color:#22c55e;">● ONLINE</span></div>
+            <div style="text-align:center;">
+              <span style="font-size:6px;color:#14b8a6;letter-spacing:0.5px;text-transform:uppercase;">user: admin@hoopculture.ca</span>
+              <div class="screen-clock" style="color:#fff;text-shadow:0 0 10px rgba(20,184,166,0.4);">12:34</div>
+              <span style="font-size:8px;color:#14b8a6;font-weight:bold;text-transform:uppercase;">Q4 - PERIOD 2</span>
+            </div>
+            <div>
+              <div class="screen-scores">
+                <div class="screen-btn" style="background:#14b8a6;">HOME +</div>
+                <div class="screen-btn guest">GUEST -</div>
+              </div>
+              <div class="screen-footer-btn" style="background:#0f1e1a;color:#5eead4;">LOGOUT</div>
+            </div>
+          </div>
+        </div>
+        <h3 class="node-title">OnRender Controller</h3>
+        <p class="node-subtitle">ONRENDER.COM — FULL-STACK</p>
+      </div>
+      <div class="connector-col">
+        <span class="connector-label-top" style="color:#14b8a6;">RELATIVE PATH API</span>
+        <div class="connector-arrow">
+          <svg class="connector-arrow-svg" viewBox="0 0 24 24" style="stroke:#14b8a6;filter:drop-shadow(0 0 6px rgba(20,184,166,0.5));"><line x1="2" y1="12" x2="22" y2="12"></line><polyline points="14 6 22 12 14 18"></polyline></svg>
+        </div>
+        <span class="connector-label-bottom" style="color:#14b8a6;">INTERNAL REQUESTS</span>
+      </div>
+      <div class="node-col">
+        <span class="node-badge" style="background:rgba(20,184,166,0.1);color:#14b8a6;border:1px solid rgba(20,184,166,0.2);">ONRENDER SERVER</span>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="mockup-frame laptop-frame" style="border-color:#152c28;">
+            <div class="laptop-screen" style="background:#020617;border-color:#1e293b;">
+              <span style="color:#14b8a6;">$ node server.js</span><br>
+              <span class="log-white">Serving files &amp; API on port 443</span><br>
+              <span style="color:#22c55e;">[Static] Served /control page</span><br>
+              <span class="log-orange">&gt; Local state update partitioned</span><br>
+              <span class="log-dim">&gt; Streaming relative SSE channel...</span>
+            </div>
+          </div>
+          <div class="laptop-base" style="background:#132522;"></div>
+        </div>
+        <h3 class="node-title">OnRender Server</h3>
+        <p class="node-subtitle">SELF-CONTAINED — NODE.JS + SSE</p>
+      </div>
+      <div class="connector-col">
+        <span class="connector-label-top" style="color:#14b8a6;">RELATIVE FEED</span>
+        <div class="connector-arrow">
+          <svg class="connector-arrow-svg" viewBox="0 0 24 24" style="stroke:#14b8a6;filter:drop-shadow(0 0 6px rgba(20,184,166,0.5));"><line x1="2" y1="12" x2="22" y2="12"></line><polyline points="14 6 22 12 14 18"></polyline></svg>
+        </div>
+        <span class="connector-label-bottom" style="color:#14b8a6;">RELATIVE SSE STREAM</span>
+      </div>
+      <div class="node-col">
+        <span class="node-badge" style="background:rgba(20,184,166,0.1);color:#14b8a6;border:1px solid rgba(20,184,166,0.2);">ONRENDER OVERLAY</span>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="mockup-frame tv-frame" style="border-color:#1a2c28;">
+            <div class="tv-screen" style="background:#050b09;border-color:#182c23;">
+              <div class="tv-overlay-title" style="color:#14b8a6;">🔴 ONRENDER FEED (?user=...)</div>
+              <div class="tv-overlay-content" style="background:#0a1814;border-color:#1a3c30;">
+                <div class="tv-team"><span class="tv-team-name">BEARS</span><span class="tv-team-score" style="color:var(--orange);">24</span></div>
+                <div class="tv-clock" style="color:#fff;">08:15</div>
+                <div class="tv-team"><span class="tv-team-name">LIONS</span><span class="tv-team-score" style="color:#14b8a6;">17</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="tv-base" style="background:#142823;"></div>
+        </div>
+        <h3 class="node-title">OBS Overlay / TV</h3>
+        <p class="node-subtitle">DIRECT ONRENDER STREAM</p>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- AI Camera Sync Section (Beta Feature Showcase) -->
+  <section id="ai-sync-feature" class="diagram-container" style="border-top: 1px solid var(--border); padding-top: 5rem; margin-top: 3rem;">
+    <div class="section-header">
+      <div class="section-subtitle" style="color: var(--fire1); background: rgba(232, 67, 10, 0.1); border: 1px solid rgba(232, 67, 10, 0.25); padding: 4px 12px; border-radius: 20px; display: inline-block; font-size: 11px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;">Beta Feature</div>
+      <h2 class="section-title" style="margin-top: 1rem;">Mobile Browser OCR Scoreboard Sync</h2>
+      <p style="color: var(--grey); max-width: 600px; margin: 1rem auto 3rem auto; font-size: 14px; line-height: 1.6;">
+        Enhance your game day production by pointing a smartphone camera or webcam at a physical gymnasium scoreboard. Our live WebAssembly-based scanner performs OCR locally in the phone's browser, syncing scores and clocks instantly with overlays and displays without requiring local laptops or video streaming.
+      </p>
+      <div style="margin-top: -1.5rem; margin-bottom: 3rem; text-align: center;">
+        <a href="/camera" class="btn primary" style="padding: 10px 24px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; font-weight: bold; border-radius: 40px; display: inline-flex; align-items: center; gap: 8px; text-decoration: none;">
+          🚀 Launch Mobile Scanner
+        </a>
+      </div>
+    </div>
+
+    <!-- AI Ecosystem Diagram Image -->
+    <div style="text-align: center; max-width: 900px; margin: 0 auto; padding: 0 1.5rem;">
+      <img src="marketing-workflow-mobile-ocr.jpg" alt="Mobile Browser OCR Scoreboard Sync Workflow" style="width: 100%; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.01)'" onmouseout="this.style.transform='scale(1)'">
+    </div>
+  </section>
+
+  <!-- Screens Navigation Grid -->
+  <section id="screens" class="screens-section">
+    <div class="section-header">
+      <div class="section-subtitle">Interface Hub</div>
+      <h2 class="section-title">Ecosystem Screens</h2>
+    </div>
+
+    <div class="screens-grid">
+      <!-- Screen 1: Controller -->
+      <div class="screen-card">
+        <div>
+          <div class="screen-icon">📱</div>
+          <h3 class="screen-name">Scoreboard Operator</h3>
+          <p class="screen-desc">The primary game controller layout. Change team names, manage score adjustments, timeouts, fouls, and authoritative clocks.</p>
+        </div>
+        <a href="/control" class="screen-link">Launch Panel ➔</a>
+      </div>
+
+      <!-- Screen 2: Venue Display -->
+      <div class="screen-card">
+        <div>
+          <div class="screen-icon">📺</div>
+          <h3 class="screen-name">Stadium Display 1</h3>
+          <p class="screen-desc">Clean, high-visibility layout styled specifically to project onto court monitors, venue TV screens, or wall projectors.</p>
+        </div>
+        <a href="/display" class="screen-link">Open Display ➔</a>
+      </div>
+
+      <!-- Screen 3: Venue Display 2 -->
+      <div class="screen-card">
+        <div>
+          <div class="screen-icon">🖥️</div>
+          <h3 class="screen-name">Stadium Display 2</h3>
+          <p class="screen-desc">Alternate stadium projector scoreboard styling offering a variation in visual layout and branding colors.</p>
+        </div>
+        <a href="/display2" class="screen-link">Open Display 2 ➔</a>
+      </div>
+
+      <!-- Screen 4: Shot Clock Control -->
+      <div class="screen-card">
+        <div>
+          <div class="screen-icon">⏱️</div>
+          <h3 class="screen-name">Shot Clock Operator</h3>
+          <p class="screen-desc">Handheld responsive panel design specifically built for a dedicated shot-clock official operating from a smartphone or tablet.</p>
+        </div>
+        <a href="/shotclock" class="screen-link">Launch Controller ➔</a>
+      </div>
+
+      <!-- Screen 5: Shot Clock Display -->
+      <div class="screen-card">
+        <div>
+          <div class="screen-icon">🚨</div>
+          <h3 class="screen-name">Shot Clock Display</h3>
+          <p class="screen-desc">Visual-only shot clock numbers with red backlight indicators to mount behind the backboard in the arena.</p>
+        </div>
+        <a href="/shotclock-display" class="screen-link">Open Display ➔</a>
+      </div>
+
+      <!-- Screen 6: OBS Fullscreen Overlay -->
+      <div class="screen-card">
+        <div>
+          <div class="screen-icon">🎥</div>
+          <h3 class="screen-name">OBS Fullscreen Overlay</h3>
+          <p class="screen-desc">Premium full-width scoreboard overlay template with glassmorphism and real-time animation for OBS Studio.</p>
+        </div>
+        <a href="/fullscreen" class="screen-link">Launch Overlay ➔</a>
+      </div>
+
+      <!-- Screen 7: NBA Scorebug -->
+      <div class="screen-card">
+        <div>
+          <div class="screen-icon">🔥</div>
+          <h3 class="screen-name">ESPN / NBA Scorebug</h3>
+          <p class="screen-desc">A floating graphics bug matching the professional NBA broadcast look, positioned at the bottom right of the stream.</p>
+        </div>
+        <a href="/nbaoverlay" class="screen-link">Launch Bug ➔</a>
+      </div>
+
+      <!-- Screen 8: NBA Scorebug 2 -->
+      <div class="screen-card">
+        <div>
+          <div class="screen-icon">🏀</div>
+          <h3 class="screen-name">NBA Scorebug 2</h3>
+          <p class="screen-desc">Alternate layout configuration for the ESPN/NBA floating stream bugs, customized for specific game stats overlays.</p>
+        </div>
+        <a href="/nbaoverlay2" class="screen-link">Launch Bug 2 ➔</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Core Features Section -->
+  <section id="features" class="features-section">
+    <div class="features-container">
+      
+      <!-- Feature 1 -->
+      <div class="feature-box">
+        <div class="feature-box-icon">
+          <svg class="feature-box-svg" viewBox="0 0 24 24">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+            <circle cx="12" cy="18" r="1"></circle>
+          </svg>
+        </div>
+        <h3 class="feature-box-title">100% Offline Capable</h3>
+        <p class="feature-box-desc">
+          Operates over a local Wi-Fi hotspot network — no internet or cellular data required during active game play. Full scoreboard, overlays, and shot clock all work offline.
+        </p>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="feature-box">
+        <div class="feature-box-icon" style="background:rgba(168,85,247,0.08);border-color:rgba(168,85,247,0.2);">
+          <svg class="feature-box-svg" viewBox="0 0 24 24" style="stroke:#a855f7;">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+        </div>
+        <h3 class="feature-box-title">Dual-Cloud Redundancy</h3>
+        <p class="feature-box-desc">
+          Two independent cloud deployments — <strong style="color:var(--white);">Vercel + Firebase</strong> (serverless) and <strong style="color:var(--white);">OnRender</strong> (full-stack). If one goes down, switch to the other without missing a beat.
+        </p>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="feature-box">
+        <div class="feature-box-icon">
+          <svg class="feature-box-svg" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </div>
+        <h3 class="feature-box-title">Zero Clock Drift</h3>
+        <p class="feature-box-desc">
+          Clocks tick authoritatively — on the server in Node.js mode, and in the operator's browser in Vercel/Firebase mode — preventing drift across all connected displays.
+        </p>
+      </div>
+
+      <!-- Feature 4 -->
+      <div class="feature-box">
+        <div class="feature-box-icon" style="background:rgba(255,160,0,0.08);border-color:rgba(255,160,0,0.2);">
+          <svg class="feature-box-svg" viewBox="0 0 24 24" style="stroke:#ffb300;">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <h3 class="feature-box-title">Firebase Realtime Sync</h3>
+        <p class="feature-box-desc">
+          In Vercel mode, all score changes, clock ticks, and buzzer events are synced instantly through Google Firebase — no backend server required.
+        </p>
+      </div>
+
+      <!-- Feature 5 -->
+      <div class="feature-box">
+        <div class="feature-box-icon">
+          <svg class="feature-box-svg" viewBox="0 0 24 24">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+            <path d="M2 17l10 5 10-5"></path>
+            <path d="M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <h3 class="feature-box-title">Auto Brand Colors</h3>
+        <p class="feature-box-desc">
+          Uploading any team logo automatically extracts its dominant color, updating scoreboard styling across all screens instantly.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- How to Use & Documentation Section -->
+  <section id="user-guide" class="screens-section" style="border-top: 1px solid var(--border); padding-top: 5rem; margin-top: 3rem; background: rgba(255,255,255,0.01);">
+    <div class="section-header">
+      <div class="section-subtitle">Documentation Hub</div>
+      <h2 class="section-title">How To Use The Scoreboard</h2>
+      <p style="color: var(--grey); max-width: 600px; margin: 1rem auto 3rem auto; font-size: 14px; line-height: 1.6;">
+        Detailed setup instructions for game operators, stream producers, and crew members. Learn how to configure and run the digital scoreboard system.
+      </p>
+    </div>
+
+    <div class="screens-grid">
+      <!-- Card 1: Scoreboard Controls -->
+      <div class="screen-card">
+        <div>
+          <div class="screen-icon">🎮</div>
+          <h3 class="screen-name">Manual Scorekeeper Guide</h3>
+          <p class="screen-desc">Learn how to change team names, manage score adjustments, timeouts, fouls, and handle clock controls.</p>
+        </div>
+        <a href="#" onclick="openDoc(event, 'manual')" class="screen-link">Read Guide ➔</a>
+      </div>
+
+      <!-- Card 2: AI Sync Setup -->
+      <div class="screen-card">
+        <div>
+          <div class="screen-icon">🤖</div>
+          <h3 class="screen-name">AI Camera Sync Guide</h3>
+          <p class="screen-desc">Detailed guide on how to configure a smartphone or USB webcam with ScoreSight to extract scores and clocks automatically.</p>
+        </div>
+        <a href="#" onclick="openDoc(event, 'ai')" class="screen-link" style="color: var(--orange);">Read AI Guide ➔</a>
+      </div>
+
+      <!-- Card 3: OBS Stream Setup -->
+      <div class="screen-card">
+        <div>
+          <div class="screen-icon">🎥</div>
+          <h3 class="screen-name">OBS Studio Stream Setup</h3>
+          <p class="screen-desc">Learn how to configure lower-third scorebars and fullscreen scoreboard graphics directly into OBS Studio.</p>
+        </div>
+        <a href="#" onclick="openDoc(event, 'setup')" class="screen-link">View Setup ➔</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Documentation Modal Container -->
+  <div class="doc-modal-overlay" id="docOverlay" onclick="if(event.target === this) closeDoc()">
+    <div class="doc-modal-card">
+      <div class="doc-modal-header">
+        <div class="doc-modal-tabs">
+          <button class="doc-tab-btn" onclick="switchTab('manual')">🎮 Manual Guide</button>
+          <button class="doc-tab-btn" onclick="switchTab('ai')">🤖 AI Sync Guide</button>
+          <button class="doc-tab-btn" onclick="switchTab('setup')">🎥 OBS Setup</button>
+        </div>
+        <button class="doc-close-btn" onclick="closeDoc()">&times;</button>
+      </div>
+      <div class="doc-modal-body">
+        <div class="doc-view" id="doc-view-manual">
+          <div style="text-align:center;padding:40px 0;font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--grey);">Loading manual scorekeeper guide...</div>
+        </div>
+        <div class="doc-view" id="doc-view-ai">
+          <div style="text-align:center;padding:40px 0;font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--grey);">Loading AI scoreboard camera sync guide...</div>
+        </div>
+        <div class="doc-view" id="doc-view-setup">
+          <div style="text-align:center;padding:40px 0;font-family:'Barlow Condensed',sans-serif;font-size:18px;color:var(--grey);">Loading OBS stream setup guide...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <img src="/hoop-culture-logo.png" alt="Hoop Culture Logo" class="footer-logo">
+    <p class="footer-text">GTA's source for basketball videos, news, and culture.</p>
+    <p class="footer-subtext">Hoop Culture Network 🏀</p>
+  </footer>
+
+  <script>
+    // Ecosystem tab switcher
+    function lndSwitch(mode) {
+      const diagrams = { local: 'lnd-local', vercel: 'lnd-vercel', onrender: 'lnd-onrender' };
+      const btns = { local: 'lnd-btn-local', vercel: 'lnd-btn-vercel', onrender: 'lnd-btn-onrender' };
+      const activeStyle = 'linear-gradient(135deg,var(--fire1),var(--fire2))';
+      Object.keys(diagrams).forEach(k => {
+        const d = document.getElementById(diagrams[k]);
+        const b = document.getElementById(btns[k]);
+        if (k === mode) {
+          d.style.display = 'grid';
+          b.style.background = activeStyle;
+          b.style.color = '#fff';
+          b.style.boxShadow = '0 4px 15px rgba(232,67,10,0.4)';
+        } else {
+          d.style.display = 'none';
+          b.style.background = 'transparent';
+          b.style.color = 'var(--grey)';
+          b.style.boxShadow = 'none';
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = localStorage.getItem('hc_session_user');
+      if (user) {
+        const navBtn = document.querySelector('nav .btn.primary');
+        if (navBtn) { navBtn.textContent = 'Control Panel'; navBtn.href = '/control'; }
+        const heroBtn = document.querySelector('.hero-actions .btn.primary');
+        if (heroBtn) { heroBtn.textContent = 'Go to Console'; heroBtn.href = '/control'; }
+        const navLinks = document.querySelector('.nav-links');
+        if (navLinks) {
+          const logoutLi = document.createElement('li');
+          logoutLi.innerHTML = `<a href="#" onclick="logout(event)" style="color: var(--red); font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; text-decoration: none;">Sign Out</a>`;
+          navLinks.appendChild(logoutLi);
+        }
+      }
+    });
+
+    function logout(e) {
+      if (e) e.preventDefault();
+      localStorage.removeItem('hc_session_user');
+      window.location.reload();
+    }
+
+    // Documentation Modal Controller
+    function openDoc(event, docId) {
+      if (event) event.preventDefault();
+      const overlay = document.getElementById('docOverlay');
+      overlay.classList.add('active');
+      switchTab(docId);
+    }
+
+    function closeDoc() {
+      const overlay = document.getElementById('docOverlay');
+      overlay.classList.remove('active');
+    }
+
+    function switchTab(docId) {
+      document.querySelectorAll('.doc-tab-btn').forEach(btn => {
+        // Toggle active tab button styling
+        const isCurrent = (docId === 'manual' && btn.textContent.includes('Manual')) ||
+                          (docId === 'ai' && btn.textContent.includes('AI')) ||
+                          (docId === 'setup' && btn.textContent.includes('OBS'));
+        btn.classList.toggle('active', isCurrent);
+      });
+      document.querySelectorAll('.doc-view').forEach(view => {
+        view.classList.remove('active');
+      });
+      const activeView = document.getElementById(`doc-view-${docId}`);
+      if (activeView) {
+        activeView.classList.add('active');
+        // Fetch and parse the guide file dynamically if not loaded yet
+        if (!activeView.dataset.loaded) {
+          const files = { manual: 'LOCAL_SETUP.txt', ai: 'AI_SCOREBOARD_GUIDE.txt', setup: 'README.txt' };
+          const filePath = files[docId] || 'README.txt';
+          fetch('/' + filePath)
+            .then(res => {
+              if (!res.ok) throw new Error();
+              return res.text();
+            })
+            .then(text => {
+              activeView.innerHTML = parseMarkdown(text);
+              activeView.dataset.loaded = 'true';
+            })
+            .catch(() => {
+              activeView.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:18px;">Failed to load documentation file: ${filePath}</div>`;
+            });
+        }
+      }
+    }
+
+    // Lightweight markdown parser for dynamic guides
+    function parseMarkdown(md) {
+      let html = '';
+      const lines = md.split('\n');
+      let inList = false;
+      let inTable = false;
+      let tableHeaderParsed = false;
+      let inAlert = false;
+      let alertContent = [];
+      let alertType = 'note';
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
+
+        // Handle Alert boundaries
+        if (inAlert && (!lines[i].startsWith('>') && line !== '')) {
+          html += renderAlert(alertType, alertContent.join('<br>'));
+          inAlert = false;
+          alertContent = [];
+        }
+
+        // Handle Table boundaries
+        if (inTable && !line.startsWith('|')) {
+          html += '</tbody></table>';
+          inTable = false;
+          tableHeaderParsed = false;
+        }
+
+        // Handle List boundaries
+        if (inList && !line.startsWith('*') && !line.startsWith('-') && !/^\d+\./.test(line)) {
+          html += '</ul>';
+          inList = false;
+        }
+
+        if (line === '') continue;
+
+        // Heading 1
+        if (line.startsWith('# ')) {
+          html += `<h1>${line.slice(2)}</h1>`;
+        }
+        // Heading 2
+        else if (line.startsWith('## ')) {
+          html += `<h2>${line.slice(3)}</h2>`;
+        }
+        // Heading 3
+        else if (line.startsWith('### ')) {
+          html += `<h3>${line.slice(4)}</h3>`;
+        }
+        // Horizontal Rule
+        else if (line === '---') {
+          html += '<hr style="border:none;border-top:1px solid var(--border);margin:2rem 0;">';
+        }
+        // Unordered lists
+        else if (line.startsWith('* ') || line.startsWith('- ')) {
+          if (!inList) {
+            html += '<ul style="margin-left:1.5rem;margin-bottom:1.2rem;list-style-type:square;">';
+            inList = true;
+          }
+          html += `<li>${parseInlineMarkdown(line.slice(2))}</li>`;
+        }
+        // Alerts & Blockquotes
+        else if (line.startsWith('>')) {
+          let content = line.slice(1).trim();
+          if (content.startsWith('[!TIP]')) {
+            inAlert = true; alertType = 'tip';
+            alertContent.push(content.slice(6).trim());
+          } else if (content.startsWith('[!IMPORTANT]')) {
+            inAlert = true; alertType = 'important';
+            alertContent.push(content.slice(12).trim());
+          } else if (content.startsWith('[!NOTE]')) {
+            inAlert = true; alertType = 'note';
+            alertContent.push(content.slice(7).trim());
+          } else if (content.startsWith('[!WARNING]')) {
+            inAlert = true; alertType = 'warning';
+            alertContent.push(content.slice(10).trim());
+          } else {
+            if (inAlert) {
+              alertContent.push(content);
+            } else {
+              html += `<blockquote style="border-left:4px solid var(--border2);padding-left:1rem;color:var(--grey);margin-bottom:1.2rem;font-style:italic;">${parseInlineMarkdown(content)}</blockquote>`;
+            }
+          }
+        }
+        // Markdown Tables
+        else if (line.startsWith('|')) {
+          if (line.includes(':---') || line.includes('---:')) continue;
+          
+          const cells = line.split('|').map(c => c.trim()).filter((c, idx, arr) => idx > 0 && idx < arr.length - 1);
+          
+          if (!inTable) {
+            html += '<table class="doc-table">';
+            inTable = true;
+          }
+
+          if (!tableHeaderParsed) {
+            html += '<thead><tr>';
+            cells.forEach(c => { html += `<th>${parseInlineMarkdown(c)}</th>`; });
+            html += '</tr></thead><tbody>';
+            tableHeaderParsed = true;
+          } else {
+            html += '<tr>';
+            cells.forEach(c => { html += `<td>${parseInlineMarkdown(c)}</td>`; });
+            html += '</tr>';
+          }
+        }
+        // General text paragraph
+        else {
+          html += `<p>${parseInlineMarkdown(line)}</p>`;
+        }
+      }
+
+      // Cleanup trailing block scopes
+      if (inAlert) html += renderAlert(alertType, alertContent.join('<br>'));
+      if (inTable) html += '</tbody></table>';
+      if (inList) html += '</ul>';
+
+      return html;
+    }
+
+    function renderAlert(type, content) {
+      let title = type.toUpperCase();
+      let borderColor = 'var(--orange)';
+      let titleColor = 'var(--orange2)';
+      if (type === 'note') { borderColor = 'var(--blue)'; titleColor = '#60a5fa'; }
+      else if (type === 'tip') { borderColor = 'var(--green)'; titleColor = '#34d399'; }
+      return `<div class="doc-alert" style="border-color:${borderColor};">
+        <div class="doc-alert-title" style="color:${titleColor};">${title}</div>
+        <div>${parseInlineMarkdown(content)}</div>
+      </div>`;
+    }
+
+    function parseInlineMarkdown(text) {
+      // Bold text formatting
+      text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      // Inline code blocks
+      text = text.replace(/`(.*?)`/g, '<code>$1</code>');
+      // Hardware/kbd shortcuts
+      text = text.replace(/<kbd>(.*?)<\/kbd>/g, '<span class="kbd-btn">$1</span>');
+      // Clean link formatting, strip absolute file links to clean bold labels
+      text = text.replace(/\[(.*?)\]\((.*?)\)/g, (match, label, url) => {
+        if (url.startsWith('file://')) return `<strong>${label}</strong>`;
+        return `<a href="${url}" target="_blank" style="color:var(--orange2);text-decoration:none;">${label}</a>`;
+      });
+      return text;
+    }
+  </script>
+</body>
+</html>

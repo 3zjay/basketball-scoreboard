@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+  // Global Storage Shield — prevents WebKit SecurityError exceptions on blocked localStorage/sessionStorage
+  (function() {
+    try {
+      localStorage.setItem('__test_ls__', '1');
+      localStorage.removeItem('__test_ls__');
+    } catch (e) {
+      console.warn("localStorage is blocked. Injecting in-memory fallback.");
+      var store = {};
+      Object.defineProperty(window, 'localStorage', {
+        value: {
+          getItem: function(k) { return store[k] === undefined ? null : store[k]; },
+          setItem: function(k, v) { store[k] = String(v); },
+          removeItem: function(k) { delete store[k]; },
+          clear: function() { store = {}; },
+          key: function(i) { return Object.keys(store)[i] || null; },
+          get length() { return Object.keys(store).length; }
+        },
+        configurable: true, writable: true
+      });
+    }
+    try {
+      sessionStorage.setItem('__test_ss__', '1');
+      sessionStorage.removeItem('__test_ss__');
+    } catch (e) {
+      console.warn("sessionStorage is blocked. Injecting in-memory fallback.");
+      var store = {};
+      Object.defineProperty(window, 'sessionStorage', {
+        value: {
+          getItem: function(k) { return store[k] === undefined ? null : store[k]; },
+          setItem: function(k, v) { store[k] = String(v); },
+          removeItem: function(k) { delete store[k]; },
+          clear: function() { store = {}; },
+          key: function(i) { return Object.keys(store)[i] || null; },
+          get length() { return Object.keys(store).length; }
+        },
+        configurable: true, writable: true
+      });
+    }
+  })();
+
+  // Time-based Redirect Loop Buster Safeguard
+  let stopRedirect = false;
+  try {
+    const now = Date.now();
+    const lastLoad = parseInt(sessionStorage.getItem('hc_last_load_time') || '0', 10);
+    const redirectCount = parseInt(sessionStorage.getItem('hc_redirect_loop_count') || '0', 10);
+    
+    sessionStorage.setItem('hc_last_load_time', now.toString());
+
+    if (now - lastLoad < 1500) {
+      if (redirectCount > 4) {
+        stopRedirect = true;
+        console.warn("Redirect loop detected. Halting redirects to stabilize.");
+        localStorage.removeItem('hc_session_user');
+        document.cookie = "hc_session_user=; path=/; max-age=0; SameSite=Lax; Secure";
+        sessionStorage.setItem('hc_redirect_loop_count', '0');
+      } else {
+        sessionStorage.setItem('hc_redirect_loop_count', (redirectCount + 1).toString());
+      }
+    } else {
+      // Reset counter on slow/normal loads (user interaction)
+      sessionStorage.setItem('hc_redirect_loop_count', '0');
+    }
+  } catch (e) {}
+
+  function getSessionFromCookie() {
+    try {
+      const match = document.cookie.match(new RegExp('(^| )hc_session_user=([^;]+)'));
+      return match ? decodeURIComponent(match[2]) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  let hasUserSession = false;
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userParam = urlParams.get('user');
+    hasUserSession = !!localStorage.getItem('hc_session_user') || 
+                     !!getSessionFromCookie() || 
+                     (userParam && userParam !== 'default');
+  } catch (e) {
+    console.warn("Storage access failed:", e);
+  }
+
+  const isLocal = window.location.hostname === 'localhost' ||
+                  window.location.hostname === '127.0.0.1' ||
+                  !window.location.hostname.includes('.') ||
+                  window.location.hostname.startsWith('192.168.') ||
+                  window.location.hostname.startsWith('10.') ||
+                  window.location.hostname.startsWith('172.') ||
+                  window.location.hostname.endsWith('.local') ||
+                  window.location.hostname.endsWith('.ngrok.io') ||
+                  window.location.hostname.endsWith('.ngrok-free.dev') ||
+                  window.location.hostname.endsWith('.loca.lt') ||
+                  window.location.hostname.endsWith('.trycloudflare.com') ||
+                  window.location.hostname.endsWith('.run.app') ||
+                  window.location.hostname.endsWith('.googleusercontent.com');
+  if (!isLocal && !hasUserSession && !stopRedirect) {
+    const currentPath = window.location.pathname + window.location.search;
+    window.location.href = '/login?redirect=' + encodeURIComponent(currentPath);
+  }
+</script>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script src="/firebase-config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Shot Clock Operator</title>
+<link rel="manifest" href="/manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@700&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width:100%; height:100%;
+  background:#0a0c12;
+  font-family:'Barlow Condensed', sans-serif;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  overflow:hidden;
+}
+
+/* Full page flex column */
+.page {
+  display:flex; flex-direction:column;
+  width:100%; height:100%;
+  /* Use dvh for devices with dynamic toolbars (iOS Safari) */
+  height:100dvh;
+  min-height:100vh;
+}
+
+/* ── OFFLINE BANNER ── */
+.offline-banner {
+  display:none; align-items:center; justify-content:center;
+  background:#7f1d1d; color:#fca5a5;
+  font-size:clamp(12px,3.5vw,18px); font-weight:800; letter-spacing:0.15vw;
+  padding:8px 4vw; text-transform:uppercase; gap:2vw;
+  flex-shrink:0;
+}
+.offline-banner.show { display:flex; }
+
+/* ── HEADER ── */
+.header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:clamp(8px,1.5vh,16px) 5vw;
+  background:#0d1117;
+  border-bottom:2px solid #1c2030;
+  flex-shrink:0;
+}
+.header-title {
+  font-size:clamp(18px,5vw,28px); font-weight:900;
+  letter-spacing:0.2vw; color:#fff; text-transform:uppercase;
+}
+.conn-badge { display:flex; align-items:center; gap:2vw; }
+.conn-dot {
+  width:clamp(8px,2.5vw,14px); height:clamp(8px,2.5vw,14px);
+  border-radius:50%; background:#ef4444;
+  box-shadow:0 0 6px #ef4444; animation:blink 1.2s ease infinite;
+}
+.conn-dot.live { background:#22c55e; box-shadow:0 0 6px #22c55e; animation:none; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.conn-text {
+  font-size:clamp(12px,3.2vw,18px); font-weight:800;
+  letter-spacing:0.15vw; color:#ef4444; text-transform:uppercase;
+}
+.conn-dot.live ~ .conn-text { color:#22c55e; }
+
+/* ── CLOCK DISPLAY ── */
+.clock-display {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding:1vh 4vw; gap:0; min-height:0;
+}
+.clock-label {
+  font-size:clamp(12px,3.5vw,20px); font-weight:800;
+  letter-spacing:0.5vw; color:#444; text-transform:uppercase;
+  margin-bottom:0;
+}
+.clock-number {
+  font-family:'Teko', sans-serif;
+  font-size:clamp(80px,35vw,45vh);
+  font-weight:700; line-height:0.85;
+  color:#ffaa00;
+  text-shadow:0 0 30px rgba(255,170,0,0.35);
+  transition:color 0.2s; font-variant-numeric:tabular-nums;
+  text-align:center;
+}
+.clock-number.warn   { color:#ff9900; }
+.clock-number.danger { color:#ff3300; animation:dangerPulse 0.4s ease infinite alternate; }
+.clock-number.zero   { color:#ff0000; }
+@keyframes dangerPulse { to{ opacity:0.4; } }
+
+.status-row {
+  display:flex; align-items:center; gap:2vw; margin-top:0.5vh;
+}
+.run-dot {
+  width:clamp(8px,2.2vw,12px); height:clamp(8px,2.2vw,12px);
+  border-radius:50%; background:#333; transition:background 0.2s;
+}
+.run-dot.running {
+  background:#22c55e; box-shadow:0 0 8px #22c55e;
+  animation:blink 0.8s ease infinite;
+}
+.status-text {
+  font-size:clamp(12px,3.2vw,18px); font-weight:800;
+  letter-spacing:0.3vw; color:#444; text-transform:uppercase;
+}
+.status-text.running { color:#22c55e; }
+
+/* ── BUTTONS ── */
+.btn-area {
+  display:flex; flex-direction:column;
+  gap:clamp(6px,2vw,14px);
+  padding:0 5vw clamp(12px,3vh,24px);
+  flex-shrink:0;
+}
+
+.btn-main {
+  width:100%; height:clamp(52px,14vh,90px);
+  border-radius:clamp(10px,2.5vw,18px); border:none; cursor:pointer;
+  font-family:'Barlow Condensed', sans-serif;
+  font-size:clamp(20px,6vw,36px); font-weight:900;
+  letter-spacing:0.3vw; text-transform:uppercase; color:#fff;
+  display:flex; align-items:center; justify-content:center; gap:2vw;
+  position:relative; overflow:hidden;
+  transition:transform 0.1s, filter 0.1s;
+}
+.btn-main:active { transform:scale(0.97); filter:brightness(0.9); }
+.btn-main.start {
+  background:linear-gradient(135deg,#15803d,#22c55e);
+  box-shadow:0 0 24px rgba(34,197,94,0.3), 0 4px 12px rgba(0,0,0,0.4);
+}
+.btn-main.stop {
+  background:linear-gradient(135deg,#991b1b,#ef4444);
+  box-shadow:0 0 24px rgba(239,68,68,0.3), 0 4px 12px rgba(0,0,0,0.4);
+}
+
+/* Reset row — 3 equal columns */
+.btn-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:clamp(6px,2vw,12px); }
+
+.btn-reset {
+  height:clamp(56px,11vh,80px);
+  border-radius:clamp(8px,2vw,14px); border:2px solid #2a3040;
+  cursor:pointer; background:#141822;
+  font-family:'Teko', sans-serif;
+  font-size:clamp(22px,8vw,48px); font-weight:700;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  line-height:0.88; transition:transform 0.1s, background 0.15s;
+  padding:0;
+}
+.btn-reset:active { transform:scale(0.96); }
+.btn-reset .sub {
+  font-family:'Barlow Condensed', sans-serif;
+  font-size:clamp(9px,2.2vw,14px); font-weight:800;
+  letter-spacing:0.15vw; text-transform:uppercase; color:#666;
+  line-height:1;
+}
+.btn-reset.r24 { border-color:#ff9900; color:#ff9900; }
+.btn-reset.r24:active { background:#1e1000; }
+.btn-reset.r14 { border-color:#ff6600; color:#ff6600; }
+.btn-reset.r14:active { background:#1e0d00; }
+.btn-reset.rcustom { border-color:#6b7280; color:#d1d5db; }
+.btn-reset.rcustom:active { background:#1a1f2e; }
+
+/* Custom input inside button */
+.custom-wrap {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  width:100%; height:100%; padding:0; gap:0;
+}
+.custom-input {
+  width:90%; background:transparent; border:none; outline:none;
+  font-family:'Teko', sans-serif;
+  font-size:clamp(22px,8vw,48px); font-weight:700;
+  color:#d1d5db; text-align:center; line-height:0.88;
+  -moz-appearance:textfield;
+}
+.custom-input::-webkit-outer-spin-button,
+.custom-input::-webkit-inner-spin-button { -webkit-appearance:none; }
+
+/* Buzzer */
+.btn-buzzer {
+  width:100%; height:clamp(44px,9vh,70px);
+  border-radius:clamp(8px,2vw,14px); border:2px solid #ef4444;
+  cursor:pointer; background:#2a0f0f;
+  font-family:'Barlow Condensed', sans-serif;
+  font-size:clamp(16px,5vw,28px); font-weight:900;
+  letter-spacing:0.3vw; text-transform:uppercase; color:#ef4444;
+  display:flex; align-items:center; justify-content:center; gap:2vw;
+  box-shadow:0 0 14px rgba(239,68,68,0.25);
+  transition:transform 0.1s, background 0.15s, box-shadow 0.15s;
+  position:relative; overflow:hidden;
+}
+.btn-buzzer:active {
+  transform:scale(0.97); background:#450f0f;
+  box-shadow:0 0 28px rgba(239,68,68,0.6);
+}
+
+/* Ripple */
+.ripple {
+  position:absolute; border-radius:50%;
+  background:rgba(255,255,255,0.2);
+  width:40px; height:40px;
+  transform:scale(0); animation:rippleAnim 0.5s ease-out forwards;
+  pointer-events:none;
+}
+@keyframes rippleAnim { to { transform:scale(10); opacity:0; } }
+
+.btn-header {
+  background: #1c2030;
+  border: 1.5px solid #2a3040;
+  border-radius: 8px;
+  color: #a0a5b5;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  cursor: pointer;
+  text-decoration: none;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+.btn-header:hover {
+  border-color: #ffaa00;
+  color: #ffaa00;
+}
+
+/* iOS Install Tooltip */
+#iosInstallBanner {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e2535;
+  border: 1.5px solid #3b82f6;
+  border-radius: 14px;
+  padding: 14px 20px;
+  z-index: 9999;
+  width: calc(100% - 40px);
+  max-width: 420px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp { from{transform:translateX(-50%) translateY(20px);opacity:0} to{transform:translateX(-50%) translateY(0);opacity:1} }
+#iosInstallBanner .ios-title {
+  font-size: 14px; font-weight: 800; letter-spacing: 1px;
+  color: #fff; margin-bottom: 6px;
+}
+#iosInstallBanner .ios-steps {
+  font-size: 13px; color: #8a95a8; line-height: 1.7;
+}
+#iosInstallBanner .ios-steps span { color: #fff; font-weight: 700; }
+#iosInstallBanner .ios-close {
+  position: absolute; top: 10px; right: 14px;
+  background: none; border: none; color: #8a95a8;
+  font-size: 18px; cursor: pointer; padding: 0;
+}
+#iosInstallBanner .ios-arrow {
+  position: absolute; bottom: -10px; left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid #3b82f6;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="offline-banner" id="offlineBanner">⚠ Disconnected — Reconnecting…</div>
+
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="header-title">⏱ Shot Clock</div>
+      <button class="btn-header" id="installBtn" onclick="installApp()" style="display:none;border-color:#22c55e;color:#22c55e;">📲 Install App</button>
+      <a href="/" class="btn-header">🏠 Home</a>
+      <button class="btn-header" onclick="logout()" style="border-color:#ef4444;color:#ef4444;">🚪 Logout</button>
+    </div>
+    <div class="conn-badge">
+      <div class="conn-dot" id="connDot"></div>
+      <div class="conn-text" id="connText">Offline</div>
+    </div>
+  </div>
+
+  <div class="clock-display">
+    <div class="clock-label">Shot Clock</div>
+    <div class="clock-number" id="clockNum">24</div>
+    <div class="status-row">
+      <div class="run-dot" id="runDot"></div>
+      <div class="status-text" id="statusText">Stopped</div>
+    </div>
+  </div>
+
+  <div class="btn-area">
+
+    <button class="btn-main start" id="mainBtn" onclick="toggleShot(event)">▶ START</button>
+
+    <div class="btn-row">
+      <button class="btn-reset r24" onclick="resetShot(24, event)">
+        24<span class="sub">Reset</span>
+      </button>
+      <button class="btn-reset r14" onclick="resetShot(14, event)">
+        14<span class="sub">Reset</span>
+      </button>
+      <button class="btn-reset rcustom" onclick="resetShotCustom(event)">
+        <div class="custom-wrap">
+          <input id="shotCustomIn" class="custom-input" type="number"
+            min="1" max="60" value="10"
+            onclick="event.stopPropagation()"
+            ontouchstart="event.stopPropagation()">
+          <span class="sub">Set</span>
+        </div>
+      </button>
+    </div>
+
+    <button class="btn-buzzer" id="buzzerBtn" onclick="soundBuzzer(event)">🔔 SOUND BUZZER</button>
+
+  </div>
+
+</div>
+<script>
+const SERVER_URL = (
+  window.location.hostname.includes('vercel.app') ||
+  window.location.hostname.includes('vercel.sh')
+) ? 'https://basketball-scoreboard-o0c7.onrender.com' : (
+  window.location.protocol === 'file:' ? 'http://localhost:3000' : ''
+);
+
+const urlParams = new URLSearchParams(window.location.search);
+const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
+// Firebase-safe key (Firebase paths cannot contain ".", "#", "$", "[", or "]")
+const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
+
+const bc = new BroadcastChannel('hc_scoreboard_sync');
+function broadcastShotclock() {
+  bc.postMessage({
+    type: 'state',
+    user: fbUser,
+    data: {
+      shotSeconds: shotSeconds,
+      shotRunning: shotRunning
+    }
+  });
+}
+
+// ── Firebase Environment Detection ──
+const useFirebase = window.location.hostname.includes('vercel.app') ||
+                    window.location.hostname.includes('vercel.sh');
+let db = null;
+if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+}
+
+// Warn if using Vercel but Firebase isn't configured
+window.addEventListener('DOMContentLoaded', () => {
+  if (useFirebase && !isFirebaseConfigured) {
+    const banner = document.createElement('div');
+    banner.style.position = 'fixed';
+    banner.style.top = '0';
+    banner.style.left = '0';
+    banner.style.right = '0';
+    banner.style.background = '#e53935';
+    banner.style.color = '#fff';
+    banner.style.textAlign = 'center';
+    banner.style.padding = '12px';
+    banner.style.zIndex = '10000';
+    banner.style.fontFamily = 'sans-serif';
+    banner.style.fontSize = '14px';
+    banner.style.fontWeight = 'bold';
+    banner.innerHTML = '⚠️ Firebase is not configured! Please set up your Firebase project credentials in <strong>firebase-config.js</strong> to enable Vercel Cloud Sync.';
+    document.body.appendChild(banner);
+  }
+});
+
+function logout() {
+  localStorage.removeItem('hc_session_user');
+  window.location.href = '/login';
+}
+
+let shotSeconds = 24;
+let shotRunning = false;
+let _lastCmd = 0;
+let _localTick = null;
+
+// ── Connection status ──
+function setConnected(v) {
+  const dot = document.getElementById('connDot');
+  const txt = document.getElementById('connText');
+  const ban = document.getElementById('offlineBanner');
+  if (v) {
+    dot.classList.add('live');
+    txt.textContent = 'Live'; txt.style.color = '#22c55e';
+    ban.classList.remove('show');
+  } else {
+    dot.classList.remove('live');
+    txt.textContent = 'Offline'; txt.style.color = '#ef4444';
+    ban.classList.add('show');
+  }
+}
+
+// ── Render ──
+function renderClock() {
+  const el  = document.getElementById('clockNum');
+  const dot = document.getElementById('runDot');
+  const st  = document.getElementById('statusText');
+  const btn = document.getElementById('mainBtn');
+
+  el.textContent = shotSeconds;
+  el.className = 'clock-number';
+  if      (shotSeconds === 0) el.classList.add('zero');
+  else if (shotSeconds <= 5)  el.classList.add('danger');
+  else if (shotSeconds <= 10) el.classList.add('warn');
+
+  if (shotRunning) {
+    dot.classList.add('running');
+    st.textContent = 'Running'; st.classList.add('running');
+    btn.className = 'btn-main stop'; btn.innerHTML = '⏸ PAUSE';
+  } else {
+    dot.classList.remove('running');
+    st.textContent = 'Stopped'; st.classList.remove('running');
+    btn.className = 'btn-main start'; btn.innerHTML = '▶ START';
+  }
+}
+
+// ── Local tick (smooth display between SSE pushes) ──
+function startLocalTick() {
+  if (_localTick) return;
+  _localTick = setInterval(() => {
+    if (shotRunning && shotSeconds > 0) { 
+      shotSeconds--; 
+      renderClock(); 
+      if (useFirebase && db) {
+        db.ref(`states/${fbUser}`).update({ shotSeconds: shotSeconds });
+      }
+      broadcastShotclock();
+    }
+    else { 
+      stopLocalTick(); 
+      if (useFirebase && shotSeconds === 0 && shotRunning) {
+        soundBuzzer();
+        setTimeout(() => {
+          resetShot(24);
+        }, 500);
+      }
+    }
+  }, 1000);
+}
+function stopLocalTick() {
+  if (_localTick) { clearInterval(_localTick); _localTick = null; }
+}
+
+// ── Server command ──
+function cmd(command, seconds) {
+  _lastCmd = Date.now();
+  const body = seconds != null ? { cmd: command, seconds } : { cmd: command };
+  if (useFirebase && db) {
+    handleLocalCommand(command, seconds);
+    return;
+  }
+  fetch(`${SERVER_URL}/cmd?user=${encodeURIComponent(currentUser)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).catch(() => {});
+}
+
+function handleLocalCommand(command, seconds) {
+  if (command === 'shot_start') {
+    shotRunning = true;
+    startLocalTick();
+  } else if (command === 'shot_stop') {
+    shotRunning = false;
+    stopLocalTick();
+  } else if (command === 'shot_reset') {
+    shotRunning = false;
+    stopLocalTick();
+    shotSeconds = seconds || 24;
+    shotRunning = true;
+    startLocalTick();
+  }
+  
+  renderClock();
+  
+  // Local sync
+  broadcastShotclock();
+
+  if (db) {
+    db.ref(`states/${fbUser}`).update({
+      shotSeconds: shotSeconds,
+      shotRunning: shotRunning
+    }).catch(e => console.error(e));
+  }
+}
+
+// ── Button actions ──
+function toggleShot(e) {
+  ripple(e, document.getElementById('mainBtn'));
+  if (shotRunning) {
+    shotRunning = false; stopLocalTick(); renderClock(); cmd('shot_stop');
+  } else {
+    if (shotSeconds <= 0) return;
+    shotRunning = true; startLocalTick(); renderClock(); cmd('shot_start');
+  }
+}
+
+function resetShot(n, e) {
+  if (e) ripple(e, e.currentTarget);
+  shotSeconds = n; shotRunning = true;
+  stopLocalTick(); startLocalTick();
+  renderClock(); cmd('shot_reset', n);
+}
+
+function resetShotCustom(e) {
+  const n = parseInt(document.getElementById('shotCustomIn').value);
+  if (isNaN(n) || n < 1 || n > 60) return;
+  resetShot(n, e);
+}
+
+function soundBuzzer(e) {
+  if (e) ripple(e, document.getElementById('buzzerBtn'));
+  playBuzz();
+  const timestamp = Date.now();
+  bc.postMessage({ type: 'buzz', user: fbUser, kind: 'shot', timestamp });
+  if (useFirebase && db) {
+    db.ref(`buzz/${fbUser}`).set({
+      kind: 'shot',
+      timestamp: timestamp
+    }).catch(e => console.error(e));
+    return;
+  }
+  fetch(`${SERVER_URL}/buzz?user=${encodeURIComponent(currentUser)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind: 'shot' })
+  }).catch(() => {});
+}
+
+// ── Ripple effect ──
+function ripple(e, btn) {
+  if (!btn) return;
+  const r = document.createElement('span');
+  r.className = 'ripple';
+  const rect = btn.getBoundingClientRect();
+  const x = (e.clientX || rect.left + rect.width / 2) - rect.left;
+  const y = (e.clientY || rect.top + rect.height / 2) - rect.top;
+  r.style.left = (x - 20) + 'px';
+  r.style.top  = (y - 20) + 'px';
+  btn.appendChild(r);
+  r.addEventListener('animationend', () => r.remove());
+}
+
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+function getAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+document.addEventListener('touchstart', () => getAudio(), { passive: true });
+document.addEventListener('click',      () => getAudio(), { passive: true });
+function playBuzz() { const a = new Audio('/buzzer.mp3'); a.volume = 1; a.play().catch(() => {}); }
+
+// ── SSE ──
+function connectSSE() {
+  if (useFirebase && db) {
+    // Real-time connection status
+    db.ref('.info/connected').on('value', snapshot => {
+      setConnected(snapshot.val() === true);
+    });
+    db.ref(`states/${fbUser}`).on('value', snapshot => {
+      const d = snapshot.val();
+      if (!d) return;
+      const since = Date.now() - _lastCmd;
+      shotSeconds = d.shotSeconds != null ? d.shotSeconds : shotSeconds;
+      if (since > 500) {
+        shotRunning = !!d.shotRunning;
+      }
+      stopLocalTick();
+      if (shotRunning) startLocalTick();
+      renderClock();
+    });
+    
+    db.ref(`buzz/${fbUser}`).on('value', snapshot => {
+      const msg = snapshot.val();
+      if (!msg) return;
+      if (msg.kind === 'shot' && msg.timestamp > (window.lastBuzzTime || 0)) {
+        window.lastBuzzTime = msg.timestamp;
+        playBuzz();
+      }
+    });
+    return;
+  }
+
+  setConnected(false);
+  const es = new EventSource(`${SERVER_URL}/events?user=${encodeURIComponent(currentUser)}`);
+  es.onopen = () => setConnected(true);
+  es.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'state') {
+        const d = msg.data;
+        const since = Date.now() - _lastCmd;
+        shotSeconds = d.shotSeconds != null ? d.shotSeconds : shotSeconds;
+        if (since > 500) {
+          shotRunning = !!d.shotRunning;
+        }
+        stopLocalTick();
+        if (shotRunning) startLocalTick();
+        renderClock();
+      } else if (msg.type === 'buzz' && msg.kind === 'shot') {
+        playBuzz();
+      }
+    } catch (err) {}
+  };
+  es.onerror = () => {
+    setConnected(false); stopLocalTick();
+    es.close(); setTimeout(connectSSE, 2000);
+  };
+}
+
+// ── Init ──
+if (useFirebase && db) {
+  db.ref(`states/${fbUser}`).once('value').then(snapshot => {
+    const d = snapshot.val();
+    if (d) {
+      if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
+      shotRunning = !!d.shotRunning;
+    }
+    if (shotRunning) startLocalTick();
+    renderClock();
+  }).catch(() => {
+    renderClock();
+  }).finally(() => connectSSE());
+} else {
+  fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`).then(r => r.json()).then(d => {
+    if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
+    shotRunning = !!d.shotRunning;
+    if (shotRunning) startLocalTick();
+    renderClock();
+  }).catch(() => {}).finally(() => connectSSE());
+}
+
+// ── PWA Install Logic ──
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+const iosDismissed = localStorage.getItem('iosBannerDismissed');
+if (isIOS && !isInStandaloneMode && !iosDismissed) {
+  setTimeout(() => {
+    const banner = document.getElementById('iosInstallBanner');
+    if (banner) banner.style.display = 'block';
+  }, 2000);
+}
+function dismissIOSBanner() {
+  const banner = document.getElementById('iosInstallBanner');
+  if (banner) banner.style.display = 'none';
+  localStorage.setItem('iosBannerDismissed', '1');
+}
+
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const btn = document.getElementById('installBtn');
+  if (btn) btn.style.display = 'inline-flex';
+});
+window.addEventListener('appinstalled', () => {
+  const btn = document.getElementById('installBtn');
+  if (btn) btn.style.display = 'none';
+  deferredInstallPrompt = null;
+});
+function installApp() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.then(() => {
+    deferredInstallPrompt = null;
+    document.getElementById('installBtn').style.display = 'none';
+  });
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+
+<!-- iOS Install Banner -->
+<div id="iosInstallBanner">
+  <button class="ios-close" onclick="dismissIOSBanner()">✕</button>
+  <div class="ios-title">📲 Install Shot Clock App</div>
+  <div class="ios-steps">
+    1. Tap the <span>Share</span> button (□↑) at the bottom of Safari<br>
+    2. Scroll down and tap <span>Add to Home Screen</span><br>
+    3. Tap <span>Add</span> — done!
+  </div>
+  <div class="ios-arrow"></div>
+</div>
+</body>
+</html>
