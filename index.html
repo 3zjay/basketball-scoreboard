@@ -123,19 +123,34 @@
     .nav-logo {
       display: flex;
       align-items: center;
+      gap: 12px;
       text-decoration: none;
     }
 
     .nav-logo img {
-      height: 52px;
+      height: 54px;
       width: auto;
       object-fit: contain;
-      filter: drop-shadow(0 0 10px rgba(255,100,0,0.6));
+      filter: drop-shadow(0 2px 8px rgba(255,85,0,0.5));
       transition: all 0.2s ease;
     }
 
+    .nav-logo-text {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: #ffffff;
+      line-height: 1;
+    }
+
+    .nav-logo-text span {
+      color: #ff5500;
+    }
+
     .nav-logo:hover img {
-      filter: drop-shadow(0 0 12px rgba(255,150,0,0.8));
+      filter: drop-shadow(0 4px 16px rgba(255,102,0,0.8));
       transform: scale(1.05);
     }
 
@@ -1006,7 +1021,8 @@
   <nav>
     <div class="nav-container">
       <a href="/" class="nav-logo">
-        <img src="/hoop-culture-logo.png" alt="Hoop Culture Logo" onerror="this.onerror=null; this.src='/hoop-culture-logo.jpg';">
+        <img src="/hoop-culture-logo.png" alt="Hoop Culture Logo">
+        <span class="nav-logo-text">HOOP <span>CULTURE</span></span>
       </a>
       <ul class="nav-links">
         <li><a href="#ecosystem">Ecosystem</a></li>
