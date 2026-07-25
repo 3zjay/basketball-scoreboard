@@ -1111,7 +1111,8 @@
       let target = syncTarget;
       if (target === 'auto') {
         const host = window.location.hostname;
-        if ((host.includes('vercel.app') || host.includes('vercel.sh')) && db) {
+        const isLocalServer = host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.');
+        if (db && typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured && !isLocalServer) {
           target = 'firebase';
         } else if (host.includes('onrender.com')) {
           target = 'api-onrender';
