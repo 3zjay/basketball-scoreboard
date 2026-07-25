@@ -31,9 +31,17 @@ self.addEventListener('fetch', e => {
   }
   
   e.respondWith(
-    fetch(e.request).catch(() => {
+    fetch(e.request).then(response => {
+      if (!response.ok && e.request.url.includes('hoop-culture-logo')) {
+        return caches.match('/hoop-culture-logo.jpg').then(c => c || response);
+      }
+      return response;
+    }).catch(() => {
       return caches.match(e.request, { ignoreSearch: true }).then(cachedResponse => {
         if (cachedResponse) return cachedResponse;
+        if (e.request.url.includes('hoop-culture-logo')) {
+          return caches.match('/hoop-culture-logo.jpg');
+        }
         // Return a valid response instead of undefined to prevent WebKit process crashes
         return new Response("Connection lost — offline.", {
           status: 503,
