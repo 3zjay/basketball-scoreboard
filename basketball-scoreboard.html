@@ -624,6 +624,25 @@ body.light .reset-btn:hover { background:#fee2e2; }
 
 <div class="main">
 
+  <!-- AI SYNC HEADER STATUS BAR -->
+  <div class="card full" id="aiSyncHeaderBar" style="display:none; border:2px solid var(--orange); background:#120d09; transition:all 0.3s ease;">
+    <div style="padding:10px 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:18px;">📹</span>
+        <div>
+          <div style="color:var(--orange2); font-weight:800; font-size:14px; letter-spacing:1px; margin:0;">OPTICAL SCANNER LIVE FEED</div>
+          <div style="font-size:11px; color:var(--text2);">Live camera crops are shown directly inside each scoreboard card below for visual operator reference.</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span id="aiFeedStatusBadge" style="font-size:11px; padding:4px 10px; border-radius:12px; background:#2a1f0a; border:1px solid #7f500d; color:#f5c842; font-weight:700;">🟡 Waiting for Scanner...</span>
+        <button class="btn" onclick="openScannerModal(event)" style="font-size:11px; padding:6px 12px; background:var(--surface2); border-color:#16c784; color:#16c784;">
+          📱 Open Scanner Camera
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- HOME TEAM -->
   <div class="card">
     <div class="card-header">
@@ -674,6 +693,17 @@ body.light .reset-btn:hover { background:#fee2e2; }
         <button class="btn r" onclick="addScore('home',-1)">−1</button>
         <button class="btn r" onclick="addScore('home',-2)">−2</button>
         <button class="btn r" onclick="addScore('home',-3)">−3</button>
+      </div>
+      <!-- AI SYNC HOME CROP EMBED -->
+      <div class="ai-crop-embed" id="aiCropHome" style="display:none; margin-top:10px; padding:8px 12px; background:#181008; border:1px solid var(--orange); border-radius:8px; align-items:center; gap:12px;">
+        <div style="width:80px; height:50px; background:#000; border:1px solid var(--border2); border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+          <img id="feedHomeImg" src="" alt="Home Feed" style="max-height:100%; max-width:100%; object-fit:contain; display:none;">
+          <span id="feedHomePlaceholder" style="font-size:9px; color:var(--text3);">No Crop</span>
+        </div>
+        <div>
+          <div style="font-size:11px; font-weight:800; color:#f5c842; letter-spacing:1px; text-transform:uppercase;">📹 Live Home Score Feed</div>
+          <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
+        </div>
       </div>
       <!-- FOULS -->
       <div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
@@ -734,6 +764,17 @@ body.light .reset-btn:hover { background:#fee2e2; }
         <button class="btn r" onclick="addScore('away',-2)">−2</button>
         <button class="btn r" onclick="addScore('away',-3)">−3</button>
       </div>
+      <!-- AI SYNC AWAY CROP EMBED -->
+      <div class="ai-crop-embed" id="aiCropAway" style="display:none; margin-top:10px; padding:8px 12px; background:#181008; border:1px solid var(--orange); border-radius:8px; align-items:center; gap:12px;">
+        <div style="width:80px; height:50px; background:#000; border:1px solid var(--border2); border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+          <img id="feedAwayImg" src="" alt="Away Feed" style="max-height:100%; max-width:100%; object-fit:contain; display:none;">
+          <span id="feedAwayPlaceholder" style="font-size:9px; color:var(--text3);">No Crop</span>
+        </div>
+        <div>
+          <div style="font-size:11px; font-weight:800; color:#ef4444; letter-spacing:1px; text-transform:uppercase;">📹 Live Away Score Feed</div>
+          <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
+        </div>
+      </div>
       <!-- FOULS -->
       <div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
         <span style="font-family:'Teko',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--text3);text-transform:uppercase;flex-shrink:0;">FOULS</span>
@@ -767,6 +808,18 @@ body.light .reset-btn:hover { background:#fee2e2; }
             <button class="btn danger"  onclick="resetGameClock()">↺ Reset</button>
           </div>
           <button class="btn" style="width:100%;margin-top:6px;background:var(--surface2);border-color:#f5c842;color:#f5c842;" onclick="setTimerPreset()">⏱ Set as Period Timer</button>
+
+          <!-- AI SYNC GAME CLOCK EMBED -->
+          <div class="ai-crop-embed" id="aiCropClock" style="display:none; margin-top:10px; padding:8px 12px; background:#181008; border:1px solid var(--orange); border-radius:8px; align-items:center; gap:12px;">
+            <div style="width:80px; height:50px; background:#000; border:1px solid var(--border2); border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <img id="feedClockImg" src="" alt="Clock Feed" style="max-height:100%; max-width:100%; object-fit:contain; display:none;">
+              <span id="feedClockPlaceholder" style="font-size:9px; color:var(--text3);">No Crop</span>
+            </div>
+            <div>
+              <div style="font-size:11px; font-weight:800; color:#3b82f6; letter-spacing:1px; text-transform:uppercase;">📹 Live Clock Feed</div>
+              <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
+            </div>
+          </div>
         </div>
 
         <!-- Shot Clock -->
@@ -788,6 +841,18 @@ body.light .reset-btn:hover { background:#fee2e2; }
               text-align:center; outline:none; -moz-appearance:textfield;
             ">
             <button class="btn" style="background:var(--surface2);border-color:var(--border);color:var(--text2);white-space:nowrap;" onclick="resetShotCustom()">↺ Set</button>
+          </div>
+
+          <!-- AI SYNC SHOT CLOCK EMBED -->
+          <div class="ai-crop-embed" id="aiCropShot" style="display:none; margin-top:10px; padding:8px 12px; background:#181008; border:1px solid var(--orange); border-radius:8px; align-items:center; gap:12px;">
+            <div style="width:80px; height:50px; background:#000; border:1px solid var(--border2); border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <img id="feedShotImg" src="" alt="Shot Feed" style="max-height:100%; max-width:100%; object-fit:contain; display:none;">
+              <span id="feedShotPlaceholder" style="font-size:9px; color:var(--text3);">No Crop</span>
+            </div>
+            <div>
+              <div style="font-size:11px; font-weight:800; color:#f97316; letter-spacing:1px; text-transform:uppercase;">📹 Live Shot Clock Feed</div>
+              <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical shot clock</div>
+            </div>
           </div>
         </div>
 
@@ -812,6 +877,18 @@ body.light .reset-btn:hover { background:#fee2e2; }
             font-family:'Barlow Condensed'; font-weight:800; font-size:15px; letter-spacing:2px;
             text-transform:uppercase; transition:all 0.15s;
           ">🔔 SOUND BUZZER</button>
+
+          <!-- AI SYNC PERIOD EMBED -->
+          <div class="ai-crop-embed" id="aiCropPeriod" style="display:none; margin-top:10px; padding:8px 12px; background:#181008; border:1px solid var(--orange); border-radius:8px; align-items:center; gap:12px;">
+            <div style="width:80px; height:50px; background:#000; border:1px solid var(--border2); border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <img id="feedPeriodImg" src="" alt="Period Feed" style="max-height:100%; max-width:100%; object-fit:contain; display:none;">
+              <span id="feedPeriodPlaceholder" style="font-size:9px; color:var(--text3);">No Crop</span>
+            </div>
+            <div>
+              <div style="font-size:11px; font-weight:800; color:#a855f7; letter-spacing:1px; text-transform:uppercase;">📹 Live Period Feed</div>
+              <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -986,6 +1063,13 @@ const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_us
 const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 
 const bc = new BroadcastChannel('hc_scoreboard_sync');
+bc.onmessage = (e) => {
+  if (e.data && (e.data.type === 'stream' || e.data.type === 'ocr')) {
+    if (typeof processOcrData === 'function') {
+      processOcrData(e.data.data || e.data);
+    }
+  }
+};
 function broadcastState() {
   bc.postMessage({ type: 'state', user: fbUser, data: S });
 }
@@ -2077,6 +2161,80 @@ if (useFirebase && db) {
   }).finally(()=>{ connectSSE(); });
 }
 
+// ── AI OPTICAL STREAM & OCR RECOGNITION CONTROLLER ──────────────
+window.ocrHistory = { home: [], away: [] };
+let lastFeedTimestamp = 0;
+
+function openScannerModal(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const scannerUrl = '/camera.html?user=' + encodeURIComponent(currentUser);
+  window.open(scannerUrl, 'ScoreboardScannerWindow', 'width=900,height=700,resizable=yes,scrollbars=yes');
+}
+
+function updateFeedMonitorUI(incoming) {
+  if (!incoming) return;
+  lastFeedTimestamp = Date.now();
+
+  const isEnabled = S.aiSyncEnabled;
+
+  const headerBar = document.getElementById('aiSyncHeaderBar');
+  if (headerBar) headerBar.style.display = isEnabled ? 'block' : 'none';
+
+  const embeds = document.querySelectorAll('.ai-crop-embed');
+  embeds.forEach(el => {
+    el.style.display = isEnabled ? 'flex' : 'none';
+  });
+
+  const badge = document.getElementById('aiFeedStatusBadge');
+  if (badge) {
+    badge.textContent = '🟢 Scanner Live Stream';
+    badge.style.background = '#143820';
+    badge.style.borderColor = '#16c784';
+    badge.style.color = '#16c784';
+  }
+
+  const updateCrop = (type, imgData) => {
+    const img = document.getElementById(`feed${type}Img`);
+    const ph = document.getElementById(`feed${type}Placeholder`);
+
+    if (img) {
+      if (imgData) {
+        img.src = imgData;
+        img.style.display = 'block';
+        if (ph) ph.style.display = 'none';
+      } else {
+        img.style.display = 'none';
+        if (ph) ph.style.display = 'inline';
+      }
+    }
+  };
+
+  updateCrop('Home', incoming.homeScoreStream);
+  updateCrop('Away', incoming.awayScoreStream);
+  updateCrop('Clock', incoming.gameClockStream);
+  updateCrop('Shot', incoming.shotClockStream);
+  updateCrop('Period', incoming.periodStream);
+}
+
+// Monitor for stale scanner stream
+setInterval(() => {
+  if (lastFeedTimestamp > 0 && Date.now() - lastFeedTimestamp > 6000) {
+    const badge = document.getElementById('aiFeedStatusBadge');
+    if (badge) {
+      badge.textContent = '🟡 Waiting for Scanner...';
+      badge.style.background = '#2a1f0a';
+      badge.style.borderColor = '#7f500d';
+      badge.style.color = '#f5c842';
+    }
+  }
+}, 3000);
+
+function processOcrData(incoming) {
+  if (!incoming) return;
+  // Update live camera stream crops inside each manual scoreboard card for visual reference
+  updateFeedMonitorUI(incoming);
+}
+
 // SSE — server pushes state every second while clocks run, instantly on any action
 function connectSSE(){
   if (useFirebase && db) {
@@ -2129,125 +2287,7 @@ function connectSSE(){
     });
 
     db.ref(`ocr/${fbUser}`).on('value', snapshot => {
-      // Guard manual actions from being overwritten by delayed OCR updates
-      if (window.lastManualActionTime && (Date.now() - window.lastManualActionTime) < 5000) return;
-      
-      if (S.aiSyncEnabled) {
-        const incoming = snapshot.val();
-        if (!incoming) return;
-        let updated = {};
-
-        if (incoming.clock != null) {
-          const clockStr = String(incoming.clock).replace(/\s/g, '').trim();
-          let incomingSeconds = null;
-          if (clockStr.includes(':')) {
-            const parts = clockStr.split(':');
-            const mins = parseInt(parts[0], 10) || 0;
-            const secs = parseInt(parts[1], 10) || 0;
-            incomingSeconds = mins * 60 + secs;
-          } else if (clockStr.length === 3) {
-            const mins = parseInt(clockStr.substring(0, 1), 10) || 0;
-            const secs = parseInt(clockStr.substring(1), 10) || 0;
-            incomingSeconds = mins * 60 + secs;
-          } else if (clockStr.length === 4) {
-            const mins = parseInt(clockStr.substring(0, 2), 10) || 0;
-            const secs = parseInt(clockStr.substring(2), 10) || 0;
-            incomingSeconds = mins * 60 + secs;
-          } else {
-            const parsedVal = parseFloat(clockStr) || 0;
-            incomingSeconds = Math.round(parsedVal);
-          }
-
-          if (incomingSeconds !== null) {
-            let isRunning = S.gameRunning;
-            if (window.lastAISeconds !== undefined) {
-              if (incomingSeconds < window.lastAISeconds) {
-                isRunning = true;
-              } else {
-                isRunning = false;
-              }
-            }
-            window.lastAISeconds = incomingSeconds;
-            updated.gameRunning = isRunning;
-
-            // Lag compensation (processing roundtrip lag offset)
-            const compensatedSeconds = isRunning ? Math.max(0, incomingSeconds - 1) : incomingSeconds;
-            const drift = Math.abs(S.gameSeconds - compensatedSeconds);
-
-            // Only snap clock if drift is significant (> 3s) or running state changed
-            if (drift > 3 || S.gameRunning !== isRunning) {
-              updated.gameSeconds = compensatedSeconds;
-            }
-          }
-        }
-
-        if (incoming.homeScore != null) {
-          updated.homeScore = parseInt(incoming.homeScore, 10) || 0;
-        }
-        if (incoming.awayScore != null) {
-          updated.awayScore = parseInt(incoming.awayScore, 10) || 0;
-        }
-
-        if (incoming.period != null) {
-          updated.quarter = parseInt(incoming.period, 10) || 1;
-        }
-
-        if (incoming.shotClock != null) {
-          const scStr = String(incoming.shotClock).trim();
-          const incomingShotSeconds = parseInt(scStr, 10) || 24;
-
-          let isShotRunning = S.shotRunning;
-          if (window.lastAIShotSeconds !== undefined) {
-            if (incomingShotSeconds < window.lastAIShotSeconds) {
-              isShotRunning = true;
-            } else {
-              isShotRunning = false;
-            }
-          }
-          window.lastAIShotSeconds = incomingShotSeconds;
-          updated.shotRunning = isShotRunning;
-
-          // Lag compensation (offsetting cloud sync latency)
-          const compensatedShotSeconds = isShotRunning ? Math.max(0, incomingShotSeconds - 1) : incomingShotSeconds;
-          const shotDrift = Math.abs(S.shotSeconds - compensatedShotSeconds);
-
-          // Only snap local shot clock if drift is significant (> 2s) or if running state changed
-          if (shotDrift > 2 || S.shotRunning !== isShotRunning) {
-            updated.shotSeconds = compensatedShotSeconds;
-          }
-        }
-
-        const hasChanges = Object.keys(updated).some(k => S[k] !== updated[k]);
-        if (hasChanges) {
-          S = { ...S, ...updated };
-          
-          if (updated.gameRunning !== undefined) {
-            if (updated.gameRunning) {
-              startLocalGameTick();
-            } else {
-              stopLocalGameTick();
-            }
-          }
-          if (updated.shotRunning !== undefined) {
-            if (updated.shotRunning) {
-              startLocalShotTick();
-            } else {
-              stopLocalShotTick();
-            }
-          }
-          
-          db.ref(`states/${fbUser}`).update({
-            homeScore: S.homeScore,
-            awayScore: S.awayScore,
-            quarter: S.quarter,
-            gameSeconds: S.gameSeconds,
-            shotSeconds: S.shotSeconds,
-            gameRunning: S.gameRunning,
-            shotRunning: S.shotRunning,
-          }).catch(e => console.error(e));
-          renderAll();
-        }
-      }
+      processOcrData(snapshot.val());
     });
 
     db.ref(`buzz/${fbUser}`).on('value', snapshot => {
@@ -2310,6 +2350,8 @@ function connectSSE(){
           if(msg.kind === 'game') playGameBuzzer();
           else playShotBuzzer();
         }
+      } else if(msg.type === 'stream' || msg.type === 'ocr') {
+        processOcrData(msg.data || msg);
       }
     } catch(err){}
   };
@@ -2322,6 +2364,14 @@ function toggleAiSync(enabled) {
   // Update toggle checkbox state
   const checkbox = document.getElementById('aiSyncToggle');
   if (checkbox) checkbox.checked = enabled;
+
+  const headerBar = document.getElementById('aiSyncHeaderBar');
+  if (headerBar) headerBar.style.display = enabled ? 'block' : 'none';
+
+  const embeds = document.querySelectorAll('.ai-crop-embed');
+  embeds.forEach(el => {
+    el.style.display = enabled ? 'flex' : 'none';
+  });
 
   saveNow();
 }

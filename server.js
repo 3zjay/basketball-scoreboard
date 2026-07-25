@@ -488,53 +488,6 @@ const requestHandler = async (req, res) => {
         states[user].aiSyncEnabled = true;
 
         const incoming = JSON.parse(b);
-        let updated = {};
-
-        // 1. Parse Clock if text is passed (e.g., "19:44", "10:00", "09:58")
-        if (incoming.clock != null) {
-          const clockStr = String(incoming.clock).replace(/\s/g, '').trim();
-          let incomingSeconds = null;
-          if (clockStr.includes(':')) {
-            const parts = clockStr.split(':');
-            const mins = parseInt(parts[0], 10) || 0;
-            const secs = parseInt(parts[1], 10) || 0;
-            incomingSeconds = mins * 60 + secs;
-          } else if (clockStr.length === 3) {
-            const mins = parseInt(clockStr.substring(0, 1), 10) || 0;
-            const secs = parseInt(clockStr.substring(1), 10) || 0;
-            incomingSeconds = mins * 60 + secs;
-          } else if (clockStr.length === 4) {
-            const mins = parseInt(clockStr.substring(0, 2), 10) || 0;
-            const secs = parseInt(clockStr.substring(2), 10) || 0;
-            incomingSeconds = mins * 60 + secs;
-          } else {
-            const parsedVal = parseFloat(clockStr);
-            if (!isNaN(parsedVal)) incomingSeconds = Math.round(parsedVal);
-          }
-          if (incomingSeconds !== null) {
-            updated.gameSeconds = incomingSeconds;
-          }
-        }
-
-        // 2. Parse Scores
-        const hScore = incoming.homeScore !== undefined ? incoming.homeScore : incoming.home;
-        if (hScore != null && !isNaN(parseInt(hScore, 10))) {
-          updated.homeScore = parseInt(hScore, 10);
-        }
-        const aScore = incoming.awayScore !== undefined ? incoming.awayScore : incoming.away;
-        if (aScore != null && !isNaN(parseInt(aScore, 10))) {
-          updated.awayScore = parseInt(aScore, 10);
-        }
-
-        // 3. Parse Period / Quarter
-        if (incoming.period != null && !isNaN(parseInt(incoming.period, 10))) {
-          updated.quarter = parseInt(incoming.period, 10);
-        }
-
-        // 4. Parse Shot Clock
-        if (incoming.shotClock != null && !isNaN(parseInt(incoming.shotClock, 10))) {
-          updated.shotSeconds = parseInt(incoming.shotClock, 10);
-        }
 
         if (incoming.gameClockStream) states[user].gameClockStream = incoming.gameClockStream;
         if (incoming.homeScoreStream) states[user].homeScoreStream = incoming.homeScoreStream;
@@ -543,12 +496,7 @@ const requestHandler = async (req, res) => {
         if (incoming.shotClockStream) states[user].shotClockStream = incoming.shotClockStream;
         if (incoming.streamActive !== undefined) states[user].streamActive = incoming.streamActive;
 
-        if (Object.keys(updated).length > 0) {
-          states[user] = { ...states[user], ...updated };
-        }
-
         pushToAll(user, { type: 'stream', data: incoming });
-        pushToAll(user, { type: 'state', data: fullState(user) });
       } catch(e) {}
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, ok: true }));
@@ -556,144 +504,26 @@ const requestHandler = async (req, res) => {
     return;
   }
 
-  // POST /api/ocr — camera sync feed endpoint (from ScoreSight)
+  // POST /api/ocr — camera sync feed endpoint
   if (req.method === 'POST' && pathname === '/api/ocr') {
     readBody(req).then(b => {
       try {
-        // Ensure the session state is initialized on the server
         getOrCreateUser(user);
-        
-        // Auto-enable AI Sync on the server if we receive an OCR payload
         states[user].aiSyncEnabled = true;
           
         const incoming = JSON.parse(b);
-        
-        // Guard manual actions from being overwritten by delayed OCR updates
-        if (states[user].lastManualTime && (Date.now() - states[user].lastManualTime) < 5000) {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: true, ignored: true }));
-          return;
-        }
-        let updated = {};
 
-        // 1. Parse Clock (e.g., "10:00", "09:58", "58.4", or colon-less "0831" / "831")
-        if (incoming.clock != null) {
-          const clockStr = String(incoming.clock).replace(/\s/g, '').trim(); // Remove all spaces
-          let incomingSeconds = null;
-          if (clockStr.includes(':')) {
-            const parts = clockStr.split(':');
-            const mins = parseInt(parts[0], 10) || 0;
-            const secs = parseInt(parts[1], 10) || 0;
-            incomingSeconds = mins * 60 + secs;
-          } else if (clockStr.length === 3) {
-            // e.g. "831" -> 8 mins, 31 secs
-            const mins = parseInt(clockStr.substring(0, 1), 10) || 0;
-            const secs = parseInt(clockStr.substring(1), 10) || 0;
-            incomingSeconds = mins * 60 + secs;
-          } else if (clockStr.length === 4) {
-            // e.g. "0831" -> 8 mins, 31 secs
-            const mins = parseInt(clockStr.substring(0, 2), 10) || 0;
-            const secs = parseInt(clockStr.substring(2), 10) || 0;
-            incomingSeconds = mins * 60 + secs;
-          } else {
-            const parsedVal = parseFloat(clockStr) || 0;
-            incomingSeconds = Math.round(parsedVal);
-          }
+        if (incoming.gameClockStream) states[user].gameClockStream = incoming.gameClockStream;
+        if (incoming.homeScoreStream) states[user].homeScoreStream = incoming.homeScoreStream;
+        if (incoming.awayScoreStream) states[user].awayScoreStream = incoming.awayScoreStream;
+        if (incoming.periodStream) states[user].periodStream = incoming.periodStream;
+        if (incoming.shotClockStream) states[user].shotClockStream = incoming.shotClockStream;
+        if (incoming.streamActive !== undefined) states[user].streamActive = incoming.streamActive;
 
-          if (incomingSeconds !== null) {
-            // Detect clock state updates: Running or Paused
-            const lastSecs = states[user].gameSeconds;
-            let isRunning = states[user].gameRunning;
-            if (lastSecs !== undefined && lastSecs !== null) {
-              if (incomingSeconds < lastSecs) {
-                isRunning = true;
-              } else {
-                isRunning = false;
-              }
-            }
-            updated.gameRunning = isRunning;
-
-            // Lag compensation (processing roundtrip lag offset)
-            const compensatedSeconds = isRunning ? Math.max(0, incomingSeconds - 1) : incomingSeconds;
-            const drift = Math.abs((states[user].gameSeconds || 0) - compensatedSeconds);
-
-            // Only snap clock if drift is significant (> 3s) or running state changed
-            if (drift > 3 || states[user].gameRunning !== isRunning) {
-              updated.gameSeconds = compensatedSeconds;
-            }
-          }
-        }
-
-        // 2. Parse Scores (Accept both homeScore/awayScore and raw home/away keys)
-        const hScore = incoming.homeScore !== undefined ? incoming.homeScore : incoming.home;
-        if (hScore != null) {
-          updated.homeScore = parseInt(hScore, 10) || 0;
-        }
-        const aScore = incoming.awayScore !== undefined ? incoming.awayScore : incoming.away;
-        if (aScore != null) {
-          updated.awayScore = parseInt(aScore, 10) || 0;
-        }
-
-        // 3. Parse Period/Quarter
-        if (incoming.period != null) {
-          updated.quarter = parseInt(incoming.period, 10) || 1;
-        }
-
-        // 4. Parse Shot Clock (if present)
-        if (incoming.shotClock != null) {
-          const scStr = String(incoming.shotClock).trim();
-          const incomingShotSeconds = parseInt(scStr, 10) || 24;
-          
-          const lastShotSecs = states[user].shotSeconds;
-          let isShotRunning = states[user].shotRunning;
-          if (lastShotSecs !== undefined && lastShotSecs !== null) {
-            if (incomingShotSeconds < lastShotSecs) {
-              isShotRunning = true;
-            } else {
-              isShotRunning = false;
-            }
-          }
-          updated.shotRunning = isShotRunning;
-
-          // Lag compensation (offsetting cloud sync latency)
-          const compensatedShotSeconds = isShotRunning ? Math.max(0, incomingShotSeconds - 1) : incomingShotSeconds;
-          const shotDrift = Math.abs((states[user].shotSeconds || 0) - compensatedShotSeconds);
-
-          // Only snap local shot clock if drift is significant (> 2s) or if running state changed
-          if (shotDrift > 2 || states[user].shotRunning !== isShotRunning) {
-            updated.shotSeconds = compensatedShotSeconds;
-          }
-        }
-
-        // Since camera is running the clock, make sure local server ticker doesn't overlap
-        if (states[user].gameRunning) {
-          stopGameClock(user);
-        }
-        if (states[user].shotRunning) {
-          stopShotClock(user);
-        }
-
-        // Store old scores for replay comparison
-        const prevHomeScore = states[user].homeScore || 0;
-        const prevAwayScore = states[user].awayScore || 0;
-
-        states[user] = { ...states[user], ...updated };
-
-        // Check if score went up
-        try {
-          const newHomeScore = states[user].homeScore || 0;
-          const newAwayScore = states[user].awayScore || 0;
-          if (newHomeScore > prevHomeScore || newAwayScore > prevAwayScore) {
-            triggerSaveReplay();
-          }
-        } catch (err) {
-          console.error("⚠️ Replay trigger check failed:", err);
-        }
-
-        pushToAll(user, { type: 'state', data: fullState(user) });
+        pushToAll(user, { type: 'stream', data: incoming });
       } catch(e) {}
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end('{"ok":true}');
+      res.end(JSON.stringify({ success: true, ok: true }));
     });
     return;
   }

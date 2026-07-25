@@ -938,14 +938,14 @@
           return total > 0 ? (count / total) : 0;
         };
 
-        const t = 0.20;
-        const s1 = sampleRegion(0.2, 0.8, 0.0, 0.22) > t;
-        const s2 = sampleRegion(0.0, 0.45, 0.12, 0.45) > t;
-        const s3 = sampleRegion(0.55, 1.0, 0.12, 0.45) > t;
-        const s4 = sampleRegion(0.2, 0.8, 0.38, 0.62) > t;
-        const s5 = sampleRegion(0.0, 0.45, 0.55, 0.88) > t;
-        const s6 = sampleRegion(0.55, 1.0, 0.55, 0.88) > t;
-        const s7 = sampleRegion(0.2, 0.8, 0.78, 1.0) > t;
+        const t = 0.30;
+        const s1 = sampleRegion(0.25, 0.75, 0.02, 0.18) > t; // Top
+        const s2 = sampleRegion(0.02, 0.30, 0.15, 0.40) > t; // Top-Left
+        const s3 = sampleRegion(0.70, 0.98, 0.15, 0.40) > t; // Top-Right
+        const s4 = sampleRegion(0.25, 0.75, 0.42, 0.58) > t; // Middle
+        const s5 = sampleRegion(0.02, 0.30, 0.60, 0.85) > t; // Bottom-Left
+        const s6 = sampleRegion(0.70, 0.98, 0.60, 0.85) > t; // Bottom-Right
+        const s7 = sampleRegion(0.25, 0.75, 0.82, 0.98) > t; // Bottom
 
         let digit = '?';
         if (!s1 && !s4 && !s7 && ((s3 && s6) || (s2 && s5))) digit = '1';
@@ -967,6 +967,7 @@
 
         if (digit !== '?') resultStr += digit;
       }
+      resultStr = resultStr.replace(/:+/g, ':');
       return resultStr || null;
     }
 
@@ -1053,19 +1054,6 @@
 
         preprocess(ctx, canvas.width, canvas.height, key);
 
-        let recText = null;
-        // Recognize 7-segment digits from binarized canvas
-        try {
-          recText = recognizeCanvasDigits(ctx, canvas.width, canvas.height, key);
-          if (recText) {
-            if (key === 'clock') payload.clock = recText;
-            if (key === 'home') payload.homeScore = recText;
-            if (key === 'away') payload.awayScore = recText;
-            if (key === 'period') payload.period = recText;
-            if (key === 'shot') payload.shotClock = recText;
-          }
-        } catch(e) {}
-
         // Update in-box binarized canvas preview
         const cPreview = document.getElementById(`crop-preview-${key}`);
         if (cPreview) {
@@ -1076,7 +1064,7 @@
           cCtx.putImageData(ctx.getImageData(0, 0, canvas.width, canvas.height), 0, 0);
         }
 
-        // Update calibration binarization monitor & text
+        // Update calibration binarization monitor
         if (key === activeCrop) {
           const pCanvas = document.getElementById('ocr-preview-canvas');
           if (pCanvas) {
@@ -1088,8 +1076,8 @@
           }
           const ocrTextEl = document.getElementById('ocr-recognized-text');
           if (ocrTextEl) {
-            ocrTextEl.textContent = `OCR: ${recText || '--'}`;
-            ocrTextEl.style.color = recText ? '#16c784' : 'var(--orange)';
+            ocrTextEl.textContent = 'Live Feed Stream';
+            ocrTextEl.style.color = '#16c784';
           }
         }
 
@@ -1102,10 +1090,6 @@
             const sCtx = sCanvas.getContext('2d');
             sCtx.clearRect(0, 0, canvas.width, canvas.height);
             sCtx.putImageData(ctx.getImageData(0, 0, canvas.width, canvas.height), 0, 0);
-          }
-          const sTextEl = document.getElementById(`saver-text-${key}`);
-          if (sTextEl) {
-            sTextEl.textContent = recText || '--';
           }
         }
 
