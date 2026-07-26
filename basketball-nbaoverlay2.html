@@ -349,7 +349,7 @@ function darken(hex, pct=0.5){
 
 function render(){
   const eff = getEffState();
-  const qL=typeof eff.quarter==='number'?(PERIODS[eff.quarter-1]||`Q${eff.quarter}`):eff.quarter;
+  const qL=typeof eff.quarter==='number'?(eff.quarter===0?PERIODS[0]:PERIODS[eff.quarter-1]||`Q${eff.quarter}`):eff.quarter;
   renderStreamOrText('periodN2', S.periodStream, qL, '1.2vw');
 
   const hEl=document.getElementById('homeScoreN2');

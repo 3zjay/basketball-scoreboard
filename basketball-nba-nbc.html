@@ -642,7 +642,7 @@ function tock(){
 function draw(){
   const eff = getEffState();
   /* period */
-  const perText = typeof eff.quarter==='number'?(PER[eff.quarter-1]||`Q${eff.quarter}`):eff.quarter;
+  const perText = typeof eff.quarter==='number'?(eff.quarter===0?PER[0]:PER[eff.quarter-1]||`Q${eff.quarter}`):eff.quarter;
   renderStreamOrText('per', S.periodStream, perText, '0.9vw');
   tock();
 

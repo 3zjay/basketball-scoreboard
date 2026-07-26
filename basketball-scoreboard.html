@@ -1288,7 +1288,7 @@ function renderAll(){
   if(hfEl) hfEl.textContent = S.homeFouls || 0;
   if(afEl) afEl.textContent = S.awayFouls || 0;
 
-  const qL = typeof S.quarter==='number' ? (PERIODS[S.quarter-1]||`Q${S.quarter}`) : S.quarter;
+  const qL = typeof S.quarter==='number' ? (S.quarter===0?PERIODS[0]:PERIODS[S.quarter-1]||`Q${S.quarter}`) : S.quarter;
   document.querySelectorAll('.qbtn').forEach(b=>b.classList.toggle('active', b.textContent===qL));
 
   renderGameClock(); renderShotClock(); renderPossession();
