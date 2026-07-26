@@ -730,3 +730,4 @@ if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
 }
 // Trigger GitHub sync
 // Force Github update for logo
+// Base64 Inline Fix for Vercel Image Corruption
