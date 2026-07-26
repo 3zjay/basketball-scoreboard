@@ -728,3 +728,4 @@ if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
   console.log('   openssl req -nodes -new -x509 -keyout key.pem -out cert.pem -days 365 -subj "/CN=localhost"');
   console.log('2. Restart this server (npm run dev). It will open a secure port 3001 for your phone camera.');
 }
+// Trigger GitHub sync Sun Jul 26 12:41:35 AM UTC 2026
