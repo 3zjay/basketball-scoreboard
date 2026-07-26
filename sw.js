@@ -1,11 +1,10 @@
 // Service Worker — enables PWA install on Android & iOS
-const CACHE = 'scoreboard-v4';
+const CACHE = 'scoreboard-v5';
 const ASSETS = [
   '/control',
   '/shotclock',
   '/manifest.json',
   '/hoop-culture-logo.png',
-  '/hoop-culture-logo.jpg',
   '/buzzer.mp3',
   '/icon-192.png',
   '/icon-512.png'
@@ -31,17 +30,9 @@ self.addEventListener('fetch', e => {
   }
   
   e.respondWith(
-    fetch(e.request).then(response => {
-      if (!response.ok && e.request.url.includes('hoop-culture-logo')) {
-        return caches.match('/hoop-culture-logo.jpg').then(c => c || response);
-      }
-      return response;
-    }).catch(() => {
+    fetch(e.request).catch(() => {
       return caches.match(e.request, { ignoreSearch: true }).then(cachedResponse => {
         if (cachedResponse) return cachedResponse;
-        if (e.request.url.includes('hoop-culture-logo')) {
-          return caches.match('/hoop-culture-logo.jpg');
-        }
         // Return a valid response instead of undefined to prevent WebKit process crashes
         return new Response("Connection lost — offline.", {
           status: 503,
