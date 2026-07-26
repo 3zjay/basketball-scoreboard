@@ -275,7 +275,7 @@ const ROUTES = {
   '/icon-192.png':       'icon-192.png',
   '/icon-512.png':       'icon-512.png',
   '/buzzer.mp3':         'buzzer.mp3',
-  '/hoop-culture-logo.png': 'hoop-culture-logo.png',
+  '/hoop-culture-logo.png?v=2': 'hoop-culture-logo.png?v=2',
   '/marketing-workflow-dark.png': 'marketing-workflow-dark.png',
   '/marketing-workflow-mobile-ocr.jpg': 'marketing-workflow-mobile-ocr.jpg',
   '/firebase-config.js': 'firebase-config.js',

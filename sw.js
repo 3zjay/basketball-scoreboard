@@ -4,7 +4,7 @@ const ASSETS = [
   '/control',
   '/shotclock',
   '/manifest.json',
-  '/hoop-culture-logo.png',
+  '/hoop-culture-logo.png?v=2',
   '/buzzer.mp3',
   '/icon-192.png',
   '/icon-512.png'
