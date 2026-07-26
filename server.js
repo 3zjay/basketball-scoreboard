@@ -275,7 +275,7 @@ const ROUTES = {
   '/icon-192.png':       'icon-192.png',
   '/icon-512.png':       'icon-512.png',
   '/buzzer.mp3':         'buzzer.mp3',
-  '/hoop-culture-logo.png?v=2': 'hoop-culture-logo.png?v=2',
+  '/hoop-culture-logo2.png': 'hoop-culture-logo2.png',
   '/marketing-workflow-dark.png': 'marketing-workflow-dark.png',
   '/marketing-workflow-mobile-ocr.jpg': 'marketing-workflow-mobile-ocr.jpg',
   '/firebase-config.js': 'firebase-config.js',
@@ -729,3 +729,4 @@ if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
   console.log('2. Restart this server (npm run dev). It will open a secure port 3001 for your phone camera.');
 }
 // Trigger GitHub sync
+// Force Github update for logo
