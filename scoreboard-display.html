@@ -445,7 +445,6 @@ function renderStreamOrText(elId, streamImgUrl, fallbackText, maxHeightCss) {
       el.innerHTML = '';
       img = document.createElement('img');
       img.className = 'stream-bin-img';
-      img.style.height = maxHeightCss || '100%';
       img.style.maxHeight = maxHeightCss || '100%';
       img.style.maxWidth = '100%';
       img.style.objectFit = 'contain';

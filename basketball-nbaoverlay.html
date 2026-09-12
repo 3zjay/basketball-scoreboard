@@ -117,7 +117,7 @@ html, body {
   border-bottom:0.18vw solid #c8102e;
   border-radius:0 0 0.42vw 0.42vw;
   height:5.73vw;
-  overflow:visible;
+  overflow:hidden;
 }
 
 /* Team segments */
@@ -433,7 +433,6 @@ function renderStreamOrText(elId, streamImgUrl, fallbackText, maxHeightCss) {
       el.innerHTML = '';
       img = document.createElement('img');
       img.className = 'stream-bin-img';
-      img.style.height = maxHeightCss || '100%';
       img.style.maxHeight = maxHeightCss || '100%';
       img.style.maxWidth = '100%';
       img.style.objectFit = 'contain';
