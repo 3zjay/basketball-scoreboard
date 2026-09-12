@@ -303,15 +303,17 @@ html, body {
 </div>
 
 <script>
-const SERVER_URL = (
-  window.location.hostname.includes('vercel.app') ||
-  window.location.hostname.includes('vercel.sh')
-) ? 'https://basketball-scoreboard-o0c7.onrender.com' : (
-  window.location.protocol === 'file:' ? 'http://localhost:3000' : ''
-);
+const isLocalServer = window.location.hostname === 'localhost' ||
+                      window.location.hostname === '127.0.0.1' ||
+                      window.location.hostname.startsWith('192.168.') ||
+                      window.location.hostname.startsWith('10.');
 
-const useFirebase = window.location.hostname.includes('vercel.app') ||
-                    window.location.hostname.includes('vercel.sh');
+const useFirebase = (typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured) && !isLocalServer;
+
+const SERVER_URL = useFirebase
+  ? 'https://basketball-scoreboard-o0c7.onrender.com'
+  : (window.location.protocol === 'file:' ? 'http://localhost:3000' : '');
+
 let db = null;
 if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
   try {
@@ -324,17 +326,83 @@ const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
 const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 
+let aiSyncActive = false;
+let aiState = { gameSeconds: null, clockStr: null, homeScore: null, awayScore: null, quarter: null, shotSeconds: null };
+
+function applyStreamData(data) {
+  if (!data) return;
+  if (data.streamActive === false) {
+    aiSyncActive = false;
+    render();
+    return;
+  }
+  if (data.streamActive === true) {
+    aiSyncActive = true;
+  } else if (data.clock != null || data.homeScore != null || data.awayScore != null || data.period != null || data.shotClock != null) {
+    aiSyncActive = true;
+  }
+
+  if (data.clock != null) {
+    const clockStr = String(data.clock).trim();
+    aiState.clockStr = clockStr;
+    if (clockStr.includes(':')) {
+      const parts = clockStr.split(':');
+      aiState.gameSeconds = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+    } else if (clockStr.length === 3) {
+      aiState.gameSeconds = (parseInt(clockStr.substring(0, 1), 10) || 0) * 60 + (parseInt(clockStr.substring(1), 10) || 0);
+    } else if (clockStr.length === 4) {
+      aiState.gameSeconds = (parseInt(clockStr.substring(0, 2), 10) || 0) * 60 + (parseInt(clockStr.substring(2), 10) || 0);
+    } else {
+      const p = parseFloat(clockStr);
+      if (!isNaN(p)) aiState.gameSeconds = Math.round(p);
+    }
+  }
+  if (data.homeScore != null && !isNaN(parseInt(data.homeScore, 10))) aiState.homeScore = parseInt(data.homeScore, 10);
+  if (data.awayScore != null && !isNaN(parseInt(data.awayScore, 10))) aiState.awayScore = parseInt(data.awayScore, 10);
+  if (data.period != null && !isNaN(parseInt(data.period, 10))) aiState.quarter = parseInt(data.period, 10);
+  if (data.shotClock != null && !isNaN(parseInt(data.shotClock, 10))) aiState.shotSeconds = parseInt(data.shotClock, 10);
+
+  if (data.gameClockStream) S.gameClockStream = data.gameClockStream;
+  if (data.homeScoreStream) S.homeScoreStream = data.homeScoreStream;
+  if (data.awayScoreStream) S.awayScoreStream = data.awayScoreStream;
+  if (data.periodStream) S.periodStream = data.periodStream;
+  if (data.shotClockStream) S.shotClockStream = data.shotClockStream;
+
+  render();
+}
+
+function getEffState() {
+  if (aiSyncActive) {
+    return {
+      ...S,
+      gameSeconds: aiState.gameSeconds !== null ? aiState.gameSeconds : S.gameSeconds,
+      clockStr: aiState.clockStr !== null ? aiState.clockStr : null,
+      homeScore: aiState.homeScore !== null ? aiState.homeScore : S.homeScore,
+      awayScore: aiState.awayScore !== null ? aiState.awayScore : S.awayScore,
+      quarter: aiState.quarter !== null ? aiState.quarter : S.quarter,
+      shotSeconds: aiState.shotSeconds !== null ? aiState.shotSeconds : S.shotSeconds,
+    };
+  }
+  return S;
+}
+
 let _lastLocalMsgTime = 0;
 const bc = new BroadcastChannel('hc_scoreboard_sync');
 bc.onmessage = (e) => {
   const msg = e.data;
-  if (!msg || msg.user !== fbUser) return;
+  if (!msg) return;
   _lastLocalMsgTime = Date.now();
   if (msg.type === 'state') {
     stopLocalTick();
-    S = { ...S, ...msg.data };
+    if (msg.data) {
+      if (msg.data.aiSyncActive !== undefined) aiSyncActive = !!msg.data.aiSyncActive;
+      if (msg.data.aiSyncEnabled !== undefined) aiSyncActive = !!msg.data.aiSyncEnabled;
+      S = { ...S, ...msg.data };
+    }
     render();
     syncLocalTick();
+  } else if (msg.type === 'stream') {
+    applyStreamData(msg.data);
   } else if (msg.type === 'buzz') {
     if (msg.timestamp > _lastBuzzTime) {
       _lastBuzzTime = msg.timestamp;
@@ -368,34 +436,106 @@ function startLocalTick(){
 function stopLocalTick(){ clearInterval(localTick); localTick = null; }
 function syncLocalTick(){ if(S.gameRunning || S.shotRunning){ startLocalTick(); } else { stopLocalTick(); } }
 
+function renderStreamOrText(elId, streamImgUrl, fallbackText, maxHeightCss) {
+  const el = typeof elId === 'string' ? document.getElementById(elId) : elId;
+  if (!el) return;
+  if (aiSyncActive && streamImgUrl) {
+    let img = el.querySelector('img.stream-bin-img');
+    if (!img) {
+      el.innerHTML = '';
+      img = document.createElement('img');
+      img.className = 'stream-bin-img';
+      img.style.maxHeight = maxHeightCss || '100%';
+      img.style.maxWidth = '100%';
+      img.style.objectFit = 'contain';
+      img.style.verticalAlign = 'middle';
+      img.style.filter = 'brightness(1.25) contrast(1.25)';
+      img.style.borderRadius = '4px';
+      img.style.border = '1px solid rgba(255, 255, 255, 0.55)';
+      img.style.outline = '1px solid rgba(0, 0, 0, 0.9)';
+      img.style.background = '#080c14';
+      img.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.8), inset 0 0 3px rgba(255, 255, 255, 0.2)';
+      img.style.padding = '2px 4px';
+      img.style.boxSizing = 'border-box';
+      img.style.display = 'inline-block';
+      el.appendChild(img);
+    } else {
+      img.style.maxHeight = maxHeightCss || '100%';
+    }
+    if (img.src !== streamImgUrl) {
+      img.src = streamImgUrl;
+    }
+  } else {
+    const img = el.querySelector('img.stream-bin-img');
+    if (img) {
+      el.innerHTML = '';
+    }
+    const txt = (fallbackText !== null && fallbackText !== undefined) ? String(fallbackText) : '';
+    if (el.children.length === 0 && el.textContent !== txt) {
+      el.textContent = txt;
+    }
+  }
+}
+
 function renderClocks(){
-  const m   = Math.floor(S.gameSeconds/60);
-  const sec = S.gameSeconds%60;
-  const mS  = m.toString().padStart(2,'0');
-  const sS  = sec.toString().padStart(2,'0');
-  document.getElementById('clkM1').textContent = mS[0];
-  document.getElementById('clkM2').textContent = mS[1];
-  document.getElementById('clkS1').textContent = sS[0];
-  document.getElementById('clkS2').textContent = sS[1];
-  const warn = S.gameSeconds <= 30;
-  ['clkM1','clkM2','clkS1','clkS2'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el){ el.style.color = warn?'#ff3300':'#ffaa00'; el.style.textShadow = warn?'0 0 30px rgba(255,50,0,0.7)':'0 0 40px rgba(255,170,0,0.5)'; }
-  });
+  const eff = getEffState();
+  const clkContainer = document.querySelector('.clock-digits');
+  if (clkContainer) {
+    if (aiSyncActive && S.gameClockStream) {
+      renderStreamOrText(clkContainer, S.gameClockStream, null, '10vw');
+    } else {
+      const img = clkContainer.querySelector('img.stream-bin-img');
+      if (img || !document.getElementById('clkM1')) {
+        clkContainer.innerHTML = `
+          <div class="clock-digit" id="clkM1">0</div>
+          <div class="clock-digit" id="clkM2">0</div>
+          <div class="clock-colon">:</div>
+          <div class="clock-digit" id="clkS1">0</div>
+          <div class="clock-digit" id="clkS2">0</div>
+        `;
+      }
+      let mS = "00", sS = "00";
+      if (aiSyncActive && eff.clockStr && eff.clockStr.includes(':')) {
+        const parts = eff.clockStr.split(':');
+        mS = (parts[0] || '0').padStart(2, '0');
+        sS = (parts[1] || '0').padStart(2, '0');
+      } else {
+        const m = Math.floor(eff.gameSeconds/60);
+        const sec = eff.gameSeconds%60;
+        mS = m.toString().padStart(2,'0');
+        sS = sec.toString().padStart(2,'0');
+      }
+      document.getElementById('clkM1').textContent = mS[0] || '0';
+      document.getElementById('clkM2').textContent = mS[1] || '0';
+      document.getElementById('clkS1').textContent = sS[0] || '0';
+      document.getElementById('clkS2').textContent = sS[1] || '0';
+      const warn = eff.gameSeconds <= 30;
+      ['clkM1','clkM2','clkS1','clkS2'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el){ el.style.color = warn?'#ff3300':'#ffaa00'; el.style.textShadow = warn?'0 0 30px rgba(255,50,0,0.7)':'0 0 40px rgba(255,170,0,0.5)'; }
+      });
+    }
+  }
+
+  const shotText = eff.shotSeconds != null ? eff.shotSeconds : '--';
+  renderStreamOrText('shotEl', S.shotClockStream, shotText, '8vw');
   const shotEl = document.getElementById('shotEl');
-  if(shotEl){ shotEl.textContent=S.shotSeconds; shotEl.className='shot-num'+(S.shotSeconds<=5?' urgent':''); }
+  if(shotEl){ shotEl.className = 'shot-num'+((eff.shotSeconds<=5)?' urgent':''); }
 }
 
 function render() {
+  const eff = getEffState();
   renderClocks();
 
   // Scores
   const hEl = document.getElementById('homeScoreEl');
   const aEl = document.getElementById('awayScoreEl');
-  if(hEl && parseInt(hEl.textContent)!==S.homeScore){ hEl.textContent=S.homeScore; if(lastHome>=0) bump('homeScoreEl'); }
-  if(aEl && parseInt(aEl.textContent)!==S.awayScore){ aEl.textContent=S.awayScore; if(lastAway>=0) bump('awayScoreEl'); }
-  if((S.homeScore!==lastHome||S.awayScore!==lastAway)&&lastHome>=0) flashScreen();
-  lastHome=S.homeScore; lastAway=S.awayScore;
+  renderStreamOrText('homeScoreEl', S.homeScoreStream, eff.homeScore, '14vw');
+  renderStreamOrText('awayScoreEl', S.awayScoreStream, eff.awayScore, '14vw');
+  if(hEl && lastHome>=0 && lastHome!==eff.homeScore){ bump('homeScoreEl'); }
+  if(aEl && lastAway>=0 && lastAway!==eff.awayScore){ bump('awayScoreEl'); }
+  if((eff.homeScore!==lastHome||eff.awayScore!==lastAway)&&lastHome>=0) flashScreen();
+  lastHome=eff.homeScore; lastAway=eff.awayScore;
 
   // Fouls
   const hf = document.getElementById('homeFoulsEl');
@@ -404,8 +544,7 @@ function render() {
   if(af) af.textContent = S.awayFouls || 0;
 
   // Period
-  const pEl = document.getElementById('periodEl');
-  if(pEl) pEl.textContent = S.quarter;
+  renderStreamOrText('periodEl', S.periodStream, eff.quarter, '6vw');
 
   // Team names
   const hn = document.getElementById('homeNameEl');
@@ -478,6 +617,10 @@ function connectSSE(){
       S = {...DEF, ...d};
       render();
     });
+    db.ref(`ocr/${fbUser}`).on('value', snapshot => {
+      const d = snapshot.val();
+      if (d) applyStreamData(d);
+    });
     db.ref(`buzz/${fbUser}`).on('value', snapshot => {
       if (Date.now() - _lastLocalMsgTime < 2000) return;
       const msg = snapshot.val();
@@ -502,6 +645,9 @@ function connectSSE(){
         const d = msg.data;
         S = {...DEF, ...d};
         render();
+      }
+      else if(msg.type==='stream'){
+        applyStreamData(msg.data);
       }
     } catch(err){}
   };

@@ -162,15 +162,17 @@ html, body { background:transparent; overflow:hidden; width:100%; height:100%; }
 
 </div>
 <script>
-const SERVER_URL = (
-  window.location.hostname.includes('vercel.app') ||
-  window.location.hostname.includes('vercel.sh')
-) ? 'https://basketball-scoreboard-o0c7.onrender.com' : (
-  window.location.protocol === 'file:' ? 'http://localhost:3000' : ''
-);
+const isLocalServer = window.location.hostname === 'localhost' ||
+                      window.location.hostname === '127.0.0.1' ||
+                      window.location.hostname.startsWith('192.168.') ||
+                      window.location.hostname.startsWith('10.');
 
-const useFirebase = window.location.hostname.includes('vercel.app') ||
-                    window.location.hostname.includes('vercel.sh');
+const useFirebase = (typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured) && !isLocalServer;
+
+const SERVER_URL = useFirebase
+  ? 'https://basketball-scoreboard-o0c7.onrender.com'
+  : (window.location.protocol === 'file:' ? 'http://localhost:3000' : '');
+
 let db = null;
 if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
   try {
@@ -183,17 +185,83 @@ const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
 const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 
+let aiSyncActive = false;
+let aiState = { gameSeconds: null, clockStr: null, homeScore: null, awayScore: null, quarter: null, shotSeconds: null };
+
+function applyStreamData(data) {
+  if (!data) return;
+  if (data.streamActive === false) {
+    aiSyncActive = false;
+    render();
+    return;
+  }
+  if (data.streamActive === true) {
+    aiSyncActive = true;
+  } else if (data.clock != null || data.homeScore != null || data.awayScore != null || data.period != null || data.shotClock != null) {
+    aiSyncActive = true;
+  }
+
+  if (data.clock != null) {
+    const clockStr = String(data.clock).trim();
+    aiState.clockStr = clockStr;
+    if (clockStr.includes(':')) {
+      const parts = clockStr.split(':');
+      aiState.gameSeconds = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+    } else if (clockStr.length === 3) {
+      aiState.gameSeconds = (parseInt(clockStr.substring(0, 1), 10) || 0) * 60 + (parseInt(clockStr.substring(1), 10) || 0);
+    } else if (clockStr.length === 4) {
+      aiState.gameSeconds = (parseInt(clockStr.substring(0, 2), 10) || 0) * 60 + (parseInt(clockStr.substring(2), 10) || 0);
+    } else {
+      const p = parseFloat(clockStr);
+      if (!isNaN(p)) aiState.gameSeconds = Math.round(p);
+    }
+  }
+  if (data.homeScore != null && !isNaN(parseInt(data.homeScore, 10))) aiState.homeScore = parseInt(data.homeScore, 10);
+  if (data.awayScore != null && !isNaN(parseInt(data.awayScore, 10))) aiState.awayScore = parseInt(data.awayScore, 10);
+  if (data.period != null && !isNaN(parseInt(data.period, 10))) aiState.quarter = parseInt(data.period, 10);
+  if (data.shotClock != null && !isNaN(parseInt(data.shotClock, 10))) aiState.shotSeconds = parseInt(data.shotClock, 10);
+
+  if (data.gameClockStream) S.gameClockStream = data.gameClockStream;
+  if (data.homeScoreStream) S.homeScoreStream = data.homeScoreStream;
+  if (data.awayScoreStream) S.awayScoreStream = data.awayScoreStream;
+  if (data.periodStream) S.periodStream = data.periodStream;
+  if (data.shotClockStream) S.shotClockStream = data.shotClockStream;
+
+  render();
+}
+
+function getEffState() {
+  if (aiSyncActive) {
+    return {
+      ...S,
+      gameSeconds: aiState.gameSeconds !== null ? aiState.gameSeconds : S.gameSeconds,
+      clockStr: aiState.clockStr !== null ? aiState.clockStr : null,
+      homeScore: aiState.homeScore !== null ? aiState.homeScore : S.homeScore,
+      awayScore: aiState.awayScore !== null ? aiState.awayScore : S.awayScore,
+      quarter: aiState.quarter !== null ? aiState.quarter : S.quarter,
+      shotSeconds: aiState.shotSeconds !== null ? aiState.shotSeconds : S.shotSeconds,
+    };
+  }
+  return S;
+}
+
 let _lastLocalMsgTime = 0;
 const bc = new BroadcastChannel('hc_scoreboard_sync');
 bc.onmessage = (e) => {
   const msg = e.data;
-  if (!msg || msg.user !== fbUser) return;
+  if (!msg) return;
   _lastLocalMsgTime = Date.now();
   if (msg.type === 'state') {
     stopLocalTick();
-    S = { ...S, ...msg.data };
+    if (msg.data) {
+      if (msg.data.aiSyncActive !== undefined) aiSyncActive = !!msg.data.aiSyncActive;
+      if (msg.data.aiSyncEnabled !== undefined) aiSyncActive = !!msg.data.aiSyncEnabled;
+      S = { ...S, ...msg.data };
+    }
     render();
     syncLocalTick();
+  } else if (msg.type === 'stream') {
+    applyStreamData(msg.data);
   } else if (msg.type === 'buzz') {
     if (msg.timestamp > _lastBuzzTime) {
       _lastBuzzTime = msg.timestamp;
@@ -211,12 +279,65 @@ function startLocalTick(){if(localTick)return;localTick=setInterval(()=>{if(S.ga
 function stopLocalTick(){clearInterval(localTick);localTick=null;}
 function syncLocalTick(){if(S.gameRunning||S.shotRunning)startLocalTick();else stopLocalTick();}
 
+function renderStreamOrText(elId, streamImgUrl, fallbackText, maxHeightCss) {
+  const el = typeof elId === 'string' ? document.getElementById(elId) : elId;
+  if (!el) return;
+  if (aiSyncActive && streamImgUrl) {
+    let img = el.querySelector('img.stream-bin-img');
+    if (!img) {
+      el.innerHTML = '';
+      img = document.createElement('img');
+      img.className = 'stream-bin-img';
+      img.style.maxHeight = maxHeightCss || '100%';
+      img.style.maxWidth = '100%';
+      img.style.objectFit = 'contain';
+      img.style.verticalAlign = 'middle';
+      img.style.filter = 'brightness(1.25) contrast(1.25)';
+      img.style.borderRadius = '4px';
+      img.style.border = '1px solid rgba(255, 255, 255, 0.55)';
+      img.style.outline = '1px solid rgba(0, 0, 0, 0.9)';
+      img.style.background = '#080c14';
+      img.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.8), inset 0 0 3px rgba(255, 255, 255, 0.2)';
+      img.style.padding = '2px 4px';
+      img.style.boxSizing = 'border-box';
+      img.style.display = 'inline-block';
+      el.appendChild(img);
+    } else {
+      img.style.maxHeight = maxHeightCss || '100%';
+    }
+    if (img.src !== streamImgUrl) {
+      img.src = streamImgUrl;
+    }
+  } else {
+    const img = el.querySelector('img.stream-bin-img');
+    if (img) {
+      el.innerHTML = '';
+    }
+    const txt = (fallbackText !== null && fallbackText !== undefined) ? String(fallbackText) : '';
+    if (el.children.length === 0 && el.textContent !== txt) {
+      el.textContent = txt;
+    }
+  }
+}
+
 function renderClocks(){
-  const m=Math.floor(S.gameSeconds/60),sec=S.gameSeconds%60;
+  const eff = getEffState();
+  let txt = '';
+  if (aiSyncActive && eff.clockStr) {
+    txt = eff.clockStr;
+  } else {
+    const m = Math.floor(eff.gameSeconds/60), sec = eff.gameSeconds%60;
+    txt = `${m}:${sec.toString().padStart(2,'0')}`;
+  }
+  
+  renderStreamOrText('gameClkN2', S.gameClockStream, txt, '1.8vw');
   const c=document.getElementById('gameClkN2');
-  if(c){c.textContent=`${m}:${sec.toString().padStart(2,'0')}`;c.className='clock-val'+(S.gameSeconds<=30?' warn':'');}
+  if(c){c.className='clock-val'+(eff.gameSeconds<=30?' warn':'');}
+
+  const shotText = eff.shotSeconds != null ? eff.shotSeconds : '--';
+  renderStreamOrText('shotClkN2', S.shotClockStream, shotText, '1.4vw');
   const sh=document.getElementById('shotClkN2');
-  if(sh){sh.textContent=S.shotSeconds;sh.className='shot-val'+(S.shotSeconds<=5?' urgent':'');}
+  if(sh){sh.className='shot-val'+((eff.shotSeconds<=5)?' urgent':'');}
 }
 
 function s(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
@@ -227,14 +348,17 @@ function darken(hex, pct=0.5){
 }
 
 function render(){
-  const qL=typeof S.quarter==='number'?(PERIODS[S.quarter-1]||`Q${S.quarter}`):S.quarter;
-  s('periodN2',qL);
+  const eff = getEffState();
+  const qL=typeof eff.quarter==='number'?(eff.quarter===0?PERIODS[0]:PERIODS[eff.quarter-1]||`Q${eff.quarter}`):eff.quarter;
+  renderStreamOrText('periodN2', S.periodStream, qL, '1.2vw');
 
   const hEl=document.getElementById('homeScoreN2');
   const aEl=document.getElementById('awayScoreN2');
-  if(hEl&&parseInt(hEl.textContent)!==S.homeScore){hEl.textContent=S.homeScore;if(lastHome>=0){hEl.classList.remove('bump');void hEl.offsetWidth;hEl.classList.add('bump');}}
-  if(aEl&&parseInt(aEl.textContent)!==S.awayScore){aEl.textContent=S.awayScore;if(lastAway>=0){aEl.classList.remove('bump');void aEl.offsetWidth;aEl.classList.add('bump');}}
-  lastHome=S.homeScore;lastAway=S.awayScore;
+  renderStreamOrText('homeScoreN2', S.homeScoreStream, eff.homeScore, '2.8vw');
+  renderStreamOrText('awayScoreN2', S.awayScoreStream, eff.awayScore, '2.8vw');
+  if(hEl && lastHome >= 0 && lastHome !== eff.homeScore){ hEl.classList.remove('bump'); void hEl.offsetWidth; hEl.classList.add('bump'); }
+  if(aEl && lastAway >= 0 && lastAway !== eff.awayScore){ aEl.classList.remove('bump'); void aEl.offsetWidth; aEl.classList.add('bump'); }
+  lastHome=eff.homeScore;lastAway=eff.awayScore;
 
   s('homeFoulsN2',S.homeFouls||0);
   s('awayFoulsN2',S.awayFouls||0);
@@ -301,6 +425,10 @@ function connectSSE(){
       if (!d) return;
       stopLocalTick(); S={...DEF,...d}; render(); syncLocalTick();
     });
+    db.ref(`ocr/${fbUser}`).on('value', snapshot => {
+      const d = snapshot.val();
+      if (d) applyStreamData(d);
+    });
     db.ref(`buzz/${fbUser}`).on('value', snapshot => {
       if (Date.now() - _lastLocalMsgTime < 2000) return;
       const msg = snapshot.val();
@@ -320,6 +448,8 @@ function connectSSE(){
       }else if(msg.type==='state'){
         if (Date.now() - _lastLocalMsgTime < 2000) return;
         stopLocalTick();S={...DEF,...msg.data};render();syncLocalTick();
+      }else if(msg.type==='stream'){
+        applyStreamData(msg.data);
       }
     }catch(err){}
   };

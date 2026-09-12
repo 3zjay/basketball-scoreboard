@@ -275,8 +275,7 @@ const ROUTES = {
   '/icon-192.png':       'icon-192.png',
   '/icon-512.png':       'icon-512.png',
   '/buzzer.mp3':         'buzzer.mp3',
-  '/hoop-culture-logo.png': 'hoop-culture-logo.png',
-  '/hoop-culture-logo.jpg': 'hoop-culture-logo.jpg',
+  '/hoop-culture-logo2.png': 'hoop-culture-logo2.png',
   '/marketing-workflow-dark.png': 'marketing-workflow-dark.png',
   '/marketing-workflow-mobile-ocr.jpg': 'marketing-workflow-mobile-ocr.jpg',
   '/firebase-config.js': 'firebase-config.js',
@@ -480,144 +479,50 @@ const requestHandler = async (req, res) => {
     return;
   }
 
-  // POST /api/ocr — camera sync feed endpoint (from ScoreSight)
+  // POST /api/stream — Optical Bridge camera stream & live state sync
+  if (req.method === 'POST' && pathname === '/api/stream') {
+    readBody(req).then(b => {
+      try {
+        getOrCreateUser(user);
+        states[user].aiSyncEnabled = true;
+
+        const incoming = JSON.parse(b);
+
+        if (incoming.gameClockStream) states[user].gameClockStream = incoming.gameClockStream;
+        if (incoming.homeScoreStream) states[user].homeScoreStream = incoming.homeScoreStream;
+        if (incoming.awayScoreStream) states[user].awayScoreStream = incoming.awayScoreStream;
+        if (incoming.periodStream) states[user].periodStream = incoming.periodStream;
+        if (incoming.shotClockStream) states[user].shotClockStream = incoming.shotClockStream;
+        if (incoming.streamActive !== undefined) states[user].streamActive = incoming.streamActive;
+
+        pushToAll(user, { type: 'stream', data: incoming });
+      } catch(e) {}
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, ok: true }));
+    });
+    return;
+  }
+
+  // POST /api/ocr — camera sync feed endpoint
   if (req.method === 'POST' && pathname === '/api/ocr') {
     readBody(req).then(b => {
       try {
-        // Ensure the session state is initialized on the server
         getOrCreateUser(user);
-        
-        // Auto-enable AI Sync on the server if we receive an OCR payload
         states[user].aiSyncEnabled = true;
           
         const incoming = JSON.parse(b);
-        
-        // Guard manual actions from being overwritten by delayed OCR updates
-        if (states[user].lastManualTime && (Date.now() - states[user].lastManualTime) < 5000) {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: true, ignored: true }));
-          return;
-        }
-        let updated = {};
 
-        // 1. Parse Clock (e.g., "10:00", "09:58", "58.4", or colon-less "0831" / "831")
-        if (incoming.clock != null) {
-          const clockStr = String(incoming.clock).replace(/\s/g, '').trim(); // Remove all spaces
-          let incomingSeconds = null;
-          if (clockStr.includes(':')) {
-            const parts = clockStr.split(':');
-            const mins = parseInt(parts[0], 10) || 0;
-            const secs = parseInt(parts[1], 10) || 0;
-            incomingSeconds = mins * 60 + secs;
-          } else if (clockStr.length === 3) {
-            // e.g. "831" -> 8 mins, 31 secs
-            const mins = parseInt(clockStr.substring(0, 1), 10) || 0;
-            const secs = parseInt(clockStr.substring(1), 10) || 0;
-            incomingSeconds = mins * 60 + secs;
-          } else if (clockStr.length === 4) {
-            // e.g. "0831" -> 8 mins, 31 secs
-            const mins = parseInt(clockStr.substring(0, 2), 10) || 0;
-            const secs = parseInt(clockStr.substring(2), 10) || 0;
-            incomingSeconds = mins * 60 + secs;
-          } else {
-            const parsedVal = parseFloat(clockStr) || 0;
-            incomingSeconds = Math.round(parsedVal);
-          }
+        if (incoming.gameClockStream) states[user].gameClockStream = incoming.gameClockStream;
+        if (incoming.homeScoreStream) states[user].homeScoreStream = incoming.homeScoreStream;
+        if (incoming.awayScoreStream) states[user].awayScoreStream = incoming.awayScoreStream;
+        if (incoming.periodStream) states[user].periodStream = incoming.periodStream;
+        if (incoming.shotClockStream) states[user].shotClockStream = incoming.shotClockStream;
+        if (incoming.streamActive !== undefined) states[user].streamActive = incoming.streamActive;
 
-          if (incomingSeconds !== null) {
-            // Detect clock state updates: Running or Paused
-            const lastSecs = states[user].gameSeconds;
-            let isRunning = states[user].gameRunning;
-            if (lastSecs !== undefined && lastSecs !== null) {
-              if (incomingSeconds < lastSecs) {
-                isRunning = true;
-              } else {
-                isRunning = false;
-              }
-            }
-            updated.gameRunning = isRunning;
-
-            // Lag compensation (processing roundtrip lag offset)
-            const compensatedSeconds = isRunning ? Math.max(0, incomingSeconds - 1) : incomingSeconds;
-            const drift = Math.abs((states[user].gameSeconds || 0) - compensatedSeconds);
-
-            // Only snap clock if drift is significant (> 3s) or running state changed
-            if (drift > 3 || states[user].gameRunning !== isRunning) {
-              updated.gameSeconds = compensatedSeconds;
-            }
-          }
-        }
-
-        // 2. Parse Scores (Accept both homeScore/awayScore and raw home/away keys)
-        const hScore = incoming.homeScore !== undefined ? incoming.homeScore : incoming.home;
-        if (hScore != null) {
-          updated.homeScore = parseInt(hScore, 10) || 0;
-        }
-        const aScore = incoming.awayScore !== undefined ? incoming.awayScore : incoming.away;
-        if (aScore != null) {
-          updated.awayScore = parseInt(aScore, 10) || 0;
-        }
-
-        // 3. Parse Period/Quarter
-        if (incoming.period != null) {
-          updated.quarter = parseInt(incoming.period, 10) || 1;
-        }
-
-        // 4. Parse Shot Clock (if present)
-        if (incoming.shotClock != null) {
-          const scStr = String(incoming.shotClock).trim();
-          const incomingShotSeconds = parseInt(scStr, 10) || 24;
-          
-          const lastShotSecs = states[user].shotSeconds;
-          let isShotRunning = states[user].shotRunning;
-          if (lastShotSecs !== undefined && lastShotSecs !== null) {
-            if (incomingShotSeconds < lastShotSecs) {
-              isShotRunning = true;
-            } else {
-              isShotRunning = false;
-            }
-          }
-          updated.shotRunning = isShotRunning;
-
-          // Lag compensation (offsetting cloud sync latency)
-          const compensatedShotSeconds = isShotRunning ? Math.max(0, incomingShotSeconds - 1) : incomingShotSeconds;
-          const shotDrift = Math.abs((states[user].shotSeconds || 0) - compensatedShotSeconds);
-
-          // Only snap local shot clock if drift is significant (> 2s) or if running state changed
-          if (shotDrift > 2 || states[user].shotRunning !== isShotRunning) {
-            updated.shotSeconds = compensatedShotSeconds;
-          }
-        }
-
-        // Since camera is running the clock, make sure local server ticker doesn't overlap
-        if (states[user].gameRunning) {
-          stopGameClock(user);
-        }
-        if (states[user].shotRunning) {
-          stopShotClock(user);
-        }
-
-        // Store old scores for replay comparison
-        const prevHomeScore = states[user].homeScore || 0;
-        const prevAwayScore = states[user].awayScore || 0;
-
-        states[user] = { ...states[user], ...updated };
-
-        // Check if score went up
-        try {
-          const newHomeScore = states[user].homeScore || 0;
-          const newAwayScore = states[user].awayScore || 0;
-          if (newHomeScore > prevHomeScore || newAwayScore > prevAwayScore) {
-            triggerSaveReplay();
-          }
-        } catch (err) {
-          console.error("⚠️ Replay trigger check failed:", err);
-        }
-
-        pushToAll(user, { type: 'state', data: fullState(user) });
+        pushToAll(user, { type: 'stream', data: incoming });
       } catch(e) {}
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end('{"ok":true}');
+      res.end(JSON.stringify({ success: true, ok: true }));
     });
     return;
   }
@@ -795,24 +700,34 @@ if (!fs.existsSync(keyPath) || !fs.existsSync(certPath)) {
 const https = require('https');
 
 // 1. Always boot the HTTP server on PORT (3000) so local Control Panel and OBS don't break with SSL issues
-http.createServer(requestHandler).listen(PORT, () => {
-  console.log('Scoreboard HTTP server running on http://localhost:' + PORT);
+http.createServer(requestHandler).listen(PORT, '0.0.0.0', () => {
+  console.log('Scoreboard HTTP server running on http://0.0.0.0:' + PORT);
 });
 
 // 2. If SSL certs are present, also boot the HTTPS server on PORT + 1 (3001) for the Phone Camera Scanner
 if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
-  const options = {
-    key: fs.readFileSync(keyPath),
-    cert: fs.readFileSync(certPath)
-  };
-  const PORT_HTTPS = parseInt(PORT, 10) + 1;
-  https.createServer(options, requestHandler).listen(PORT_HTTPS, () => {
-    console.log('Secure HTTPS server (for phone camera) running on https://localhost:' + PORT_HTTPS);
-    console.log('Phone camera URL: https://[your-laptop-ip]:' + PORT_HTTPS + '/camera');
-  });
+  try {
+    const options = {
+      key: fs.readFileSync(keyPath),
+      cert: fs.readFileSync(certPath)
+    };
+    const PORT_HTTPS = parseInt(PORT, 10) + 1;
+    const httpsServer = https.createServer(options, requestHandler);
+    httpsServer.on('error', (err) => {
+      console.warn('HTTPS server warning:', err.message);
+    });
+    httpsServer.listen(PORT_HTTPS, '0.0.0.0', () => {
+      console.log('Secure HTTPS server (for phone camera) running on https://0.0.0.0:' + PORT_HTTPS);
+    });
+  } catch (err) {
+    console.warn('Could not start secondary HTTPS server:', err.message);
+  }
 } else {
   console.log('\nTo run securely over local IP (allowing phone camera access offline):');
   console.log('1. Run this command on your laptop to generate self-signed SSL certs:');
   console.log('   openssl req -nodes -new -x509 -keyout key.pem -out cert.pem -days 365 -subj "/CN=localhost"');
   console.log('2. Restart this server (npm run dev). It will open a secure port 3001 for your phone camera.');
 }
+// Trigger GitHub sync
+// Force Github update for logo
+// Base64 Inline Fix for Vercel Image Corruption

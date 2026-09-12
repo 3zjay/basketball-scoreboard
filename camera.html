@@ -295,26 +295,31 @@
   <!-- Draggable Crop Frames -->
   <div class="crop-frame clock" id="frame-clock" style="top: 15%; left: 15%; width: 140px; height: 50px;">
     <div class="crop-label">CLOCK</div>
+    <canvas class="crop-binarized-preview" id="crop-preview-clock" style="position:absolute; inset:0; width:100%; height:100%; opacity:0.65; pointer-events:none; border-radius:3px; image-rendering:pixelated; object-fit:fill; z-index:1;"></canvas>
     <div class="resize-handle" onmousedown="startResize(event, 'clock')" ontouchstart="startResize(event, 'clock')"></div>
   </div>
 
   <div class="crop-frame home" id="frame-home" style="top: 30%; left: 15%; width: 100px; height: 50px;">
     <div class="crop-label">HOME</div>
+    <canvas class="crop-binarized-preview" id="crop-preview-home" style="position:absolute; inset:0; width:100%; height:100%; opacity:0.65; pointer-events:none; border-radius:3px; image-rendering:pixelated; object-fit:fill; z-index:1;"></canvas>
     <div class="resize-handle" onmousedown="startResize(event, 'home')" ontouchstart="startResize(event, 'home')"></div>
   </div>
 
   <div class="crop-frame away" id="frame-away" style="top: 30%; left: 55%; width: 100px; height: 50px;">
     <div class="crop-label">AWAY</div>
+    <canvas class="crop-binarized-preview" id="crop-preview-away" style="position:absolute; inset:0; width:100%; height:100%; opacity:0.65; pointer-events:none; border-radius:3px; image-rendering:pixelated; object-fit:fill; z-index:1;"></canvas>
     <div class="resize-handle" onmousedown="startResize(event, 'away')" ontouchstart="startResize(event, 'away')"></div>
   </div>
 
   <div class="crop-frame period" id="frame-period" style="top: 15%; left: 65%; width: 60px; height: 50px;">
     <div class="crop-label">QTR</div>
+    <canvas class="crop-binarized-preview" id="crop-preview-period" style="position:absolute; inset:0; width:100%; height:100%; opacity:0.65; pointer-events:none; border-radius:3px; image-rendering:pixelated; object-fit:fill; z-index:1;"></canvas>
     <div class="resize-handle" onmousedown="startResize(event, 'period')" ontouchstart="startResize(event, 'period')"></div>
   </div>
 
   <div class="crop-frame shot" id="frame-shot" style="top: 45%; left: 45%; width: 80px; height: 50px;">
     <div class="crop-label">SHOT</div>
+    <canvas class="crop-binarized-preview" id="crop-preview-shot" style="position:absolute; inset:0; width:100%; height:100%; opacity:0.65; pointer-events:none; border-radius:3px; image-rendering:pixelated; object-fit:fill; z-index:1;"></canvas>
     <div class="resize-handle" onmousedown="startResize(event, 'shot')" ontouchstart="startResize(event, 'shot')"></div>
   </div>
 
@@ -344,13 +349,16 @@
     
     <!-- Binarization slider and preview monitor -->
     <div style="display:flex; align-items:center; gap:12px; width:100%; border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:8px 0; margin:2px 0;">
-      <canvas id="ocr-preview-canvas" style="width:70px; height:35px; border:1px solid var(--border); background:#000; border-radius:4px; flex-shrink:0;"></canvas>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0;">
+        <canvas id="ocr-preview-canvas" style="width:85px; height:42px; border:2px solid var(--orange2); background:#000; border-radius:4px; flex-shrink:0; image-rendering:pixelated;"></canvas>
+        <div id="ocr-recognized-text" style="font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:800; color:#16c784; letter-spacing:1px; margin-top:2px;">OCR: --</div>
+      </div>
       <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
         <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--grey); font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:1px; text-transform:uppercase;">
           <span>Binarization Filter:</span>
-          <span id="threshold-val" style="color:var(--orange);">120</span>
+          <span id="threshold-val" style="color:var(--orange); font-size:12px; font-weight:bold;">120</span>
         </div>
-        <input type="range" id="threshold-slider" min="40" max="220" value="120" oninput="updateThreshold(this.value)" style="width:100%; height:4px; background:var(--border); border-radius:2px; cursor:pointer; accent-color:var(--orange);">
+        <input type="range" id="threshold-slider" min="40" max="220" value="120" oninput="updateThreshold(this.value)" style="width:100%; height:6px; background:var(--border); border-radius:3px; cursor:pointer; accent-color:var(--orange);">
         <div style="display:flex; gap:12px; margin-top:4px; flex-wrap:wrap;">
           <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:10px; color:var(--grey); font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:1px; text-transform:uppercase;">
             <input type="checkbox" id="dilation-toggle" onchange="toggleDilation(this.checked)" style="accent-color:var(--orange); cursor:pointer; width:12px; height:12px;" checked>
@@ -453,6 +461,7 @@
     let enabledCrops = { clock: true, home: true, away: true, period: true, shot: true };
 
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('basketball_scoreboard') : null;
+    const bc2 = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('hc_scoreboard_sync') : null;
 
     // Initialize Firebase if configured
     let db = null;
@@ -809,7 +818,7 @@
         dilate(data, w, h);
       }
 
-      // Convert background to 100% Alpha Transparent (PNG) so zero dark rectangular border shadows exist!
+      // Render crisp, opaque 1-bit monochrome binarization filter output (White digits on Opaque Black background)
       for (let i = 0; i < data.length; i += 4) {
         if (data[i] === 255 && data[i+1] === 255 && data[i+2] === 255) {
           data[i] = 255;
@@ -820,7 +829,7 @@
           data[i] = 0;
           data[i+1] = 0;
           data[i+2] = 0;
-          data[i+3] = 0; // Pure Transparent Background
+          data[i+3] = 255; // Full opaque background for clear binarization preview!
         }
       }
 
@@ -849,13 +858,133 @@
       if (invCheckbox) invCheckbox.checked = !!invertStates[key];
     }
 
+    // 7-Segment & LED Digit OCR Recognizer
+    function recognizeCanvasDigits(ctx, w, h, key) {
+      if (!w || !h) return null;
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const data = imgData.data;
+
+      const colCounts = new Array(w).fill(0);
+      let totalDark = 0;
+      for (let x = 0; x < w; x++) {
+        for (let y = 0; y < h; y++) {
+          const idx = (y * w + x) * 4;
+          if (data[idx] === 255 && data[idx+3] > 128) { colCounts[x]++; totalDark++; }
+        }
+      }
+      if (totalDark < 8) return null;
+
+      const digitBoxes = [];
+      let inDigit = false;
+      let startX = 0;
+      for (let x = 0; x < w; x++) {
+        if (colCounts[x] > 1) {
+          if (!inDigit) { inDigit = true; startX = x; }
+        } else {
+          if (inDigit) {
+            inDigit = false;
+            if ((x - startX) >= 2) digitBoxes.push({ x1: startX, x2: x - 1 });
+          }
+        }
+      }
+      if (inDigit && (w - startX) >= 2) digitBoxes.push({ x1: startX, x2: w - 1 });
+      if (digitBoxes.length === 0) return null;
+
+      let resultStr = '';
+      for (let b = 0; b < digitBoxes.length; b++) {
+        const box = digitBoxes[b];
+        const boxW = box.x2 - box.x1 + 1;
+
+        let yMin = h, yMax = 0;
+        for (let y = 0; y < h; y++) {
+          for (let x = box.x1; x <= box.x2; x++) {
+            const idx = (y * w + x) * 4;
+            if (data[idx] === 255 && data[idx+3] > 128) {
+              if (y < yMin) yMin = y;
+              if (y > yMax) yMax = y;
+            }
+          }
+        }
+        const boxH = yMax - yMin + 1;
+        if (boxH < 4) continue;
+
+        if (key === 'clock' && boxW <= Math.max(4, w * 0.1) && boxH < h * 0.8) {
+          let topDark = 0, botDark = 0;
+          const midY = (yMin + yMax) / 2;
+          for (let y = yMin; y <= yMax; y++) {
+            for (let x = box.x1; x <= box.x2; x++) {
+              const idx = (y * w + x) * 4;
+              if (data[idx] === 255 && data[idx+3] > 128) {
+                if (y < midY) topDark++; else botDark++;
+              }
+            }
+          }
+          if (topDark > 0 && botDark > 0) { resultStr += ':'; continue; }
+        }
+
+        const sampleRegion = (rx1, rx2, ry1, ry2) => {
+          const px1 = Math.floor(box.x1 + rx1 * boxW);
+          const px2 = Math.min(box.x2, Math.floor(box.x1 + rx2 * boxW));
+          const py1 = Math.floor(yMin + ry1 * boxH);
+          const py2 = Math.min(yMax, Math.floor(yMin + ry2 * boxH));
+          let count = 0, total = 0;
+          for (let y = py1; y <= py2; y++) {
+            for (let x = px1; x <= px2; x++) {
+              total++;
+              const idx = (y * w + x) * 4;
+              if (data[idx] === 255 && data[idx+3] > 128) count++;
+            }
+          }
+          return total > 0 ? (count / total) : 0;
+        };
+
+        const t = 0.30;
+        const s1 = sampleRegion(0.25, 0.75, 0.02, 0.18) > t; // Top
+        const s2 = sampleRegion(0.02, 0.30, 0.15, 0.40) > t; // Top-Left
+        const s3 = sampleRegion(0.70, 0.98, 0.15, 0.40) > t; // Top-Right
+        const s4 = sampleRegion(0.25, 0.75, 0.42, 0.58) > t; // Middle
+        const s5 = sampleRegion(0.02, 0.30, 0.60, 0.85) > t; // Bottom-Left
+        const s6 = sampleRegion(0.70, 0.98, 0.60, 0.85) > t; // Bottom-Right
+        const s7 = sampleRegion(0.25, 0.75, 0.82, 0.98) > t; // Bottom
+
+        let digit = '?';
+        if (!s1 && !s4 && !s7 && ((s3 && s6) || (s2 && s5))) digit = '1';
+        else if (s1 && !s2 && s3 && s4 && s5 && !s6 && s7) digit = '2';
+        else if (s1 && !s2 && s3 && s4 && !s5 && s6 && s7) digit = '3';
+        else if (!s1 && s2 && s3 && s4 && !s5 && s6 && !s7) digit = '4';
+        else if (s1 && s2 && !s3 && s4 && !s5 && s6 && s7) digit = '5';
+        else if (s1 && s2 && !s3 && s4 && s5 && s6 && s7) digit = '6';
+        else if (s1 && s3 && s6 && !s4 && !s5 && !s7) digit = '7';
+        else if (s1 && s2 && s3 && s4 && s5 && s6 && s7) digit = '8';
+        else if (s1 && s2 && s3 && s4 && !s5 && s6 && s7) digit = '9';
+        else if (s1 && s2 && s3 && !s4 && s5 && s6 && s7) digit = '0';
+        else {
+          if (s3 && s6 && !s1 && !s4 && !s7) digit = '1';
+          else if (s1 && s3 && s7) digit = s4 ? '2' : '7';
+          else if (s1 && s2 && s3 && s6) digit = '9';
+          else if (s2 && s3 && s5 && s6) digit = '0';
+        }
+
+        if (digit !== '?') resultStr += digit;
+      }
+      resultStr = resultStr.replace(/:+/g, ':');
+      return resultStr || null;
+    }
+
+    let streamTimer = null;
     // Optical Bridge 12.5 FPS Stream Loop
     function opticalStreamLoop() {
-      if (!syncActive) return;
+      if (streamTimer) {
+        clearTimeout(streamTimer);
+        streamTimer = null;
+      }
 
       const video = document.getElementById('camera-view');
       const canvas = document.getElementById('helper-canvas');
-      if (!video || !canvas) return;
+      if (!video || !canvas) {
+        streamTimer = setTimeout(opticalStreamLoop, 150);
+        return;
+      }
 
       const videoW = video.videoWidth;
       const videoH = video.videoHeight;
@@ -863,7 +992,7 @@
       const viewH = video.offsetHeight;
 
       if (!videoW || !videoH || !viewW || !viewH) {
-        setTimeout(opticalStreamLoop, 150);
+        streamTimer = setTimeout(opticalStreamLoop, 150);
         return;
       }
 
@@ -876,7 +1005,7 @@
         period: 'periodStream'
       };
 
-      const payload = { streamActive: true };
+      const payload = { streamActive: syncActive };
 
       for (const key of keys) {
         if (enabledCrops[key] === false) {
@@ -925,6 +1054,17 @@
 
         preprocess(ctx, canvas.width, canvas.height, key);
 
+        // Update in-box binarized canvas preview
+        const cPreview = document.getElementById(`crop-preview-${key}`);
+        if (cPreview) {
+          cPreview.width = canvas.width;
+          cPreview.height = canvas.height;
+          const cCtx = cPreview.getContext('2d');
+          cCtx.clearRect(0, 0, canvas.width, canvas.height);
+          cCtx.putImageData(ctx.getImageData(0, 0, canvas.width, canvas.height), 0, 0);
+        }
+
+        // Update calibration binarization monitor
         if (key === activeCrop) {
           const pCanvas = document.getElementById('ocr-preview-canvas');
           if (pCanvas) {
@@ -934,8 +1074,14 @@
             pCtx.clearRect(0, 0, canvas.width, canvas.height);
             pCtx.putImageData(ctx.getImageData(0, 0, canvas.width, canvas.height), 0, 0);
           }
+          const ocrTextEl = document.getElementById('ocr-recognized-text');
+          if (ocrTextEl) {
+            ocrTextEl.textContent = 'Live Feed Stream';
+            ocrTextEl.style.color = '#16c784';
+          }
         }
 
+        // Update battery saver monitors
         if (batterySaverActive) {
           const sCanvas = document.getElementById(`saver-canvas-${key}`);
           if (sCanvas) {
@@ -951,8 +1097,11 @@
         payload[fieldMap[key]] = dataUrl;
       }
 
-      sendUpdate(payload);
-      setTimeout(opticalStreamLoop, 120);
+      if (syncActive) {
+        sendUpdate(payload);
+      }
+
+      streamTimer = setTimeout(opticalStreamLoop, 100);
     }
 
     // Transmit stream to Firebase / Server / BroadcastChannel
@@ -962,7 +1111,8 @@
       let target = syncTarget;
       if (target === 'auto') {
         const host = window.location.hostname;
-        if ((host.includes('vercel.app') || host.includes('vercel.sh')) && db) {
+        const isLocalServer = host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.');
+        if (db && typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured && !isLocalServer) {
           target = 'firebase';
         } else if (host.includes('onrender.com')) {
           target = 'api-onrender';
@@ -973,6 +1123,10 @@
 
       if (bc) {
         bc.postMessage({ type: 'stream', data: payload });
+      }
+      if (bc2) {
+        const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
+        bc2.postMessage({ type: 'stream', user: fbUser, data: payload });
       }
 
       if (target === 'firebase' && db) {
@@ -1031,7 +1185,6 @@
         btn.classList.add('active');
         document.getElementById('status-text').textContent = 'Optical Bridge (Streaming Live)';
         document.getElementById('status-text').style.color = '#16c784';
-        opticalStreamLoop();
       } else {
         btn.textContent = '🛰️ Start Sync';
         btn.classList.remove('active');
@@ -1242,6 +1395,7 @@
       startCamera();
       
       toggleSync();
+      opticalStreamLoop();
       resetHideControlsTimer();
     });
   </script>
