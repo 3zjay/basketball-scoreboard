@@ -233,11 +233,6 @@ function startShotClock(u) {
       stopShotClock(user);
       pushToAll(user, { type: 'state', data: fullState(user) });
       pushToAll(user, { type: 'buzz', kind: 'shot' });
-      // Auto-reset to 24 and restart
-      setTimeout(() => {
-        states[user].shotSeconds = 24;
-        startShotClock(user);
-      }, 500);
     } else {
       pushToAll(user, { type: 'state', data: fullState(user) });
     }

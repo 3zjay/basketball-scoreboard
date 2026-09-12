@@ -101,10 +101,11 @@ html, body { background:transparent; overflow:hidden; width:100%; height:100%; }
 .shot-val {
   font-family:'Teko',sans-serif; font-size:2.9vw; font-weight:700;
   color:#f5c842; line-height:1; font-variant-numeric:tabular-nums;
-  min-width:2.8vw; display:inline-block; text-align:center;
+  min-width:3.0vw; display:inline-flex; align-items:center; justify-content:center;
+  text-align:center; flex-shrink:0; overflow:hidden;
 }
 .shot-val.urgent { color:#e84040; animation:scPulse 0.45s ease infinite alternate; }
-@keyframes scPulse { to{opacity:0.35} }
+@keyframes scPulse { 0%{opacity:1} 100%{opacity:0.35} }
 
 /* Possession dot */
 .poss-dot {
@@ -288,9 +289,11 @@ function renderStreamOrText(elId, streamImgUrl, fallbackText, maxHeightCss) {
       el.innerHTML = '';
       img = document.createElement('img');
       img.className = 'stream-bin-img';
+      img.style.height = maxHeightCss || '100%';
       img.style.maxHeight = maxHeightCss || '100%';
       img.style.maxWidth = '100%';
       img.style.objectFit = 'contain';
+      img.style.flexShrink = '0';
       img.style.verticalAlign = 'middle';
       img.style.filter = 'brightness(1.25) contrast(1.25)';
       img.style.borderRadius = '4px';

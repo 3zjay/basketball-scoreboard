@@ -79,18 +79,21 @@ html, body {
   font-variant-numeric:tabular-nums; transition:color 0.3s;
 }
 .game-clock.warn { color:#ff5f5f; }
-.shot-row { display:flex; align-items:center; gap:0.26vw; }
+.shot-row { display:flex; align-items:center; justify-content:center; gap:0.26vw; flex-shrink:0; }
 .shot-label {
   font-size:0.47vw; font-weight:800;
   letter-spacing:0.1vw; color:#8a95a8; text-transform:uppercase;
+  flex-shrink:0;
 }
 .shot-num {
   font-family:'Teko',sans-serif; font-size:1.04vw; font-weight:700;
   color:#f5c842; letter-spacing:0.05vw; line-height:1;
-  font-variant-numeric:tabular-nums; min-width:1.3vw; text-align:center;
+  font-variant-numeric:tabular-nums; min-width:1.5vw; text-align:center;
+  display:inline-flex; align-items:center; justify-content:center;
+  overflow:hidden; flex-shrink:0;
 }
 .shot-num.urgent { color:#e84040; animation:scPulse 0.45s ease infinite alternate; }
-@keyframes scPulse { to { opacity:0.4; } }
+@keyframes scPulse { 0% { opacity:1; } 100% { opacity:0.35; } }
 
 .live-seg {
   display:flex; align-items:center; gap:0.36vw;
@@ -430,9 +433,11 @@ function renderStreamOrText(elId, streamImgUrl, fallbackText, maxHeightCss) {
       el.innerHTML = '';
       img = document.createElement('img');
       img.className = 'stream-bin-img';
+      img.style.height = maxHeightCss || '100%';
       img.style.maxHeight = maxHeightCss || '100%';
       img.style.maxWidth = '100%';
       img.style.objectFit = 'contain';
+      img.style.flexShrink = '0';
       img.style.verticalAlign = 'middle';
       img.style.filter = 'brightness(1.25) contrast(1.25)';
       img.style.borderRadius = '4px';

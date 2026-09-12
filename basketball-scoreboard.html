@@ -1818,12 +1818,15 @@ function startLocalShotTick(){
     }
     else { 
       stopLocalShotTick(); 
-      if (useFirebase && S.shotSeconds === 0 && S.shotRunning) {
+      if (S.shotSeconds <= 0 && S.shotRunning) {
+        S.shotSeconds = 0;
+        S.shotRunning = false;
+        renderShotClock();
         triggerBuzz('shot');
-        setTimeout(() => {
-          S.shotSeconds = 24;
-          cmd('shot_start');
-        }, 500);
+        if (useFirebase && db) {
+          db.ref(`states/${fbUser}`).update({ shotSeconds: 0, shotRunning: false });
+        }
+        broadcastState();
       }
     }
   }, 1000);

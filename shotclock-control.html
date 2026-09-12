@@ -550,11 +550,15 @@ function startLocalTick() {
     }
     else { 
       stopLocalTick(); 
-      if (useFirebase && shotSeconds === 0 && shotRunning) {
+      if (shotSeconds <= 0 && shotRunning) {
+        shotSeconds = 0;
+        shotRunning = false;
+        renderClock();
         soundBuzzer();
-        setTimeout(() => {
-          resetShot(24);
-        }, 500);
+        if (useFirebase && db) {
+          db.ref(`states/${fbUser}`).update({ shotSeconds: 0, shotRunning: false });
+        }
+        broadcastShotclock();
       }
     }
   }, 1000);
