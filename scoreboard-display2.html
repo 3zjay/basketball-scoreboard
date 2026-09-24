@@ -377,20 +377,42 @@ function getEffState() {
 }
 
 let _lastLocalMsgTime = 0;
+let _lastStateMsgTime = 0;
+
+function hasStateNonClockChanged(oldS, newD) {
+  if (!oldS || !newD) return true;
+  for (const k of [
+    'homeScore', 'awayScore', 'homeAbbr', 'awayAbbr', 'homeColor', 'awayColor',
+    'homeLogo', 'awayLogo', 'homeLogoThumb', 'awayLogoThumb',
+    'quarter', 'possession', 'homeFouls', 'awayFouls'
+  ]) {
+    if (newD[k] !== undefined && newD[k] !== oldS[k]) return true;
+  }
+  return false;
+}
+
+function applyStateMessage(msgData) {
+  _lastStateMsgTime = Date.now();
+  if (!msgData) return;
+  if (msgData.aiSyncActive !== undefined) aiSyncActive = !!msgData.aiSyncActive;
+  if (msgData.aiSyncEnabled !== undefined) aiSyncActive = !!msgData.aiSyncEnabled;
+  const nonClockChanged = hasStateNonClockChanged(S, msgData);
+  S = { ...S, ...msgData };
+  if (nonClockChanged) {
+    render();
+  } else {
+    renderClocks();
+  }
+  syncLocalTick();
+}
+
 const bc = new BroadcastChannel('hc_scoreboard_sync');
 bc.onmessage = (e) => {
   const msg = e.data;
   if (!msg) return;
   _lastLocalMsgTime = Date.now();
   if (msg.type === 'state') {
-    stopLocalTick();
-    if (msg.data) {
-      if (msg.data.aiSyncActive !== undefined) aiSyncActive = !!msg.data.aiSyncActive;
-      if (msg.data.aiSyncEnabled !== undefined) aiSyncActive = !!msg.data.aiSyncEnabled;
-      S = { ...S, ...msg.data };
-    }
-    render();
-    syncLocalTick();
+    applyStateMessage(msg.data);
   } else if (msg.type === 'stream') {
     applyStreamData(msg.data);
   } else if (msg.type === 'buzz') {
@@ -419,6 +441,7 @@ let localTick = null;
 function startLocalTick(){
   if(localTick) return;
   localTick = setInterval(()=>{
+    if(Date.now() - _lastStateMsgTime < 1400) return;
     if(S.gameRunning && S.gameSeconds > 0){ S.gameSeconds--; renderClocks(); }
     if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; renderClocks(); }
   }, 1000);
@@ -512,7 +535,36 @@ function renderClocks(){
   const shotText = eff.shotSeconds != null ? eff.shotSeconds : '--';
   renderStreamOrText('shotEl', S.shotClockStream, shotText, '8vw');
   const shotEl = document.getElementById('shotEl');
-  if(shotEl){ shotEl.className = 'shot-num'+((eff.shotSeconds<=5)?' urgent':''); }
+  if(shotEl){
+    const targetUrgent = (eff.shotSeconds !== null && eff.shotSeconds<=5 && eff.shotSeconds > 0);
+    if(shotEl.classList.contains('urgent') !== targetUrgent) shotEl.classList.toggle('urgent', targetUrgent);
+  }
+}
+
+function setSafePossLogo(elId, url, abbr, color, isPoss) {
+  const el = typeof elId === 'string' ? document.getElementById(elId) : elId;
+  if (!el) return;
+  if (url) {
+    let img = el.querySelector('img');
+    if (!img) {
+      el.innerHTML = `<img src="${url}" alt="">`;
+    } else if (img.getAttribute('src') !== url) {
+      img.src = url;
+    }
+  } else {
+    if (!el.querySelector('.poss-logo-ph')) {
+      el.innerHTML = `<div class="poss-logo-ph">${(abbr||'').substring(0,3).toUpperCase()}</div>`;
+    }
+  }
+  if (el.dataset.color !== color) {
+    el.dataset.color = color;
+    el.style.borderColor = color;
+  }
+  const shadow = isPoss ? `0 0 14px ${color}, 0 0 28px ${color}88` : '';
+  if (el.dataset.shadow !== shadow) {
+    el.dataset.shadow = shadow;
+    el.style.boxShadow = shadow;
+  }
 }
 
 function render(){
@@ -542,32 +594,21 @@ function render(){
 
   const hb = document.getElementById('homeBlock');
   const ab = document.getElementById('awayBlock');
-  if(hb) hb.style.setProperty('--team-color', S.homeColor||'#f5c842');
-  if(ab) ab.style.setProperty('--team-color', S.awayColor||'#c8102e');
+  const hc = S.homeColor||'#f5c842';
+  const ac = S.awayColor||'#c8102e';
+  if(hb && hb.dataset.color !== hc){ hb.dataset.color = hc; hb.style.setProperty('--team-color', hc); }
+  if(ab && ab.dataset.color !== ac){ ab.dataset.color = ac; ab.style.setProperty('--team-color', ac); }
 
   const homeOn = S.possession==='home';
   const awayOn = S.possession==='away';
   document.getElementById('possHome')?.classList.toggle('on', homeOn);
   document.getElementById('possAway')?.classList.toggle('on', awayOn);
 
-  const hlEl = document.getElementById('possLogoHome');
-  const alEl = document.getElementById('possLogoAway');
   const hLogo = S.homeLogo || S.homeLogoThumb;
-  if(hlEl){
-    hlEl.innerHTML = hLogo
-      ? `<img src="${hLogo}" alt="">`
-      : `<div class="poss-logo-ph">${(S.homeAbbr||'HOME').substring(0,3).toUpperCase()}</div>`;
-    hlEl.style.borderColor = S.homeColor||'#f5c842';
-    hlEl.style.boxShadow = homeOn ? `0 0 14px ${S.homeColor||'#f5c842'}, 0 0 28px ${S.homeColor||'#f5c842'}88` : '';
-  }
+  setSafePossLogo('possLogoHome', hLogo, S.homeAbbr || 'HOME', hc, homeOn);
+
   const aLogo = S.awayLogo || S.awayLogoThumb;
-  if(alEl){
-    alEl.innerHTML = aLogo
-      ? `<img src="${aLogo}" alt="">`
-      : `<div class="poss-logo-ph">${(S.awayAbbr||'AWAY').substring(0,3).toUpperCase()}</div>`;
-    alEl.style.borderColor = S.awayColor||'#c8102e';
-    alEl.style.boxShadow = awayOn ? `0 0 14px ${S.awayColor||'#c8102e'}, 0 0 28px ${S.awayColor||'#c8102e'}88` : '';
-  }
+  setSafePossLogo('possLogoAway', aLogo, S.awayAbbr || 'AWAY', ac, awayOn);
 }
 
 function bump(id){ const e=document.getElementById(id); if(!e)return; e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); }
@@ -605,9 +646,7 @@ function connectSSE(){
       if (Date.now() - _lastLocalMsgTime < 2000) return;
       const d = snapshot.val();
       if (!d) return;
-      
-      S = {...DEF, ...d};
-      render();
+      applyStateMessage(d);
     });
     db.ref(`ocr/${fbUser}`).on('value', snapshot => {
       const d = snapshot.val();
@@ -632,9 +671,7 @@ function connectSSE(){
       }
       else if(msg.type==='state'){
         if (Date.now() - _lastLocalMsgTime < 2000) return;
-        const d = msg.data;
-        S = {...DEF, ...d};
-        render();
+        applyStateMessage(msg.data);
       }
       else if(msg.type==='stream'){
         applyStreamData(msg.data);

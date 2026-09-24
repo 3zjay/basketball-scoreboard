@@ -1071,9 +1071,22 @@ const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 
 const bc = new BroadcastChannel('hc_scoreboard_sync');
 bc.onmessage = (e) => {
-  if (e.data && (e.data.type === 'stream' || e.data.type === 'ocr')) {
+  if (!e.data) return;
+  if (e.data.type === 'stream' || e.data.type === 'ocr') {
     if (typeof processOcrData === 'function') {
       processOcrData(e.data.data || e.data);
+    }
+  } else if (e.data.type === 'state') {
+    if (e.data.user && e.data.user !== fbUser) return;
+    const d = e.data.data;
+    if (d && d.shotSeconds !== undefined) {
+      if (S.shotSeconds !== d.shotSeconds || S.shotRunning !== !!d.shotRunning) {
+        S.shotSeconds = d.shotSeconds;
+        S.shotRunning = !!d.shotRunning;
+        renderShotClock();
+        if (S.shotRunning) startLocalShotTick();
+        else stopLocalShotTick();
+      }
     }
   }
 };

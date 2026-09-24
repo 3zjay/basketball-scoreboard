@@ -173,7 +173,7 @@ let _lastLocalMsgTime = 0;
 const bc = new BroadcastChannel('hc_scoreboard_sync');
 bc.onmessage = (e) => {
   const msg = e.data;
-  if (!msg || msg.user !== fbUser) return;
+  if (!msg || (msg.user && msg.user !== fbUser)) return;
   _lastLocalMsgTime = Date.now();
   if (msg.type === 'state') {
     if (msg.data.shotSeconds != null) shotSeconds = msg.data.shotSeconds;
@@ -224,11 +224,10 @@ function render() {
   const dotEl   = document.getElementById('runDot');
   const lblEl   = document.getElementById('runLabel');
 
-  numEl.textContent = shotSeconds;
+  if (numEl.textContent !== String(shotSeconds)) numEl.textContent = shotSeconds;
 
-  numEl.className = 'shot-number';
-  if      (shotSeconds === 0)  numEl.classList.add('zero');
-  else if (shotSeconds <= 5)   numEl.classList.add('danger');
+  const targetClass = 'shot-number' + (shotSeconds === 0 ? ' zero' : (shotSeconds <= 5 ? ' danger' : ''));
+  if (numEl.className !== targetClass) numEl.className = targetClass;
 
   if (shotRunning) {
     dotEl.classList.add('running');

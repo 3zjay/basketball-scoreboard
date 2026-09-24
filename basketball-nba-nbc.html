@@ -499,31 +499,59 @@ function getEffState() {
   return S;
 }
 
-const bc=typeof BroadcastChannel!=='undefined'?new BroadcastChannel('basketball_scoreboard'):null;
-if(bc){
-  bc.onmessage=e=>{
-    if(e.data){
-      if(e.data.type==='state'){
-        _lastLocalMsgTime=Date.now();
-        _ll=Date.now();
-        stop();
-        if (e.data.data) {
-          if (e.data.data.aiSyncActive !== undefined) aiSyncActive = !!e.data.data.aiSyncActive;
-          if (e.data.data.aiSyncEnabled !== undefined) aiSyncActive = !!e.data.data.aiSyncEnabled;
-          S = { ...S, ...e.data.data };
-        }
-        draw();
-        sync();
-      }else if(e.data.type==='stream'){
-        _lastLocalMsgTime=Date.now();
-        applyStreamData(e.data.data);
-      }
-    }
-  };
+let _lastStateMsgTime = 0;
+
+function hasStateNonClockChanged(oldS, newD) {
+  if (!oldS || !newD) return true;
+  for (const k of [
+    'homeScore', 'awayScore', 'homeAbbr', 'awayAbbr', 'homeRecord', 'awayRecord',
+    'homeColor', 'awayColor', 'homeLogo', 'awayLogo', 'homeLogoThumb', 'awayLogoThumb',
+    'quarter', 'possession', 'rp1Title', 'rp1Value', 'rp2Title', 'rp2Value',
+    'homeFouls', 'awayFouls'
+  ]) {
+    if (newD[k] !== undefined && newD[k] !== oldS[k]) return true;
+  }
+  return false;
 }
 
+function applyStateMessage(msgData) {
+  _lastStateMsgTime = Date.now();
+  _ll = Date.now();
+  _lastLocalMsgTime = Date.now();
+  if (!msgData) return;
+  if (msgData.aiSyncActive !== undefined) aiSyncActive = !!msgData.aiSyncActive;
+  if (msgData.aiSyncEnabled !== undefined) aiSyncActive = !!msgData.aiSyncEnabled;
+  const nonClockChanged = hasStateNonClockChanged(S, msgData);
+  S = { ...S, ...msgData };
+  if (nonClockChanged) {
+    draw();
+  } else {
+    tock();
+  }
+  sync();
+}
+
+function handleBCMessage(e) {
+  if (!e || !e.data) return;
+  if (e.data.type === 'state') {
+    applyStateMessage(e.data.data);
+  } else if (e.data.type === 'stream') {
+    _lastLocalMsgTime = Date.now();
+    applyStreamData(e.data.data);
+  }
+}
+
+const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('hc_scoreboard_sync') : null;
+if (bc) bc.onmessage = handleBCMessage;
+const bcLegacy = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('basketball_scoreboard') : null;
+if (bcLegacy) bcLegacy.onmessage = handleBCMessage;
+
 function $(i){return document.getElementById(i);}
-function tx(i,v){const e=$(i);if(e)e.textContent=v;}
+function tx(i,v){
+  const e=$(i);
+  const s = String(v !== undefined && v !== null ? v : '');
+  if(e && e.textContent !== s) e.textContent = s;
+}
 function isHex(c){return/^#[0-9A-F]{6}$/i.test(c);}
 
 /* Hex Darkener Helper */
@@ -550,11 +578,24 @@ function isLight(hex) {
 
 function setLogo(cid,url){
   const c=$(cid);if(!c)return;
-  c.innerHTML=url?`<img src="${url}" alt="" style="width:100%;height:100%;object-fit:contain">`:'<div class="no-logo">LOGO</div>';
+  if(url){
+    let img=c.querySelector('img');
+    if(!img){
+      c.innerHTML=`<img src="${url}" alt="" style="width:100%;height:100%;object-fit:contain">`;
+    } else if(img.getAttribute('src')!==url){
+      img.src=url;
+    }
+  } else {
+    if(!c.querySelector('.no-logo')){
+      c.innerHTML='<div class="no-logo">LOGO</div>';
+    }
+  }
 }
 function setStacked(id,text){
   const el=$(id);if(!el)return;
   const cleanText=(text||'').trim();
+  if (el.dataset.renderedText === cleanText) return;
+  el.dataset.renderedText = cleanText;
   const chars=cleanText.toUpperCase().split('');
   const len=chars.length;
   
@@ -632,11 +673,19 @@ function tock(){
     v = s < 60 ? `${s}.0` : `${m}:${sec.toString().padStart(2,'0')}`;
   }
   renderStreamOrText('clk', S.gameClockStream, v, '1.6vw');
-  const e=$('clk');if(e){e.className=eff.gameSeconds<=30?'warn':'';}
+  const e=$('clk');
+  if(e){
+    const targetWarn = eff.gameSeconds<=30;
+    if(e.classList.contains('warn') !== targetWarn) e.classList.toggle('warn', targetWarn);
+  }
 
   const scText = eff.shotSeconds != null ? eff.shotSeconds : '--';
   renderStreamOrText('sc', S.shotClockStream, scText, '0.9vw');
-  const sc=$('sc');if(sc){sc.className=(eff.shotSeconds<=5)?'warn':'';}
+  const sc=$('sc');
+  if(sc){
+    const targetWarn = (eff.shotSeconds !== null && eff.shotSeconds<=5 && eff.shotSeconds > 0);
+    if(sc.classList.contains('warn') !== targetWarn) sc.classList.toggle('warn', targetWarn);
+  }
 }
 
 /* ══ DRAW ══ */
@@ -726,20 +775,24 @@ function draw(){
   const txtEl = document.getElementById('strip-text');
 
   if (txtEl) {
+    let targetHtml = '';
     if (cleanBc) {
       if (dotEl) dotEl.style.display = 'inline-block';
-      let html = `LIVE: ${cleanBc}`;
+      targetHtml = `LIVE: ${cleanBc}`;
       if (cleanVn) {
-        html += ` &nbsp;&nbsp;&bull;&nbsp;&nbsp; ${vnLabel}: <span class="venue-highlight">${cleanVn}</span>`;
+        targetHtml += ` &nbsp;&nbsp;&bull;&nbsp;&nbsp; ${vnLabel}: <span class="venue-highlight">${cleanVn}</span>`;
       }
-      txtEl.innerHTML = html;
     } else {
       if (dotEl) dotEl.style.display = 'none';
       if (cleanVn) {
-        txtEl.innerHTML = `${vnLabel}: <span class="venue-highlight">${cleanVn}</span>`;
+        targetHtml = `${vnLabel}: <span class="venue-highlight">${cleanVn}</span>`;
       } else {
-        txtEl.textContent = 'HOOP CULTURE NETWORK';
+        targetHtml = 'HOOP CULTURE NETWORK';
       }
+    }
+    if (txtEl.dataset.renderedHtml !== targetHtml) {
+      txtEl.dataset.renderedHtml = targetHtml;
+      txtEl.innerHTML = targetHtml;
     }
   }
 }
@@ -748,8 +801,18 @@ function draw(){
 let tT=null,sT=null;
 function sync(){
   clearInterval(tT);clearInterval(sT);
-  if(S.clockRunning){tT=setInterval(()=>{if(S.gameSeconds>0){S.gameSeconds--;tock();}else{clearInterval(tT);gbuzz();}},1000);}
-  if(S.shotRunning){sT=setInterval(()=>{if(S.shotSeconds>0){S.shotSeconds--;tock();}else{clearInterval(sT);sbuzz();}},1000);}
+  if(S.gameRunning){
+    tT=setInterval(()=>{
+      if(Date.now() - _lastStateMsgTime < 1400) return;
+      if(S.gameSeconds>0){S.gameSeconds--;tock();}else{clearInterval(tT);gbuzz();}
+    },1000);
+  }
+  if(S.shotRunning){
+    sT=setInterval(()=>{
+      if(Date.now() - _lastStateMsgTime < 1400) return;
+      if(S.shotSeconds>0){S.shotSeconds--;tock();}else{clearInterval(sT);sbuzz();}
+    },1000);
+  }
 }
 function stop(){clearInterval(tT);clearInterval(sT);}
 
@@ -774,13 +837,29 @@ function sbuzz(){ _shotBuzzer.currentTime = 0; _shotBuzzer.play().catch(()=>{});
 /* ══ CONNECT ══ */
 function conn(){
   if(useFB&&db){
-    db.ref(`states/${FU}`).on('value',sn=>{if(Date.now()-_ll<2000)return;const d=sn.val();if(!d)return;stop();S={...DEF,...d};draw();sync();});
+    db.ref(`states/${FU}`).on('value',sn=>{
+      if(Date.now()-_ll<2000)return;
+      const d=sn.val();
+      if(!d)return;
+      applyStateMessage(d);
+    });
     db.ref(`ocr/${FU}`).on('value',sn=>{const d=sn.val();if(d)applyStreamData(d);});
     db.ref(`buzz/${FU}`).on('value',sn=>{if(Date.now()-_ll<2000)return;const m=sn.val();if(!m||m.timestamp<=_lb)return;_lb=m.timestamp;m.kind==='game'?gbuzz():sbuzz();});
     return;
   }
   const es=new EventSource(`${SRV}/events?user=${encodeURIComponent(CU)}`);
-  es.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='buzz'){m.kind==='game'?gbuzz():sbuzz();}else if(m.type==='state'){stop();S={...S,...m.data};draw();sync();}else if(m.type==='stream'){applyStreamData(m.data);}}catch(err){}};
+  es.onmessage=e=>{
+    try{
+      const m=JSON.parse(e.data);
+      if(m.type==='buzz'){
+        m.kind==='game'?gbuzz():sbuzz();
+      } else if(m.type==='state'){
+        applyStateMessage(m.data);
+      } else if(m.type==='stream'){
+        applyStreamData(m.data);
+      }
+    }catch(err){}
+  };
   es.onerror=()=>{es.close();setTimeout(conn,2000);};
 }
 if(useFB&&db){

@@ -292,20 +292,42 @@ function getEffState() {
 }
 
 let _lastLocalMsgTime = 0;
+let _lastStateMsgTime = 0;
+
+function hasStateNonClockChanged(oldS, newD) {
+  if (!oldS || !newD) return true;
+  for (const k of [
+    'homeScore', 'awayScore', 'homeAbbr', 'awayAbbr', 'homeRecord', 'awayRecord',
+    'homeColor', 'awayColor', 'homeLogo', 'awayLogo', 'homeLogoThumb', 'awayLogoThumb',
+    'quarter', 'possession', 'rp1Title', 'rp1Value', 'rp2Title', 'rp2Value', 'barColor'
+  ]) {
+    if (newD[k] !== undefined && newD[k] !== oldS[k]) return true;
+  }
+  return false;
+}
+
+function applyStateMessage(msgData) {
+  _lastStateMsgTime = Date.now();
+  if (!msgData) return;
+  if (msgData.aiSyncActive !== undefined) aiSyncActive = !!msgData.aiSyncActive;
+  if (msgData.aiSyncEnabled !== undefined) aiSyncActive = !!msgData.aiSyncEnabled;
+  const nonClockChanged = hasStateNonClockChanged(S, msgData);
+  S = { ...S, ...msgData };
+  if (nonClockChanged) {
+    render();
+  } else {
+    renderClocks();
+  }
+  syncLocalTick();
+}
+
 const bc = new BroadcastChannel('hc_scoreboard_sync');
 bc.onmessage = (e) => {
   const msg = e.data;
   if (!msg) return;
   _lastLocalMsgTime = Date.now();
   if (msg.type === 'state') {
-    stopLocalTick();
-    if (msg.data) {
-      if (msg.data.aiSyncActive !== undefined) aiSyncActive = !!msg.data.aiSyncActive;
-      if (msg.data.aiSyncEnabled !== undefined) aiSyncActive = !!msg.data.aiSyncEnabled;
-      S = { ...S, ...msg.data };
-    }
-    render();
-    syncLocalTick();
+    applyStateMessage(msg.data);
   } else if (msg.type === 'stream') {
     applyStreamData(msg.data);
   } else if (msg.type === 'buzz') {
@@ -332,6 +354,7 @@ let localTick = null;
 function startLocalTick(){
   if(localTick) return;
   localTick = setInterval(()=>{
+    if(Date.now() - _lastStateMsgTime < 1400) return;
     if(S.gameRunning && S.gameSeconds > 0){ S.gameSeconds--; renderClocks(); }
     if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; renderClocks(); }
   }, 1000);
@@ -393,15 +416,46 @@ function renderClocks(){
   
   renderStreamOrText('gameClkOv', S.gameClockStream, txt, '2.5vw');
   const clkEl=document.getElementById('gameClkOv');
-  if(clkEl){ clkEl.className='game-clock'+(eff.gameSeconds<=30?' warn':''); }
+  if(clkEl){
+    const targetWarn = eff.gameSeconds<=30;
+    if(clkEl.classList.contains('warn') !== targetWarn){
+      clkEl.classList.toggle('warn', targetWarn);
+    }
+  }
 
   const shotText = eff.shotSeconds != null ? eff.shotSeconds : '--';
   renderStreamOrText('shotClkOv', S.shotClockStream, shotText, '1.3vw');
   const shotEl=document.getElementById('shotClkOv');
-  if(shotEl){ shotEl.className='shot-num'+((eff.shotSeconds<=5)?' urgent':''); }
+  if(shotEl){
+    const targetUrgent = (eff.shotSeconds !== null && eff.shotSeconds<=5 && eff.shotSeconds > 0);
+    if(shotEl.classList.contains('urgent') !== targetUrgent){
+      shotEl.classList.toggle('urgent', targetUrgent);
+    }
+  }
 }
 
-function s(id,val){ const e=document.getElementById(id); if(e) e.textContent=val; }
+function s(id,val){
+  const e=document.getElementById(id);
+  const str = String(val !== undefined && val !== null ? val : '');
+  if(e && e.textContent !== str) e.textContent = str;
+}
+
+function setSafeLogo(elId, url) {
+  const el = typeof elId === 'string' ? document.getElementById(elId) : elId;
+  if (!el) return;
+  if (url) {
+    let img = el.querySelector('img');
+    if (!img) {
+      el.innerHTML = `<img src="${url}" alt="">`;
+    } else if (img.getAttribute('src') !== url) {
+      img.src = url;
+    }
+  } else {
+    if (!el.querySelector('.logo-ph')) {
+      el.innerHTML = '<div class="logo-ph">LOGO</div>';
+    }
+  }
+}
 
 function render(){
   const eff = getEffState();
@@ -421,18 +475,23 @@ function render(){
   s('rp1TOv',S.rp1Title); s('rp1VOv',S.rp1Value);
   s('rp2TOv',S.rp2Title); s('rp2VOv',S.rp2Value);
 
-  const hLogo = S.homeLogo || S.homeLogoThumb;
-  const hEl = document.getElementById('homeLogoOv');
-  if(hEl) hEl.innerHTML = hLogo ? `<img src="${hLogo}" alt="">` : '<div class="logo-ph">LOGO</div>';
-
-  const aLogo = S.awayLogo || S.awayLogoThumb;
-  const aEl = document.getElementById('awayLogoOv');
-  if(aEl) aEl.innerHTML = aLogo ? `<img src="${aLogo}" alt="">` : '<div class="logo-ph">LOGO</div>';
+  setSafeLogo('homeLogoOv', S.homeLogo || S.homeLogoThumb);
+  setSafeLogo('awayLogoOv', S.awayLogo || S.awayLogoThumb);
 
   const hCircle=document.getElementById('homeLogoOv');
   const aCircle=document.getElementById('awayLogoOv');
-  if(hCircle){ hCircle.style.border=`0.26vw solid ${S.homeColor||'#f5c842'}`; hCircle.style.boxShadow=`0 0 0.63vw ${S.homeColor||'#f5c842'}, 0 0.21vw 1.25vw rgba(0,0,0,0.8)`; }
-  if(aCircle){ aCircle.style.border=`0.26vw solid ${S.awayColor||'#c8102e'}`; aCircle.style.boxShadow=`0 0 0.63vw ${S.awayColor||'#c8102e'}, 0 0.21vw 1.25vw rgba(0,0,0,0.8)`; }
+  const hc = S.homeColor||'#f5c842';
+  const ac = S.awayColor||'#c8102e';
+  if(hCircle && hCircle.dataset.color !== hc){
+    hCircle.dataset.color = hc;
+    hCircle.style.border=`0.26vw solid ${hc}`;
+    hCircle.style.boxShadow=`0 0 0.63vw ${hc}, 0 0.21vw 1.25vw rgba(0,0,0,0.8)`;
+  }
+  if(aCircle && aCircle.dataset.color !== ac){
+    aCircle.dataset.color = ac;
+    aCircle.style.border=`0.26vw solid ${ac}`;
+    aCircle.style.boxShadow=`0 0 0.63vw ${ac}, 0 0.21vw 1.25vw rgba(0,0,0,0.8)`;
+  }
 
   const homeArrow=document.getElementById('possArrowHome');
   const awayArrow=document.getElementById('possArrowAway');
@@ -465,7 +524,7 @@ function connectSSE(){
       if (Date.now() - _lastLocalMsgTime < 2000) return;
       const d = snapshot.val();
       if (!d) return;
-      stopLocalTick(); S={...DEF,...d}; render(); syncLocalTick();
+      applyStateMessage(d);
     });
     db.ref(`ocr/${fbUser}`).on('value', snapshot => {
       const d = snapshot.val();
@@ -490,7 +549,7 @@ function connectSSE(){
       }
       else if(msg.type==='state'){
         if (Date.now() - _lastLocalMsgTime < 2000) return;
-        stopLocalTick(); S={...DEF,...msg.data}; render(); syncLocalTick();
+        applyStateMessage(msg.data);
       }
       else if(msg.type==='stream'){
         applyStreamData(msg.data);
