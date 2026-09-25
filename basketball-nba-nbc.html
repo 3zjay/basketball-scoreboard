@@ -272,7 +272,9 @@
       background: transparent;
       padding: 0;
     }
-    #sc.warn { color: #ff3344; }
+    #sc.warn { color: #ff3344; animation: scPulse 0.45s ease infinite alternate; }
+    #sc.zero { color: #ff1122; text-shadow: 0 0 0.5vw #ff0000; }
+    @keyframes scPulse { 0% { opacity: 1; } 100% { opacity: 0.35; } }
 
     #qf {
       font-size: 0.75vw;
@@ -685,6 +687,8 @@ function tock(){
   if(sc){
     const targetWarn = (eff.shotSeconds !== null && eff.shotSeconds<=5 && eff.shotSeconds > 0);
     if(sc.classList.contains('warn') !== targetWarn) sc.classList.toggle('warn', targetWarn);
+    const targetZero = (eff.shotSeconds !== null && eff.shotSeconds === 0);
+    if(sc.classList.contains('zero') !== targetZero) sc.classList.toggle('zero', targetZero);
   }
 }
 
@@ -803,13 +807,13 @@ function sync(){
   clearInterval(tT);clearInterval(sT);
   if(S.gameRunning){
     tT=setInterval(()=>{
-      if(Date.now() - _lastStateMsgTime < 1400) return;
+      if(Date.now() - _lastStateMsgTime < 3000) return;
       if(S.gameSeconds>0){S.gameSeconds--;tock();}else{clearInterval(tT);gbuzz();}
     },1000);
   }
   if(S.shotRunning){
     sT=setInterval(()=>{
-      if(Date.now() - _lastStateMsgTime < 1400) return;
+      if(Date.now() - _lastStateMsgTime < 3000) return;
       if(S.shotSeconds>0){S.shotSeconds--;tock();}else{clearInterval(sT);sbuzz();}
     },1000);
   }

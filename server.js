@@ -223,7 +223,7 @@ function stopGameClock(u) {
 
 function startShotClock(u) {
   const user = getOrCreateUser(u);
-  if (shotTimers[user]) return;
+  if (shotTimers[user]) { clearInterval(shotTimers[user]); shotTimers[user] = null; }
   if (!(states[user].shotSeconds > 0)) return;
   states[user].shotRunning = true;
   shotTimers[user] = setInterval(() => {
@@ -443,6 +443,15 @@ const requestHandler = async (req, res) => {
           stopShotClock(user);
           states[user].shotSeconds = seconds || 24;
           startShotClock(user);
+
+        } else if (cmd === 'shot_set') {
+          states[user].shotSeconds = Math.max(0, parseInt(seconds, 10) || 0);
+          pushToAll(user, { type: 'state', data: fullState(user) });
+
+        } else if (cmd === 'shot_adjust') {
+          const delta = parseInt(seconds, 10) || 0;
+          states[user].shotSeconds = Math.max(0, (states[user].shotSeconds || 0) + delta);
+          pushToAll(user, { type: 'state', data: fullState(user) });
 
         } else if (cmd === 'reset_all') {
           stopGameClock(user);

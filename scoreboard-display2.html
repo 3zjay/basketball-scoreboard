@@ -117,6 +117,10 @@ html, body {
   text-shadow:0 0 28px rgba(255,30,0,0.8);
   animation:urgentPulse 0.35s ease infinite alternate;
 }
+.shot-num.zero {
+  color:#ff1122;
+  text-shadow:0 0 28px rgba(255,0,0,0.9);
+}
 @keyframes urgentPulse { to{opacity:0.35} }
 
 /* ══ ROW 3: FOULS + POSSESSION ══ */
@@ -441,7 +445,7 @@ let localTick = null;
 function startLocalTick(){
   if(localTick) return;
   localTick = setInterval(()=>{
-    if(Date.now() - _lastStateMsgTime < 1400) return;
+    if(Date.now() - _lastStateMsgTime < 3000) return;
     if(S.gameRunning && S.gameSeconds > 0){ S.gameSeconds--; renderClocks(); }
     if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; renderClocks(); }
   }, 1000);
@@ -538,6 +542,8 @@ function renderClocks(){
   if(shotEl){
     const targetUrgent = (eff.shotSeconds !== null && eff.shotSeconds<=5 && eff.shotSeconds > 0);
     if(shotEl.classList.contains('urgent') !== targetUrgent) shotEl.classList.toggle('urgent', targetUrgent);
+    const targetZero = (eff.shotSeconds !== null && eff.shotSeconds === 0);
+    if(shotEl.classList.contains('zero') !== targetZero) shotEl.classList.toggle('zero', targetZero);
   }
 }
 

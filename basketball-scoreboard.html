@@ -832,6 +832,10 @@ body.light .reset-btn:hover { background:#fee2e2; }
           </div>
           <div class="two" style="margin-bottom:6px;">
             <button class="btn" style="background:var(--surface2);border-color:var(--border);color:var(--text2);" onclick="resetShot(14)">Reset 14</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+              <button class="btn" style="background:var(--surface2);border-color:var(--border);color:var(--text2);padding:8px 2px;" onclick="adjustShot(-1)">-1s</button>
+              <button class="btn" style="background:var(--surface2);border-color:var(--border);color:var(--text2);padding:8px 2px;" onclick="adjustShot(1)">+1s</button>
+            </div>
           </div>
           <div class="two" style="align-items:center;gap:6px;">
             <input type="number" id="shotCustomIn" min="1" max="60" value="24" style="
@@ -1069,6 +1073,11 @@ const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_us
 // Firebase-safe key (Firebase paths cannot contain ".", "#", "$", "[", or "]")
 const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 
+const myClientId = 'sb_' + Math.random().toString(36).slice(2, 9) + '_' + Date.now();
+let isShotLeader = false;
+let _sseConnected = false;
+let _lastServerClockTime = 0;
+
 const bc = new BroadcastChannel('hc_scoreboard_sync');
 bc.onmessage = (e) => {
   if (!e.data) return;
@@ -1080,18 +1089,27 @@ bc.onmessage = (e) => {
     if (e.data.user && e.data.user !== fbUser) return;
     const d = e.data.data;
     if (d && d.shotSeconds !== undefined) {
-      if (S.shotSeconds !== d.shotSeconds || S.shotRunning !== !!d.shotRunning) {
-        S.shotSeconds = d.shotSeconds;
-        S.shotRunning = !!d.shotRunning;
-        renderShotClock();
-        if (S.shotRunning) startLocalShotTick();
-        else stopLocalShotTick();
+      if (d.shotLeader && d.shotLeader !== myClientId) {
+        isShotLeader = false;
+        stopLocalShotTick();
+      }
+      if (!isShotLeader) {
+        if (S.shotSeconds !== d.shotSeconds || S.shotRunning !== !!d.shotRunning) {
+          S.shotSeconds = d.shotSeconds;
+          S.shotRunning = !!d.shotRunning;
+          renderShotClock();
+        }
       }
     }
   }
 };
 function broadcastState() {
-  bc.postMessage({ type: 'state', user: fbUser, data: S });
+  const payload = {
+    ...S,
+    shotLeader: isShotLeader ? myClientId : (S.shotLeader || null),
+    shotLeaderTime: isShotLeader ? Date.now() : (S.shotLeaderTime || null)
+  };
+  bc.postMessage({ type: 'state', user: fbUser, data: payload });
 }
 
 let db = null;
@@ -1821,11 +1839,27 @@ function stopLocalGameTick(){ clearInterval(_localGameTick); _localGameTick = nu
 function startLocalShotTick(){
   if(_localShotTick) return;
   _localShotTick = setInterval(()=>{
+    // In Server mode with active SSE, yield to server
+    if (!useFirebase && _sseConnected && (Date.now() - _lastServerClockTime < 2500)) {
+      stopLocalShotTick();
+      return;
+    }
+    // In Firebase mode, only leader ticks
+    if (useFirebase && !isShotLeader) {
+      stopLocalShotTick();
+      return;
+    }
+
     if(S.shotRunning && S.shotSeconds > 0){ 
       S.shotSeconds--; 
       renderShotClock(); 
       if (useFirebase && db) {
-        db.ref(`states/${fbUser}`).update({ shotSeconds: S.shotSeconds });
+        db.ref(`states/${fbUser}`).update({ 
+          shotSeconds: S.shotSeconds,
+          shotRunning: true,
+          shotLeader: myClientId,
+          shotLeaderTime: Date.now()
+        });
       }
       broadcastState();
     }
@@ -1837,7 +1871,12 @@ function startLocalShotTick(){
         renderShotClock();
         triggerBuzz('shot');
         if (useFirebase && db) {
-          db.ref(`states/${fbUser}`).update({ shotSeconds: 0, shotRunning: false });
+          db.ref(`states/${fbUser}`).update({ 
+            shotSeconds: 0, 
+            shotRunning: false,
+            shotLeader: myClientId,
+            shotLeaderTime: Date.now()
+          });
         }
         broadcastState();
       }
@@ -1869,23 +1908,77 @@ function toggleShotClock(){
     S.shotRunning = false;
     stopLocalShotTick();
     renderShotClock();
-    cmd('shot_stop');
+    broadcastState();
+    if (useFirebase && db) {
+      isShotLeader = true;
+      db.ref(`states/${fbUser}`).update({
+        shotRunning: false,
+        shotSeconds: S.shotSeconds,
+        shotLeader: myClientId,
+        shotLeaderTime: Date.now()
+      });
+    } else {
+      cmd('shot_stop');
+    }
   } else {
     if(S.shotSeconds <= 0) return;
     S.shotRunning = true;
-    startLocalShotTick();
     renderShotClock();
-    cmd('shot_start');
+    broadcastState();
+    if (useFirebase && db) {
+      isShotLeader = true;
+      startLocalShotTick();
+      db.ref(`states/${fbUser}`).update({
+        shotRunning: true,
+        shotSeconds: S.shotSeconds,
+        shotLeader: myClientId,
+        shotLeaderTime: Date.now()
+      });
+    } else {
+      if (!_sseConnected) startLocalShotTick();
+      cmd('shot_start');
+    }
   }
 }
 // Reset always starts the shot clock immediately
 function resetShot(n){
   _lastClockCmd = Date.now();
   stopLocalShotTick();
-  S.shotSeconds = n; S.shotRunning = true;
-  startLocalShotTick();
+  S.shotSeconds = n; 
+  S.shotRunning = true;
   renderShotClock();
-  cmd('shot_reset', n);
+  broadcastState();
+
+  if (useFirebase && db) {
+    isShotLeader = true;
+    startLocalShotTick();
+    db.ref(`states/${fbUser}`).update({
+      shotSeconds: n,
+      shotRunning: true,
+      shotLeader: myClientId,
+      shotLeaderTime: Date.now()
+    });
+  } else {
+    if (!_sseConnected) startLocalShotTick();
+    cmd('shot_reset', n);
+  }
+}
+function adjustShot(delta){
+  _lastClockCmd = Date.now();
+  S.shotSeconds = Math.max(0, (S.shotSeconds || 0) + delta);
+  renderShotClock();
+  broadcastState();
+
+  if (useFirebase && db) {
+    isShotLeader = true;
+    db.ref(`states/${fbUser}`).update({
+      shotSeconds: S.shotSeconds,
+      shotLeader: myClientId,
+      shotLeaderTime: Date.now()
+    });
+  } else {
+    cmd('shot_adjust', delta);
+  }
 }
 function resetShotCustom(){
   const n = parseInt(document.getElementById('shotCustomIn').value);
@@ -2285,6 +2378,11 @@ function connectSSE(){
         d.awayColor  = S.awayColor;
       }
 
+      if (d.shotLeader && d.shotLeader !== myClientId && (Date.now() - (d.shotLeaderTime || 0) < 3000)) {
+        isShotLeader = false;
+        stopLocalShotTick();
+      }
+
       const prevHomeLogo    = S.homeLogo;
       const prevAwayLogo    = S.awayLogo;
 
@@ -2300,7 +2398,7 @@ function connectSSE(){
         else stopLocalGameTick();
       }
       if (runShotChanged) {
-        if (S.shotRunning) startLocalShotTick();
+        if (S.shotRunning && isShotLeader) startLocalShotTick();
         else stopLocalShotTick();
       }
       renderAll();
@@ -2325,11 +2423,16 @@ function connectSSE(){
 
   setLiveStatus('connecting');
   const es = new EventSource(`${SERVER_URL}/events?user=${encodeURIComponent(currentUser)}`);
-  es.onopen = () => setLiveStatus('connected');
+  es.onopen = () => {
+    _sseConnected = true;
+    setLiveStatus('connected');
+  };
   es.onmessage = (e) => {
     try {
       const msg = JSON.parse(e.data);
       if(msg.type === 'state') {
+        _lastServerClockTime = Date.now();
+        _sseConnected = true;
         const d = msg.data;
         const now = Date.now();
         const sinceClockCmd = now - _lastClockCmd;
@@ -2360,9 +2463,11 @@ function connectSSE(){
         S = {...DEF, ...d};
         if(!S.homeLogo && prevHomeLogo) S.homeLogo = prevHomeLogo;
         if(!S.awayLogo && prevAwayLogo) S.awayLogo = prevAwayLogo;
-        stopLocalGameTick(); stopLocalShotTick();
+        
+        // In server mode, server ticks the shot clock: stop redundant local tick
+        stopLocalShotTick();
+        stopLocalGameTick();
         if(S.gameRunning) startLocalGameTick();
-        if(S.shotRunning) startLocalShotTick();
         renderAll();
       } else if(msg.type === 'buzz') {
         const sinceLocal = Date.now() - _lastLocalBuzz;
@@ -2375,7 +2480,12 @@ function connectSSE(){
       }
     } catch(err){}
   };
-  es.onerror = () => { setLiveStatus('offline'); es.close(); setTimeout(connectSSE, 3000); };
+  es.onerror = () => { 
+    _sseConnected = false;
+    setLiveStatus('offline'); 
+    es.close(); 
+    setTimeout(connectSSE, 3000); 
+  };
 }
 
 function toggleAiSync(enabled) {
@@ -2425,6 +2535,10 @@ document.addEventListener('keydown', (e) => {
       toggleShotClock(); break;
     case 'r': resetShot(24); break;
     case 't': resetShot(14); break;
+    case '+':
+    case '=': adjustShot(1); break;
+    case '-':
+    case '_': adjustShot(-1); break;
     // Buzzer
     case 'b': refBuzzer(); break;
   }

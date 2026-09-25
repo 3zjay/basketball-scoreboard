@@ -89,6 +89,7 @@ html, body {
 .shot-label { font-size:0.57vw; font-weight:800; color:#8a95a8; letter-spacing:0.1vw; text-transform:uppercase; }
 .shot-num { font-family:'Teko',sans-serif; font-size:1.35vw; font-weight:700; color:#f5c842; letter-spacing:0.05vw; width:1.88vw; text-align:center; line-height:1; font-variant-numeric:tabular-nums; }
 .shot-num.urgent { color:#e84040; animation:scPulse 0.45s ease infinite alternate; }
+.shot-num.zero { color:#ff3b30; text-shadow:0 0 0.6vw #ff0000; font-weight:800; }
 @keyframes scPulse { to { opacity:0.4; } }
 
 .right-panel { flex:1; display:flex; align-items:stretch; border-left:1px solid rgba(255,255,255,0.07); height:100%; }
@@ -354,7 +355,7 @@ let localTick = null;
 function startLocalTick(){
   if(localTick) return;
   localTick = setInterval(()=>{
-    if(Date.now() - _lastStateMsgTime < 1400) return;
+    if(Date.now() - _lastStateMsgTime < 3000) return;
     if(S.gameRunning && S.gameSeconds > 0){ S.gameSeconds--; renderClocks(); }
     if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; renderClocks(); }
   }, 1000);
@@ -430,6 +431,10 @@ function renderClocks(){
     const targetUrgent = (eff.shotSeconds !== null && eff.shotSeconds<=5 && eff.shotSeconds > 0);
     if(shotEl.classList.contains('urgent') !== targetUrgent){
       shotEl.classList.toggle('urgent', targetUrgent);
+    }
+    const targetZero = (eff.shotSeconds !== null && eff.shotSeconds === 0);
+    if(shotEl.classList.contains('zero') !== targetZero){
+      shotEl.classList.toggle('zero', targetZero);
     }
   }
 }

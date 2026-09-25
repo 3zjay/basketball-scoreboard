@@ -93,6 +93,7 @@ html, body {
   overflow:hidden; flex-shrink:0;
 }
 .shot-num.urgent { color:#e84040; animation:scPulse 0.45s ease infinite alternate; }
+.shot-num.zero { color:#ff3b30; text-shadow:0 0 0.6vw #ff0000; font-weight:800; }
 @keyframes scPulse { 0% { opacity:1; } 100% { opacity:0.35; } }
 
 .live-seg {
@@ -439,7 +440,7 @@ let localTick = null;
 function startLocalTick(){
   if(localTick) return;
   localTick = setInterval(()=>{
-    if(Date.now() - _lastStateMsgTime < 1400) return;
+    if(Date.now() - _lastStateMsgTime < 3000) return;
     if(S.gameRunning && S.gameSeconds > 0){ S.gameSeconds--; renderClocks(); }
     if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; renderClocks(); }
   }, 1000);
@@ -513,6 +514,10 @@ function renderClocks(){
     const targetUrgent = (eff.shotSeconds !== null && eff.shotSeconds <= 5 && eff.shotSeconds > 0);
     if(shot.classList.contains('urgent') !== targetUrgent){
       shot.classList.toggle('urgent', targetUrgent);
+    }
+    const targetZero = (eff.shotSeconds !== null && eff.shotSeconds === 0);
+    if(shot.classList.contains('zero') !== targetZero){
+      shot.classList.toggle('zero', targetZero);
     }
   }
 }
