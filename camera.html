@@ -1320,7 +1320,7 @@
         period: 'periodStream'
       };
 
-      const payload = { streamActive: syncActive };
+      const payload = { streamActive: syncActive, invertStates: { ...invertStates } };
 
       for (const key of keys) {
         if (enabledCrops[key] === false) {

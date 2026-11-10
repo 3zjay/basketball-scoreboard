@@ -323,9 +323,10 @@ const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 let aiSyncActive = false;
 let aiState = { gameSeconds: null, clockStr: null, homeScore: null, awayScore: null, quarter: null, shotSeconds: null };
 
-let feedInvertMode = (urlParams.get('invert') === 'black' || urlParams.get('invert') === '1' || urlParams.get('black') === '1' || urlParams.get('feedInvert') === 'black')
+const explicitInvert = urlParams.get('invert') || urlParams.get('feedInvert');
+let feedInvertMode = (explicitInvert === 'black' || explicitInvert === '1' || urlParams.get('black') === '1')
   ? 'black'
-  : (localStorage.getItem('hc_feed_invert_mode') || 'white');
+  : (explicitInvert === 'white' || explicitInvert === '0' || urlParams.get('white') === '1' ? 'white' : 'auto');
 
 function applyStreamImgStyles(img) {
   if (!img) return;
@@ -341,17 +342,26 @@ function applyStreamImgStyles(img) {
       c.width = 4; c.height = 4;
       const ctx = c.getContext('2d');
       ctx.drawImage(img, 0, 0, 4, 4);
-      const p = ctx.getImageData(0, 0, 1, 1).data;
-      isLightBg = (p[0] * 0.299 + p[1] * 0.587 + p[2] * 0.114) > 140;
+      const p00 = ctx.getImageData(0, 0, 1, 1).data;
+      const p30 = ctx.getImageData(3, 0, 1, 1).data;
+      const p03 = ctx.getImageData(0, 3, 1, 1).data;
+      const p33 = ctx.getImageData(3, 3, 1, 1).data;
+      const lum00 = p00[0] * 0.299 + p00[1] * 0.587 + p00[2] * 0.114;
+      const lum30 = p30[0] * 0.299 + p30[1] * 0.587 + p30[2] * 0.114;
+      const lum03 = p03[0] * 0.299 + p03[1] * 0.587 + p03[2] * 0.114;
+      const lum33 = p33[0] * 0.299 + p33[1] * 0.587 + p33[2] * 0.114;
+      isLightBg = ((lum00 + lum30 + lum03 + lum33) / 4) > 120;
     }
   } catch(e) {}
 
-  if (feedInvertMode === 'black') {
+  if (feedInvertMode === 'black' || (feedInvertMode === 'auto' && isLightBg)) {
+    // Inverted crop (white background from scanner): Multiply blend renders pure black digits, eliminating white background with 0% shade
     img.style.mixBlendMode = 'multiply';
-    img.style.filter = isLightBg ? 'contrast(2.5) brightness(1.3)' : 'invert(1) contrast(2.5) brightness(1.3)';
+    img.style.filter = 'contrast(2.5) brightness(1.3)';
   } else {
+    // Uninverted crop (black background from scanner): Screen blend renders pure white digits, eliminating black background with 0% box
     img.style.mixBlendMode = 'screen';
-    img.style.filter = isLightBg ? 'invert(1) contrast(2.5) brightness(1.3)' : 'contrast(2.5) brightness(1.3)';
+    img.style.filter = 'contrast(2.5) brightness(1.3)';
   }
 }
 
@@ -360,13 +370,18 @@ function updateAllStreamImagesStyle() {
 }
 
 function setFeedInvertMode(mode) {
-  feedInvertMode = (mode === 'black') ? 'black' : 'white';
-  try { localStorage.setItem('hc_feed_invert_mode', feedInvertMode); } catch(e) {}
+  feedInvertMode = (mode === 'black' || mode === 'white') ? mode : 'auto';
+  try {
+    if (feedInvertMode === 'auto') localStorage.removeItem('hc_feed_invert_mode');
+    else localStorage.setItem('hc_feed_invert_mode', feedInvertMode);
+  } catch(e) {}
   updateAllStreamImagesStyle();
 }
 
 function toggleFeedInvert() {
-  setFeedInvertMode(feedInvertMode === 'black' ? 'white' : 'black');
+  if (feedInvertMode === 'auto') setFeedInvertMode('black');
+  else if (feedInvertMode === 'black') setFeedInvertMode('white');
+  else setFeedInvertMode('auto');
 }
 
 window.addEventListener('keydown', (e) => {
@@ -377,9 +392,6 @@ window.addEventListener('keydown', (e) => {
 
 function applyStreamData(data) {
   if (!data) return;
-  if (data.feedInvert && data.feedInvert !== feedInvertMode) {
-    setFeedInvertMode(data.feedInvert);
-  }
   if (data.streamActive === false) {
     aiSyncActive = false;
     S.gameClockStream = null;
@@ -425,9 +437,6 @@ function applyStateMessage(msgData) {
   if (!msgData) return;
   if (msgData.aiSyncActive !== undefined) aiSyncActive = !!msgData.aiSyncActive;
   if (msgData.aiSyncEnabled !== undefined) aiSyncActive = !!msgData.aiSyncEnabled;
-  if (msgData.feedInvert && msgData.feedInvert !== feedInvertMode) {
-    setFeedInvertMode(msgData.feedInvert);
-  }
   const nonClockChanged = hasStateNonClockChanged(S, msgData);
   S = { ...S, ...msgData };
   if (nonClockChanged) {

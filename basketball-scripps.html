@@ -798,8 +798,9 @@
 
   <label>Scanner Digits Polarity (or press 'I'):</label>
   <select id="hudFeedInvert" onchange="setFeedInvertMode(this.value)">
-    <option value="white">⚪ White Digits (Screen Blend)</option>
-    <option value="black">⚫ Black Digits (Multiply Blend)</option>
+    <option value="auto">⚡ Auto (Per-Crop Polarity from Scanner)</option>
+    <option value="white">⚪ White Digits (Force Screen)</option>
+    <option value="black">⚫ Black Digits (Force Multiply)</option>
   </select>
 
   <label>Broadcast Brand:</label>
@@ -871,10 +872,11 @@ const scaleParam = parseFloat(gP('scale') || '1.0');
 // Clock Pod Styling Option ('white' = authentic Scripps Sports white pod; 'dark' = dark blended pod)
 let clockTheme = gP('clock') || 'white';
 
-// Scanner Digits Invert Polarity Option ('white' = Screen blend for white digits; 'black' = Multiply blend for black digits)
-let feedInvertMode = (gP('invert') === 'black' || gP('invert') === '1' || gP('black') === '1' || gP('feedInvert') === 'black')
+// Scanner Digits Invert Polarity Option ('auto' = per-crop detection from scanner; 'black' = force multiply; 'white' = force screen)
+const explicitInvert = gP('invert') || gP('feedInvert');
+let feedInvertMode = (explicitInvert === 'black' || explicitInvert === '1' || gP('black') === '1')
   ? 'black'
-  : (localStorage.getItem('hc_feed_invert_mode') || 'white');
+  : (explicitInvert === 'white' || explicitInvert === '0' || gP('white') === '1' ? 'white' : 'auto');
 
 function applyStreamImgStyles(img) {
   if (!img) return;
@@ -890,17 +892,26 @@ function applyStreamImgStyles(img) {
       c.width = 4; c.height = 4;
       const ctx = c.getContext('2d');
       ctx.drawImage(img, 0, 0, 4, 4);
-      const p = ctx.getImageData(0, 0, 1, 1).data;
-      isLightBg = (p[0] * 0.299 + p[1] * 0.587 + p[2] * 0.114) > 140;
+      const p00 = ctx.getImageData(0, 0, 1, 1).data;
+      const p30 = ctx.getImageData(3, 0, 1, 1).data;
+      const p03 = ctx.getImageData(0, 3, 1, 1).data;
+      const p33 = ctx.getImageData(3, 3, 1, 1).data;
+      const lum00 = p00[0] * 0.299 + p00[1] * 0.587 + p00[2] * 0.114;
+      const lum30 = p30[0] * 0.299 + p30[1] * 0.587 + p30[2] * 0.114;
+      const lum03 = p03[0] * 0.299 + p03[1] * 0.587 + p03[2] * 0.114;
+      const lum33 = p33[0] * 0.299 + p33[1] * 0.587 + p33[2] * 0.114;
+      isLightBg = ((lum00 + lum30 + lum03 + lum33) / 4) > 120;
     }
   } catch(e) {}
 
-  if (feedInvertMode === 'black') {
+  if (feedInvertMode === 'black' || (feedInvertMode === 'auto' && isLightBg)) {
+    // Inverted crop (white background from scanner): Multiply blend renders pure black digits, eliminating white background with 0% shade
     img.style.mixBlendMode = 'multiply';
-    img.style.filter = isLightBg ? 'contrast(2.5) brightness(1.3)' : 'invert(1) contrast(2.5) brightness(1.3)';
+    img.style.filter = 'contrast(2.5) brightness(1.3)';
   } else {
+    // Uninverted crop (black background from scanner): Screen blend renders pure white digits, eliminating black background with 0% box
     img.style.mixBlendMode = 'screen';
-    img.style.filter = isLightBg ? 'invert(1) contrast(2.5) brightness(1.3)' : 'contrast(2.5) brightness(1.3)';
+    img.style.filter = 'contrast(2.5) brightness(1.3)';
   }
 }
 
@@ -909,16 +920,21 @@ function updateAllStreamImagesStyle() {
 }
 
 function setFeedInvertMode(mode) {
-  feedInvertMode = (mode === 'black') ? 'black' : 'white';
-  try { localStorage.setItem('hc_feed_invert_mode', feedInvertMode); } catch(e) {}
+  feedInvertMode = (mode === 'black' || mode === 'white') ? mode : 'auto';
+  try {
+    if (feedInvertMode === 'auto') localStorage.removeItem('hc_feed_invert_mode');
+    else localStorage.setItem('hc_feed_invert_mode', feedInvertMode);
+  } catch(e) {}
   const sel = $('hudFeedInvert');
   if (sel) sel.value = feedInvertMode;
   updateAllStreamImagesStyle();
-  showToast(feedInvertMode === 'black' ? '⚫ Feed Invert: Black Digits (Multiply Blend)' : '⚪ Feed Invert: White Digits (Screen Blend)');
+  showToast(feedInvertMode === 'black' ? '⚫ Feed Invert: Force Black (Multiply)' : (feedInvertMode === 'white' ? '⚪ Feed Invert: Force White (Screen)' : '⚡ Feed Invert: Auto Per-Crop'));
 }
 
 function toggleFeedInvert() {
-  setFeedInvertMode(feedInvertMode === 'black' ? 'white' : 'black');
+  if (feedInvertMode === 'auto') setFeedInvertMode('black');
+  else if (feedInvertMode === 'black') setFeedInvertMode('white');
+  else setFeedInvertMode('auto');
 }
 
 /* ══ STATE DEFINITION ══ */
@@ -1469,9 +1485,6 @@ function applyStateMessage(msgData) {
   _lastStateMsgTime = Date.now();
   if (msgData.aiSyncActive !== undefined) aiSyncActive = !!msgData.aiSyncActive;
   if (msgData.aiSyncEnabled !== undefined) aiSyncActive = !!msgData.aiSyncEnabled;
-  if (msgData.feedInvert && msgData.feedInvert !== feedInvertMode) {
-    setFeedInvertMode(msgData.feedInvert);
-  }
   // Ensure team names update if scoreboard transmits homeAbbr / awayAbbr / homeTeam / awayTeam
   if (msgData.homeAbbr) {
     msgData.homeName = msgData.homeAbbr;
@@ -1503,9 +1516,6 @@ function applyStateMessage(msgData) {
 function applyStreamData(streamData) {
   if (!streamData) return;
   _lastStateMsgTime = Date.now();
-  if (streamData.feedInvert && streamData.feedInvert !== feedInvertMode) {
-    setFeedInvertMode(streamData.feedInvert);
-  }
   if (streamData.streamActive === false) {
     aiSyncActive = false;
     S.gameClockStream = null;

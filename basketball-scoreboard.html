@@ -796,10 +796,6 @@ body.light .reset-btn:hover { background:#fee2e2; }
       </div>
       <div style="display:flex; align-items:center; gap:8px;">
         <span id="aiFeedStatusBadge" style="font-size:11px; padding:4px 10px; border-radius:12px; background:#2a1f0a; border:1px solid #7f500d; color:#f5c842; font-weight:700;">🟡 Waiting for Scanner...</span>
-        <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:#d6dbe6; font-weight:700; cursor:pointer; background:#1a1410; border:1px solid #332318; padding:5px 10px; border-radius:4px;" title="Invert optical scanner digits so they blend as crisp black digits on overlays (Multiply blend)">
-          <input type="checkbox" id="feedInvertToggle" onchange="toggleFeedInvert(this.checked)" style="accent-color:var(--orange); cursor:pointer;">
-          <span>🌓 Invert Digits (Black on Overlays)</span>
-        </label>
         <button class="btn" onclick="openRemoteAlignModal(event)" style="font-size:11px; padding:6px 14px; background:linear-gradient(135deg, #e8430a, #ff6b1a); color:#fff; border:none; font-weight:800; border-radius:4px; box-shadow: 0 0 10px rgba(232,67,10,0.4); cursor:pointer;">
           🎯 Adjust Crops Remotely
         </button>
@@ -862,14 +858,22 @@ body.light .reset-btn:hover { background:#fee2e2; }
         <button class="btn r" onclick="addScore('home',-3)">−3</button>
       </div>
       <!-- AI SYNC HOME CROP EMBED -->
-      <div class="ai-crop-embed" id="aiCropHome" style="display:none; margin-top:10px; padding:8px 12px; background:#181008; border:1px solid var(--orange); border-radius:8px; align-items:center; gap:12px;">
-        <div style="width:80px; height:50px; background:#000; border:1px solid var(--border2); border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-          <img id="feedHomeImg" src="" alt="Home Feed" style="max-height:100%; max-width:100%; object-fit:contain; display:none;">
-          <span id="feedHomePlaceholder" style="font-size:9px; color:var(--text3);">No Crop</span>
+      <div class="ai-crop-embed" id="aiCropHome" style="display:none; margin-top:10px; padding:8px 12px; background:#181008; border:1px solid var(--orange); border-radius:8px; align-items:center; justify-content:space-between; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:80px; height:50px; background:#000; border:1px solid var(--border2); border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <img id="feedHomeImg" src="" alt="Home Feed" style="max-height:100%; max-width:100%; object-fit:contain; display:none;">
+            <span id="feedHomePlaceholder" style="font-size:9px; color:var(--text3);">No Crop</span>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:800; color:#f5c842; letter-spacing:1px; text-transform:uppercase;">📹 Live Home Score Feed</div>
+            <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
+          </div>
         </div>
         <div>
-          <div style="font-size:11px; font-weight:800; color:#f5c842; letter-spacing:1px; text-transform:uppercase;">📹 Live Home Score Feed</div>
-          <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
+          <label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:#d6dbe6; cursor:pointer; background:#0a0604; border:1px solid #332318; padding:5px 8px; border-radius:4px;" title="Invert Home Score crop (White background, Black digits on overlay)">
+            <input type="checkbox" id="cropInvertHomeCb" onchange="toggleCropInvertDirect('home', this.checked)" style="accent-color:var(--orange); cursor:pointer;">
+            <span>🌓 Invert (Black)</span>
+          </label>
         </div>
       </div>
       <!-- FOULS -->
@@ -932,14 +936,22 @@ body.light .reset-btn:hover { background:#fee2e2; }
         <button class="btn r" onclick="addScore('away',-3)">−3</button>
       </div>
       <!-- AI SYNC AWAY CROP EMBED -->
-      <div class="ai-crop-embed" id="aiCropAway" style="display:none; margin-top:10px; padding:8px 12px; background:#181008; border:1px solid var(--orange); border-radius:8px; align-items:center; gap:12px;">
-        <div style="width:80px; height:50px; background:#000; border:1px solid var(--border2); border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-          <img id="feedAwayImg" src="" alt="Away Feed" style="max-height:100%; max-width:100%; object-fit:contain; display:none;">
-          <span id="feedAwayPlaceholder" style="font-size:9px; color:var(--text3);">No Crop</span>
+      <div class="ai-crop-embed" id="aiCropAway" style="display:none; margin-top:10px; padding:8px 12px; background:#181008; border:1px solid var(--orange); border-radius:8px; align-items:center; justify-content:space-between; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:80px; height:50px; background:#000; border:1px solid var(--border2); border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <img id="feedAwayImg" src="" alt="Away Feed" style="max-height:100%; max-width:100%; object-fit:contain; display:none;">
+            <span id="feedAwayPlaceholder" style="font-size:9px; color:var(--text3);">No Crop</span>
+          </div>
+          <div>
+            <div style="font-size:11px; font-weight:800; color:#ef4444; letter-spacing:1px; text-transform:uppercase;">📹 Live Away Score Feed</div>
+            <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
+          </div>
         </div>
         <div>
-          <div style="font-size:11px; font-weight:800; color:#ef4444; letter-spacing:1px; text-transform:uppercase;">📹 Live Away Score Feed</div>
-          <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
+          <label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:#d6dbe6; cursor:pointer; background:#0a0604; border:1px solid #332318; padding:5px 8px; border-radius:4px;" title="Invert Away Score crop (White background, Black digits on overlay)">
+            <input type="checkbox" id="cropInvertAwayCb" onchange="toggleCropInvertDirect('away', this.checked)" style="accent-color:var(--orange); cursor:pointer;">
+            <span>🌓 Invert (Black)</span>
+          </label>
         </div>
       </div>
       <!-- FOULS -->
@@ -977,14 +989,22 @@ body.light .reset-btn:hover { background:#fee2e2; }
           <button class="btn" style="width:100%;margin-top:6px;background:var(--surface2);border-color:#f5c842;color:#f5c842;" onclick="setTimerPreset()">⏱ Set as Period Timer</button>
 
           <!-- AI SYNC GAME CLOCK EMBED -->
-          <div class="ai-crop-embed" id="aiCropClock" style="display:none; margin-top:10px; padding:8px 12px; background:#181008; border:1px solid var(--orange); border-radius:8px; align-items:center; gap:12px;">
-            <div style="width:80px; height:50px; background:#000; border:1px solid var(--border2); border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <img id="feedClockImg" src="" alt="Clock Feed" style="max-height:100%; max-width:100%; object-fit:contain; display:none;">
-              <span id="feedClockPlaceholder" style="font-size:9px; color:var(--text3);">No Crop</span>
+          <div class="ai-crop-embed" id="aiCropClock" style="display:none; margin-top:10px; padding:8px 12px; background:#181008; border:1px solid var(--orange); border-radius:8px; align-items:center; justify-content:space-between; gap:12px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:80px; height:50px; background:#000; border:1px solid var(--border2); border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <img id="feedClockImg" src="" alt="Clock Feed" style="max-height:100%; max-width:100%; object-fit:contain; display:none;">
+                <span id="feedClockPlaceholder" style="font-size:9px; color:var(--text3);">No Crop</span>
+              </div>
+              <div>
+                <div style="font-size:11px; font-weight:800; color:#3b82f6; letter-spacing:1px; text-transform:uppercase;">📹 Live Clock Feed</div>
+                <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
+              </div>
             </div>
             <div>
-              <div style="font-size:11px; font-weight:800; color:#3b82f6; letter-spacing:1px; text-transform:uppercase;">📹 Live Clock Feed</div>
-              <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
+              <label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:#d6dbe6; cursor:pointer; background:#0a0604; border:1px solid #332318; padding:5px 8px; border-radius:4px;" title="Invert Game Clock crop (White background, Black digits on overlay)">
+                <input type="checkbox" id="cropInvertClockCb" onchange="toggleCropInvertDirect('clock', this.checked)" style="accent-color:var(--orange); cursor:pointer;">
+                <span>🌓 Invert (Black)</span>
+              </label>
             </div>
           </div>
         </div>
@@ -1015,14 +1035,22 @@ body.light .reset-btn:hover { background:#fee2e2; }
           </div>
 
           <!-- AI SYNC SHOT CLOCK EMBED -->
-          <div class="ai-crop-embed" id="aiCropShot" style="display:none; margin-top:10px; padding:8px 12px; background:#181008; border:1px solid var(--orange); border-radius:8px; align-items:center; gap:12px;">
-            <div style="width:80px; height:50px; background:#000; border:1px solid var(--border2); border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <img id="feedShotImg" src="" alt="Shot Feed" style="max-height:100%; max-width:100%; object-fit:contain; display:none;">
-              <span id="feedShotPlaceholder" style="font-size:9px; color:var(--text3);">No Crop</span>
+          <div class="ai-crop-embed" id="aiCropShot" style="display:none; margin-top:10px; padding:8px 12px; background:#181008; border:1px solid var(--orange); border-radius:8px; align-items:center; justify-content:space-between; gap:12px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:80px; height:50px; background:#000; border:1px solid var(--border2); border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <img id="feedShotImg" src="" alt="Shot Feed" style="max-height:100%; max-width:100%; object-fit:contain; display:none;">
+                <span id="feedShotPlaceholder" style="font-size:9px; color:var(--text3);">No Crop</span>
+              </div>
+              <div>
+                <div style="font-size:11px; font-weight:800; color:#f97316; letter-spacing:1px; text-transform:uppercase;">📹 Live Shot Clock Feed</div>
+                <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical shot clock</div>
+              </div>
             </div>
             <div>
-              <div style="font-size:11px; font-weight:800; color:#f97316; letter-spacing:1px; text-transform:uppercase;">📹 Live Shot Clock Feed</div>
-              <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical shot clock</div>
+              <label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:#d6dbe6; cursor:pointer; background:#0a0604; border:1px solid #332318; padding:5px 8px; border-radius:4px;" title="Invert Shot Clock crop (White background, Black digits on overlay)">
+                <input type="checkbox" id="cropInvertShotCb" onchange="toggleCropInvertDirect('shot', this.checked)" style="accent-color:var(--orange); cursor:pointer;">
+                <span>🌓 Invert (Black)</span>
+              </label>
             </div>
           </div>
         </div>
@@ -1050,14 +1078,22 @@ body.light .reset-btn:hover { background:#fee2e2; }
           ">🔔 SOUND BUZZER</button>
 
           <!-- AI SYNC PERIOD EMBED -->
-          <div class="ai-crop-embed" id="aiCropPeriod" style="display:none; margin-top:10px; padding:8px 12px; background:#181008; border:1px solid var(--orange); border-radius:8px; align-items:center; gap:12px;">
-            <div style="width:80px; height:50px; background:#000; border:1px solid var(--border2); border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <img id="feedPeriodImg" src="" alt="Period Feed" style="max-height:100%; max-width:100%; object-fit:contain; display:none;">
-              <span id="feedPeriodPlaceholder" style="font-size:9px; color:var(--text3);">No Crop</span>
+          <div class="ai-crop-embed" id="aiCropPeriod" style="display:none; margin-top:10px; padding:8px 12px; background:#181008; border:1px solid var(--orange); border-radius:8px; align-items:center; justify-content:space-between; gap:12px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:80px; height:50px; background:#000; border:1px solid var(--border2); border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <img id="feedPeriodImg" src="" alt="Period Feed" style="max-height:100%; max-width:100%; object-fit:contain; display:none;">
+                <span id="feedPeriodPlaceholder" style="font-size:9px; color:var(--text3);">No Crop</span>
+              </div>
+              <div>
+                <div style="font-size:11px; font-weight:800; color:#a855f7; letter-spacing:1px; text-transform:uppercase;">📹 Live Period Feed</div>
+                <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
+              </div>
             </div>
             <div>
-              <div style="font-size:11px; font-weight:800; color:#a855f7; letter-spacing:1px; text-transform:uppercase;">📹 Live Period Feed</div>
-              <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
+              <label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:#d6dbe6; cursor:pointer; background:#0a0604; border:1px solid #332318; padding:5px 8px; border-radius:4px;" title="Invert Period crop (White background, Black digits on overlay)">
+                <input type="checkbox" id="cropInvertPeriodCb" onchange="toggleCropInvertDirect('period', this.checked)" style="accent-color:var(--orange); cursor:pointer;">
+                <span>🌓 Invert (Black)</span>
+              </label>
             </div>
           </div>
         </div>
@@ -1260,7 +1296,10 @@ bc.onmessage = (e) => {
     if (e.data.sender !== myClientId && !isDraggingRemote && !isResizingRemote) {
       if (e.data.crops) remoteNormCrops = Object.assign(remoteNormCrops, e.data.crops);
       if (e.data.thresholds) remoteThresholds = Object.assign(remoteThresholds, e.data.thresholds);
-      if (e.data.invertStates) remoteInvertStates = Object.assign(remoteInvertStates, e.data.invertStates);
+      if (e.data.invertStates) {
+        remoteInvertStates = Object.assign(remoteInvertStates, e.data.invertStates);
+        syncCropInvertCheckboxes();
+      }
       if (e.data.enabledCrops) remoteEnabledCrops = Object.assign(remoteEnabledCrops, e.data.enabledCrops);
       applyRemoteBoxStyles();
     }
@@ -1369,8 +1408,7 @@ const DEF = {
   rp2Title:'VENUE', rp2Value:'Audley',
   barColor:'#0d1117',
   possession:null,
-  aiSyncEnabled:false,
-  feedInvert:'white'
+  aiSyncEnabled:false
 };
 
 let S = {...DEF};
@@ -1531,9 +1569,6 @@ function renderAll(){
   // Sync AI Sync checkbox state
   const aiToggleEl = document.getElementById('aiSyncToggle');
   if(aiToggleEl) aiToggleEl.checked = S.aiSyncEnabled || false;
-
-  const feedInvToggle = document.getElementById('feedInvertToggle');
-  if(feedInvToggle) feedInvToggle.checked = (S.feedInvert === 'black');
 }
 
 function t(id,val){ if(val===null)return; const e=document.getElementById(id); if(e) e.textContent=val; }
@@ -2670,7 +2705,10 @@ function connectSSE(){
       if (val && val.sender !== myClientId && !isDraggingRemote && !isResizingRemote) {
         if (val.crops) remoteNormCrops = Object.assign(remoteNormCrops, val.crops);
         if (val.thresholds) remoteThresholds = Object.assign(remoteThresholds, val.thresholds);
-        if (val.invertStates) remoteInvertStates = Object.assign(remoteInvertStates, val.invertStates);
+        if (val.invertStates) {
+          remoteInvertStates = Object.assign(remoteInvertStates, val.invertStates);
+          syncCropInvertCheckboxes();
+        }
         if (val.enabledCrops) remoteEnabledCrops = Object.assign(remoteEnabledCrops, val.enabledCrops);
         applyRemoteBoxStyles();
       }
@@ -2774,12 +2812,30 @@ function toggleAiSync(enabled) {
   saveNow();
 }
 
-function toggleFeedInvert(checked) {
-  S.feedInvert = checked ? 'black' : 'white';
-  try { localStorage.setItem('hc_feed_invert_mode', S.feedInvert); } catch(e) {}
-  const feedInvToggle = document.getElementById('feedInvertToggle');
-  if (feedInvToggle) feedInvToggle.checked = checked;
-  saveNow();
+function toggleCropInvertDirect(key, checked) {
+  remoteInvertStates[key] = !!checked;
+  if (activeRemoteCrop === key) {
+    const cb = document.getElementById('rcropInvertCb');
+    if (cb) cb.checked = !!checked;
+  }
+  syncCropInvertCheckboxes();
+  broadcastRemoteCrops();
+  saveRemoteCropsLocally();
+}
+
+function syncCropInvertCheckboxes() {
+  const map = {
+    home: document.getElementById('cropInvertHomeCb'),
+    away: document.getElementById('cropInvertAwayCb'),
+    clock: document.getElementById('cropInvertClockCb'),
+    shot: document.getElementById('cropInvertShotCb'),
+    period: document.getElementById('cropInvertPeriodCb')
+  };
+  for (const k in map) {
+    if (map[k]) map[k].checked = !!remoteInvertStates[k];
+  }
+  const modalCb = document.getElementById('rcropInvertCb');
+  if (modalCb) modalCb.checked = !!remoteInvertStates[activeRemoteCrop];
 }
 
 // ── KEYBOARD SHORTCUTS ──────────────────────────────────────
@@ -2990,12 +3046,24 @@ function loadSavedRemoteCrops() {
     if (saved) {
       remoteNormCrops = Object.assign(remoteNormCrops, JSON.parse(saved));
     }
+    const savedInv = localStorage.getItem('hc_remote_invert_states') || localStorage.getItem('hc_ocr_invert_states');
+    if (savedInv) {
+      remoteInvertStates = Object.assign(remoteInvertStates, JSON.parse(savedInv));
+    }
+    const savedThresh = localStorage.getItem('hc_remote_thresholds');
+    if (savedThresh) {
+      remoteThresholds = Object.assign(remoteThresholds, JSON.parse(savedThresh));
+    }
+    syncCropInvertCheckboxes();
   } catch(e) {}
 }
 
 function saveRemoteCropsLocally() {
   try {
     localStorage.setItem('hc_remote_norm_crops', JSON.stringify(remoteNormCrops));
+    localStorage.setItem('hc_remote_invert_states', JSON.stringify(remoteInvertStates));
+    localStorage.setItem('hc_ocr_invert_states', JSON.stringify(remoteInvertStates));
+    localStorage.setItem('hc_remote_thresholds', JSON.stringify(remoteThresholds));
   } catch(e) {}
 }
 
@@ -3083,8 +3151,10 @@ function toggleRemoteCropEnabled(enabled) {
 }
 
 function toggleRemoteInvert(inverted) {
-  remoteInvertStates[activeRemoteCrop] = inverted;
+  remoteInvertStates[activeRemoteCrop] = !!inverted;
+  syncCropInvertCheckboxes();
   broadcastRemoteCrops();
+  saveRemoteCropsLocally();
 }
 
 function updateRemoteThreshold(val) {
@@ -3308,6 +3378,10 @@ function endRemotePointer() {
   window.removeEventListener('mouseup', endRemotePointer);
   window.removeEventListener('touchend', endRemotePointer);
 }
+
+// Initial restore and sync of per-crop settings
+loadSavedRemoteCrops();
+syncCropInvertCheckboxes();
 </script>
 
 <!-- Scanner Connect Modal -->
