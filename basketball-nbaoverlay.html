@@ -341,22 +341,26 @@ function applyStreamImgStyles(img, cropKey) {
     cropKey = img.dataset.cropKey;
   }
 
-  let isInverted = false;
+  // Polarity determination:
+  // - Black background from camera (Invert CHECKED / true) -> needs 'screen' to make black 100% transparent
+  // - White background from camera (Invert UNCHECKED / false) -> needs 'multiply' to make white 100% transparent
+  let useScreenBlend = true; // default: scoreboard displays have black backgrounds
+
   if (feedInvertMode === 'black') {
-    isInverted = true;
+    useScreenBlend = false; // Force multiply (black digits, white transparent background)
   } else if (feedInvertMode === 'white') {
-    isInverted = false;
+    useScreenBlend = true; // Force screen (white/colored digits, black transparent background)
   } else if (cropKey && cropInvertStates[cropKey] !== undefined) {
-    isInverted = !!cropInvertStates[cropKey];
+    useScreenBlend = !!cropInvertStates[cropKey];
   }
 
-  if (isInverted) {
-    // Inverted crop (white background from scanner): Multiply blend renders pure black digits, eliminating white background with 0% shade
-    img.style.mixBlendMode = 'multiply';
+  if (useScreenBlend) {
+    // Screen blend mode: Black background is 100% transparent, digits blend seamlessly onto card
+    img.style.mixBlendMode = 'screen';
     img.style.filter = 'contrast(2.5) brightness(1.3)';
   } else {
-    // Uninverted crop (black background from scanner): Screen blend renders pure white digits, eliminating black background with 0% box
-    img.style.mixBlendMode = 'screen';
+    // Multiply blend mode: White background is 100% transparent, dark digits blend seamlessly onto card
+    img.style.mixBlendMode = 'multiply';
     img.style.filter = 'contrast(2.5) brightness(1.3)';
   }
 }
