@@ -302,6 +302,8 @@
       text-transform: uppercase;
       letter-spacing: 0.02vw;
       line-height: 0.95;
+      color: #ffffff;
+      text-shadow: 0 0.15vw 0.5vw rgba(0, 0, 0, 0.95), 0 0.05vw 0.1vw rgba(0, 0, 0, 0.95);
       white-space: nowrap;
       word-break: keep-all;
       overflow-wrap: normal;
@@ -930,8 +932,8 @@ const DEFAULT_STATE = {
   awayScore: 68,
   homeAbbr: 'FREEDOM',
   awayAbbr: 'PINTURA',
-  homeName: 'FREEDOM',
-  awayName: 'PINTURA',
+  homeName: '',
+  awayName: '',
   homeColor: '#f5c842',
   awayColor: '#c8102e',
   homeLogo: 'home-thumb.png',
@@ -972,6 +974,8 @@ try {
     const local = JSON.parse(localRaw);
     if (local && typeof local === 'object') {
       if (local.awayAbbr || local.homeAbbr || (local.awayScore !== undefined && local.awayScore > 0)) {
+        if (local.homeAbbr) local.homeName = local.homeAbbr;
+        if (local.awayAbbr) local.awayName = local.awayAbbr;
         S = { ...DEFAULT_STATE, ...local };
       }
     }
@@ -1089,8 +1093,25 @@ function renderTeams() {
   const leftColor  = S[leftTeamKey + 'Color'] || (isSwapped ? '#f5c842' : '#c8102e');
   const rightColor = S[rightTeamKey + 'Color'] || (isSwapped ? '#c8102e' : '#f5c842');
 
-  const leftName  = (S[leftTeamKey + 'Name'] || S[leftTeamKey + 'Abbr'] || (isSwapped ? 'FREEDOM' : 'PINTURA')).toUpperCase();
-  const rightName = (S[rightTeamKey + 'Name'] || S[rightTeamKey + 'Abbr'] || (isSwapped ? 'PINTURA' : 'FREEDOM')).toUpperCase();
+  function getTeamDisplayName(key) {
+    // Prefer explicit Abbr from scoreboard, then Name, then Team
+    const abbr = S[key + 'Abbr'];
+    if (abbr && typeof abbr === 'string' && abbr.trim() && abbr.trim() !== 'AWAY' && abbr.trim() !== 'HOME') {
+      return abbr.trim();
+    }
+    const name = S[key + 'Name'];
+    if (name && typeof name === 'string' && name.trim()) {
+      return name.trim();
+    }
+    const team = S[key + 'Team'];
+    if (team && typeof team === 'string' && team.trim()) {
+      return team.trim();
+    }
+    return key === 'home' ? 'FREEDOM' : 'PINTURA';
+  }
+
+  const leftName  = getTeamDisplayName(leftTeamKey).toUpperCase();
+  const rightName = getTeamDisplayName(rightTeamKey).toUpperCase();
 
   const leftLogo  = S[leftTeamKey + 'Logo'] || S[leftTeamKey + 'LogoThumb'] || '';
   const rightLogo = S[rightTeamKey + 'Logo'] || S[rightTeamKey + 'LogoThumb'] || '';
@@ -1113,34 +1134,23 @@ function renderTeams() {
     scoreCapsuleWrap.style.background = `linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%), linear-gradient(to right, ${leftColor} 0%, ${leftColor} 50%, ${rightColor} 50%, ${rightColor} 100%)`;
   }
 
-  // Dynamic contrast colors for team names (Dark text on yellow/gold like Scripps Sports LAL, white on dark like DET)
-  const leftTextColor = getContrastColor(leftColor);
-  const rightTextColor = getContrastColor(rightColor);
-
-  // Team Names
+  // Team Names: Set both to crisp athletic White matching Freedom on any color background
   const leftNameEl = $('awayTeamName');
   if (leftNameEl) {
     if (leftNameEl.textContent !== leftName) leftNameEl.textContent = leftName;
-    adjustTeamFontSize(leftNameEl, leftName);
-    leftNameEl.style.color = leftTextColor;
-    if (leftTextColor === '#0a0d14') {
-      leftNameEl.style.textShadow = '0 1px 0 rgba(255,255,255,0.4), 0 0 3px rgba(255,255,255,0.3)';
-    } else {
-      leftNameEl.style.textShadow = '0 0.15vw 0.5vw rgba(0, 0, 0, 0.85), 0 0.05vw 0.1vw rgba(0,0,0,0.9)';
-    }
+    leftNameEl.style.color = '#ffffff';
+    leftNameEl.style.textShadow = '0 0.15vw 0.5vw rgba(0, 0, 0, 0.95), 0 0.05vw 0.1vw rgba(0,0,0,0.95)';
   }
 
   const rightNameEl = $('homeTeamName');
   if (rightNameEl) {
     if (rightNameEl.textContent !== rightName) rightNameEl.textContent = rightName;
-    adjustTeamFontSize(rightNameEl, rightName);
-    rightNameEl.style.color = rightTextColor;
-    if (rightTextColor === '#0a0d14') {
-      rightNameEl.style.textShadow = '0 1px 0 rgba(255,255,255,0.4), 0 0 3px rgba(255,255,255,0.3)';
-    } else {
-      rightNameEl.style.textShadow = '0 0.15vw 0.5vw rgba(0, 0, 0, 0.85), 0 0.05vw 0.1vw rgba(0,0,0,0.9)';
-    }
+    rightNameEl.style.color = '#ffffff';
+    rightNameEl.style.textShadow = '0 0.15vw 0.5vw rgba(0, 0, 0, 0.95), 0 0.05vw 0.1vw rgba(0,0,0,0.95)';
   }
+
+  // Calculate and apply uniform font size so BOTH sides match identically
+  setUniformTeamFontSize(leftNameEl, leftName, rightNameEl, rightName);
 
   // Logos
   setLogoBadge('awayLogoCircle', 'awayLogoFallback', leftLogo, leftName.slice(0, 3));
@@ -1169,52 +1179,47 @@ function renderTeams() {
   }
 }
 
-function adjustTeamFontSize(el, text) {
-  if (!el) return;
-  const raw = (text || '').trim();
-  const words = raw.split(/\s+/).filter(Boolean);
-  const isMultiWord = words.length >= 2;
-  const len = raw.length;
+function setUniformTeamFontSize(el1, text1, el2, text2) {
+  if (!el1 || !el2) return;
+  const raw1 = (text1 || '').trim();
+  const raw2 = (text2 || '').trim();
+  const maxLen = Math.max(raw1.length, raw2.length);
 
-  el.classList.remove('two-lines');
-  el.style.whiteSpace = 'nowrap';
-  el.style.wordBreak = 'keep-all';
-  el.style.overflowWrap = 'normal';
+  [el1, el2].forEach(el => {
+    el.classList.remove('two-lines');
+    el.style.whiteSpace = 'nowrap';
+    el.style.wordBreak = 'keep-all';
+    el.style.overflowWrap = 'normal';
+  });
 
-  // Multi-word wrapping (only if 2+ words AND total length > 8, e.g. "LOS ANGELES", "GOLDEN STATE")
-  if (isMultiWord && len > 8) {
-    el.classList.add('two-lines');
-    el.style.whiteSpace = 'normal';
-    el.style.fontSize = len > 14 ? '1.05vw' : '1.2vw';
-    return;
-  }
-
-  // Single-word font scaling: bold, clean, athletic, non-breaking
-  let targetSize = 1.55;
-  if (len <= 4) {
-    targetSize = 2.3; // LAL, DET, PIN, FRE — huge and bold matching Scripps Sports
-  } else if (len <= 7) {
-    targetSize = 1.6; // PINTURA, FREEDOM — bold presence on ONE line, never broken
-  } else if (len <= 9) {
-    targetSize = 1.38; // WARRIORS, RAPTORS
-  } else if (len <= 11) {
-    targetSize = 1.2;
+  // Calculate target font size based on the longer team name so both fit evenly
+  let targetSize = 1.45;
+  if (maxLen <= 4) {
+    targetSize = 1.85; // e.g. LAL, DET, PIN, FRE
+  } else if (maxLen <= 7) {
+    targetSize = 1.45; // e.g. PINTURA, FREEDOM — clean athletic size matching freedom
+  } else if (maxLen <= 10) {
+    targetSize = 1.25; // e.g. BARBERCUTZ, WARRIORS
   } else {
     targetSize = 1.05;
   }
 
-  el.style.fontSize = targetSize + 'vw';
+  el1.style.fontSize = targetSize + 'vw';
+  el2.style.fontSize = targetSize + 'vw';
 
-  // Safety auto-fit loop: dynamically scale down by 0.04vw if text would overflow its parent
-  const parent = el.parentElement;
-  if (parent && parent.clientWidth > 0) {
-    let currentVw = targetSize;
-    let guard = 0;
-    while (el.scrollWidth > parent.clientWidth && currentVw > 0.9 && guard < 15) {
-      currentVw -= 0.04;
-      el.style.fontSize = currentVw.toFixed(2) + 'vw';
-      guard++;
-    }
+  // Safety auto-fit loop: if either overflows its container, shrink BOTH equally so they stay identical!
+  const parent1 = el1.parentElement;
+  const parent2 = el2.parentElement;
+  let currentVw = targetSize;
+  let guard = 0;
+  while (guard < 15 && currentVw > 0.85) {
+    const ov1 = parent1 && parent1.clientWidth > 0 && el1.scrollWidth > parent1.clientWidth;
+    const ov2 = parent2 && parent2.clientWidth > 0 && el2.scrollWidth > parent2.clientWidth;
+    if (!ov1 && !ov2) break;
+    currentVw -= 0.04;
+    el1.style.fontSize = currentVw.toFixed(2) + 'vw';
+    el2.style.fontSize = currentVw.toFixed(2) + 'vw';
+    guard++;
   }
 }
 
@@ -1416,6 +1421,21 @@ function applyStateMessage(msgData) {
     opticalMode = !!msgData.opticalFeed;
     updateOpticalHudUI();
   }
+  // Ensure team names update if scoreboard transmits homeAbbr / awayAbbr / homeTeam / awayTeam
+  if (msgData.homeAbbr) {
+    msgData.homeName = msgData.homeAbbr;
+  }
+  if (msgData.awayAbbr) {
+    msgData.awayName = msgData.awayAbbr;
+  }
+  if (msgData.homeTeam) {
+    msgData.homeAbbr = msgData.homeTeam;
+    msgData.homeName = msgData.homeTeam;
+  }
+  if (msgData.awayTeam) {
+    msgData.awayAbbr = msgData.awayTeam;
+    msgData.awayName = msgData.awayTeam;
+  }
   S = { ...S, ...msgData };
   renderAll();
   syncLocalTimers();
@@ -1518,7 +1538,8 @@ function setupBroadcastChannels() {
         if (e.data.type === 'state') applyStateMessage(e.data.data);
         else if (e.data.type === 'stream' || e.data.type === 'ocr') applyStreamData(e.data.data || e.data);
         else if (e.data.gameClockStream || e.data.shotClockStream) applyStreamData(e.data);
-        else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined) applyStateMessage(e.data);
+        else if (e.data.data && typeof e.data.data === 'object' && (e.data.data.homeScore !== undefined || e.data.data.homeAbbr !== undefined || e.data.data.awayAbbr !== undefined)) applyStateMessage(e.data.data);
+        else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined || e.data.homeAbbr !== undefined || e.data.awayAbbr !== undefined || e.data.awayName !== undefined || e.data.homeName !== undefined) applyStateMessage(e.data);
       };
     } catch(err) {}
   });
@@ -1531,7 +1552,8 @@ window.addEventListener('message', (e) => {
   if (e.data.type === 'state') applyStateMessage(e.data.data);
   else if (e.data.type === 'stream' || e.data.type === 'ocr') applyStreamData(e.data.data || e.data);
   else if (e.data.gameClockStream || e.data.shotClockStream) applyStreamData(e.data);
-  else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined) applyStateMessage(e.data);
+  else if (e.data.data && typeof e.data.data === 'object' && (e.data.data.homeScore !== undefined || e.data.data.homeAbbr !== undefined || e.data.data.awayAbbr !== undefined)) applyStateMessage(e.data.data);
+  else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined || e.data.homeAbbr !== undefined || e.data.awayAbbr !== undefined || e.data.awayName !== undefined || e.data.homeName !== undefined) applyStateMessage(e.data);
 });
 
 // 3. Firebase Realtime Sync
