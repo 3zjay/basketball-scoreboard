@@ -95,7 +95,7 @@
       height: var(--pill-height);
       border-radius: 9999px;
       overflow: hidden;
-      background: linear-gradient(to right, var(--away-color) 0%, var(--away-color) 50%, var(--home-color) 50%, var(--home-color) 100%);
+      background: linear-gradient(180deg, #101524 0%, #060910 100%);
       border: 1.5px solid rgba(255, 255, 255, 0.28);
       box-shadow: 0 0.8vw 2.5vw rgba(0, 0, 0, 0.85), 0 0.2vw 0.5vw rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 0 rgba(0, 0, 0, 0.4);
       position: relative;
@@ -174,19 +174,24 @@
     .seg-team.away {
       margin-left: -1.4vw;
       border-radius: 9999px 0 0 9999px;
-      padding: 0 1vw 0 0.8vw;
+      padding: 0 1vw 0 1.4vw;
       gap: 0.7vw;
       z-index: 10;
       box-shadow: -0.25vw 0 0.8vw rgba(0, 0, 0, 0.55);
-      border-left: 1.5px solid rgba(255, 255, 255, 0.35);
+      border-left: 1.5px solid rgba(255, 255, 255, 0.38);
       background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%), var(--away-color);
       justify-content: flex-start;
       flex-direction: row;
     }
 
     .seg-team.home {
-      padding: 0 0.8vw 0 0.8vw;
+      margin-right: -1.4vw;
+      border-radius: 0 9999px 9999px 0;
+      padding: 0 1.4vw 0 1vw;
       gap: 0.7vw;
+      z-index: 10;
+      box-shadow: 0.25vw 0 0.8vw rgba(0, 0, 0, 0.55);
+      border-right: 1.5px solid rgba(255, 255, 255, 0.38);
       background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%), var(--home-color);
       justify-content: flex-end;
       flex-direction: row;
@@ -307,6 +312,7 @@
       justify-content: center;
       height: 100%;
       padding: 0.62vw 0;
+      margin: 0 -2px;
       flex-shrink: 0;
       position: relative;
       z-index: 15;
@@ -423,17 +429,19 @@
       filter: drop-shadow(0 0.12vw 0.25vw rgba(0, 0, 0, 0.3));
     }
 
-    /* ════ 5. CLOCK & SHOT CLOCK SEGMENT (FAR RIGHT END — Authentic Scripps Sports Layout) ════ */
+    /* ════ 5. CLOCK & SHOT CLOCK SEGMENT (FAR RIGHT END — Symmetrical Dark End Cap matching Venue) ════ */
     .seg-clock {
+      min-width: 13.5vw;
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%), var(--home-color);
+      background: linear-gradient(180deg, #101524 0%, #060910 100%);
       border-radius: 0 9999px 9999px 0;
-      padding: 0 1.2vw 0 0.5vw;
-      gap: 0.6vw;
+      padding: 0 1.8vw 0 2.2vw;
+      gap: 0.75vw;
       flex-shrink: 0;
       position: relative;
+      z-index: 5;
       transition: background 0.4s ease;
     }
 
@@ -464,7 +472,7 @@
     }
     .period-val sup {
       font-size: 0.68em;
-      color: #e8430a;
+      color: #0a0d14;
       margin-left: 0.05vw;
     }
 
@@ -879,10 +887,10 @@ const DEFAULT_STATE = {
   awayName: 'PINTURA',
   homeColor: '#f5c842',
   awayColor: '#c8102e',
-  homeLogo: '',
-  awayLogo: '',
-  homeLogoThumb: '',
-  awayLogoThumb: '',
+  homeLogo: 'home-thumb.png',
+  awayLogo: 'away-thumb.png',
+  homeLogoThumb: 'home-thumb.png',
+  awayLogoThumb: 'away-thumb.png',
   gameClockStream: null,
   shotClockStream: null,
   homeScoreStream: null,
@@ -1034,13 +1042,13 @@ function renderTeams() {
 
   // Direct element background sync for guaranteed zero-latency seamless matching across all rendering engines
   const bug = $('scorebug');
-  if (bug) bug.style.background = `linear-gradient(to right, ${leftColor} 0%, ${leftColor} 50%, ${rightColor} 50%, ${rightColor} 100%)`;
+  if (bug) bug.style.background = `linear-gradient(180deg, #101524 0%, #060910 100%)`;
   const awaySeg = $('awayTeamSeg');
   if (awaySeg) awaySeg.style.background = `linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%), ${leftColor}`;
   const homeSeg = $('homeTeamSeg');
   if (homeSeg) homeSeg.style.background = `linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%), ${rightColor}`;
   const clockSeg = $('segClock');
-  if (clockSeg) clockSeg.style.background = `linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%), ${rightColor}`;
+  if (clockSeg) clockSeg.style.background = `linear-gradient(180deg, #101524 0%, #060910 100%)`;
   const scoreCapsuleWrap = $('scoreCapsuleWrap');
   if (scoreCapsuleWrap) {
     scoreCapsuleWrap.style.background = `linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%), linear-gradient(to right, ${leftColor} 0%, ${leftColor} 50%, ${rightColor} 50%, ${rightColor} 100%)`;
