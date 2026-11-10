@@ -223,7 +223,7 @@ function stopGameClock(u) {
 
 function startShotClock(u) {
   const user = getOrCreateUser(u);
-  if (shotTimers[user]) return;
+  if (shotTimers[user]) { clearInterval(shotTimers[user]); shotTimers[user] = null; }
   if (!(states[user].shotSeconds > 0)) return;
   states[user].shotRunning = true;
   shotTimers[user] = setInterval(() => {
@@ -270,7 +270,12 @@ const ROUTES = {
   '/icon-192.png':       'icon-192.png',
   '/icon-512.png':       'icon-512.png',
   '/buzzer.mp3':         'buzzer.mp3',
+  '/hoop-culture-logo.jpg': 'hoop-culture-logo.jpg',
   '/hoop-culture-logo2.png': 'hoop-culture-logo2.png',
+  '/hoop-culture-logo-enhanced.png': 'hoop-culture-logo-enhanced.png',
+  '/hoop-culture-logo-opt.png': 'hoop-culture-logo-opt.png',
+  '/hoop-culture-logo-512.png': 'hoop-culture-logo-512.png',
+  '/hoop-culture-logo-256.png': 'hoop-culture-logo-256.png',
   '/marketing-workflow-dark.png': 'marketing-workflow-dark.png',
   '/marketing-workflow-mobile-ocr.jpg': 'marketing-workflow-mobile-ocr.jpg',
   '/firebase-config.js': 'firebase-config.js',
@@ -437,11 +442,16 @@ const requestHandler = async (req, res) => {
         } else if (cmd === 'shot_reset') {
           stopShotClock(user);
           states[user].shotSeconds = seconds || 24;
-          if (states[user].gameRunning) {
-            startShotClock(user);
-          } else {
-            pushToAll(user, { type: 'state', data: fullState(user) });
-          }
+          startShotClock(user);
+
+        } else if (cmd === 'shot_set') {
+          states[user].shotSeconds = Math.max(0, parseInt(seconds, 10) || 0);
+          pushToAll(user, { type: 'state', data: fullState(user) });
+
+        } else if (cmd === 'shot_adjust') {
+          const delta = parseInt(seconds, 10) || 0;
+          states[user].shotSeconds = Math.max(0, (states[user].shotSeconds || 0) + delta);
+          pushToAll(user, { type: 'state', data: fullState(user) });
 
         } else if (cmd === 'reset_all') {
           stopGameClock(user);

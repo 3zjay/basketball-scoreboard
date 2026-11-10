@@ -79,18 +79,22 @@ html, body {
   font-variant-numeric:tabular-nums; transition:color 0.3s;
 }
 .game-clock.warn { color:#ff5f5f; }
-.shot-row { display:flex; align-items:center; gap:0.26vw; }
+.shot-row { display:flex; align-items:center; justify-content:center; gap:0.26vw; flex-shrink:0; }
 .shot-label {
   font-size:0.47vw; font-weight:800;
   letter-spacing:0.1vw; color:#8a95a8; text-transform:uppercase;
+  flex-shrink:0;
 }
 .shot-num {
   font-family:'Teko',sans-serif; font-size:1.04vw; font-weight:700;
   color:#f5c842; letter-spacing:0.05vw; line-height:1;
-  font-variant-numeric:tabular-nums; min-width:1.3vw; text-align:center;
+  font-variant-numeric:tabular-nums; min-width:1.5vw; text-align:center;
+  display:inline-flex; align-items:center; justify-content:center;
+  overflow:hidden; flex-shrink:0;
 }
 .shot-num.urgent { color:#e84040; animation:scPulse 0.45s ease infinite alternate; }
-@keyframes scPulse { to { opacity:0.4; } }
+.shot-num.zero { color:#ff3b30; text-shadow:0 0 0.6vw #ff0000; font-weight:800; }
+@keyframes scPulse { 0% { opacity:1; } 100% { opacity:0.35; } }
 
 .live-seg {
   display:flex; align-items:center; gap:0.36vw;
@@ -376,20 +380,42 @@ function getEffState() {
 }
 
 let _lastLocalMsgTime = 0;
+let _lastStateMsgTime = 0;
+
+function hasStateNonClockChanged(oldS, newD) {
+  if (!oldS || !newD) return true;
+  for (const k of [
+    'homeScore', 'awayScore', 'homeAbbr', 'awayAbbr', 'homeRecord', 'awayRecord',
+    'homeColor', 'awayColor', 'homeLogo', 'awayLogo', 'homeLogoThumb', 'awayLogoThumb',
+    'quarter', 'possession', 'rp1Title', 'rp1Value', 'rp2Title', 'rp2Value'
+  ]) {
+    if (newD[k] !== undefined && newD[k] !== oldS[k]) return true;
+  }
+  return false;
+}
+
+function applyStateMessage(msgData) {
+  _lastStateMsgTime = Date.now();
+  if (!msgData) return;
+  if (msgData.aiSyncActive !== undefined) aiSyncActive = !!msgData.aiSyncActive;
+  if (msgData.aiSyncEnabled !== undefined) aiSyncActive = !!msgData.aiSyncEnabled;
+  const nonClockChanged = hasStateNonClockChanged(S, msgData);
+  S = { ...S, ...msgData };
+  if (nonClockChanged) {
+    render();
+  } else {
+    renderClocks();
+  }
+  syncLocalTick();
+}
+
 const bc = new BroadcastChannel('hc_scoreboard_sync');
 bc.onmessage = (e) => {
   const msg = e.data;
   if (!msg) return;
   _lastLocalMsgTime = Date.now();
   if (msg.type === 'state') {
-    stopLocalTick();
-    if (msg.data) {
-      if (msg.data.aiSyncActive !== undefined) aiSyncActive = !!msg.data.aiSyncActive;
-      if (msg.data.aiSyncEnabled !== undefined) aiSyncActive = !!msg.data.aiSyncEnabled;
-      S = { ...S, ...msg.data };
-    }
-    render();
-    syncLocalTick();
+    applyStateMessage(msg.data);
   } else if (msg.type === 'stream') {
     applyStreamData(msg.data);
   } else if (msg.type === 'buzz') {
@@ -414,6 +440,7 @@ let localTick = null;
 function startLocalTick(){
   if(localTick) return;
   localTick = setInterval(()=>{
+    if(Date.now() - _lastStateMsgTime < 3000) return;
     if(S.gameRunning && S.gameSeconds > 0){ S.gameSeconds--; renderClocks(); }
     if(S.shotRunning && S.shotSeconds > 0){ S.shotSeconds--; renderClocks(); }
   }, 1000);
@@ -433,6 +460,7 @@ function renderStreamOrText(elId, streamImgUrl, fallbackText, maxHeightCss) {
       img.style.maxHeight = maxHeightCss || '100%';
       img.style.maxWidth = '100%';
       img.style.objectFit = 'contain';
+      img.style.flexShrink = '0';
       img.style.verticalAlign = 'middle';
       img.style.filter = 'brightness(1.25) contrast(1.25)';
       img.style.borderRadius = '4px';
@@ -475,20 +503,58 @@ function renderClocks(){
   
   renderStreamOrText('gameClkCenterOv2', S.gameClockStream, txt, '1.8vw');
   const clk = document.getElementById('gameClkCenterOv2');
-  if(clk){ clk.className = 'game-clock'+(warn?' warn':''); }
+  if(clk && clk.classList.contains('warn') !== warn){
+    clk.classList.toggle('warn', warn);
+  }
 
   const shotText = eff.shotSeconds != null ? eff.shotSeconds : '--';
   renderStreamOrText('shotClkCenterOv2', S.shotClockStream, shotText, '1.4vw');
   const shot = document.getElementById('shotClkCenterOv2');
-  if(shot){ shot.className = 'shot-num'+((eff.shotSeconds<=5)?' urgent':''); }
+  if(shot){
+    const targetUrgent = (eff.shotSeconds !== null && eff.shotSeconds <= 5 && eff.shotSeconds > 0);
+    if(shot.classList.contains('urgent') !== targetUrgent){
+      shot.classList.toggle('urgent', targetUrgent);
+    }
+    const targetZero = (eff.shotSeconds !== null && eff.shotSeconds === 0);
+    if(shot.classList.contains('zero') !== targetZero){
+      shot.classList.toggle('zero', targetZero);
+    }
+  }
 }
 
 let lastHome = -1, lastAway = -1;
-function s(id, val){ const e = document.getElementById(id); if(e) e.textContent = val; }
+function s(id, val){
+  const e = document.getElementById(id);
+  const str = String(val !== undefined && val !== null ? val : '');
+  if(e && e.textContent !== str) e.textContent = str;
+}
 
 function darken(hex, pct=0.5){
   let r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
   return `rgb(${Math.round(r*pct)},${Math.round(g*pct)},${Math.round(b*pct)})`;
+}
+
+function setSafeLogo(elId, url, borderColor) {
+  const el = typeof elId === 'string' ? document.getElementById(elId) : elId;
+  if (!el) return;
+  if (url) {
+    let img = el.querySelector('img');
+    if (!img) {
+      el.innerHTML = `<img src="${url}" alt="">`;
+    } else if (img.getAttribute('src') !== url) {
+      img.src = url;
+    }
+  } else {
+    if (!el.querySelector('.logo-ph')) {
+      el.innerHTML = '<div class="logo-ph">LOGO</div>';
+    }
+  }
+  if (borderColor && el.dataset.borderCol !== borderColor) {
+    el.dataset.borderCol = borderColor;
+    el.style.borderColor = borderColor;
+    el.style.background = darken(borderColor, 0.4);
+    el.style.boxShadow = `0 0 0.8vw ${borderColor}, 0 0 2vw ${borderColor}66, 0 0.16vw 1vw rgba(0,0,0,0.8)`;
+  }
 }
 
 function render(){
@@ -509,20 +575,24 @@ function render(){
   const txtEl = document.getElementById('top-text');
 
   if (txtEl) {
+    let targetHtml = '';
     if (cleanBc) {
       if (dotEl) dotEl.style.display = 'inline-block';
-      let html = `LIVE: ${cleanBc}`;
+      targetHtml = `LIVE: ${cleanBc}`;
       if (cleanVn) {
-        html += ` &nbsp;&nbsp;&bull;&nbsp;&nbsp; ${vnLabel}: <span class="venue-highlight">${cleanVn}</span>`;
+        targetHtml += ` &nbsp;&nbsp;&bull;&nbsp;&nbsp; ${vnLabel}: <span class="venue-highlight">${cleanVn}</span>`;
       }
-      txtEl.innerHTML = html;
     } else {
       if (dotEl) dotEl.style.display = 'none';
       if (cleanVn) {
-        txtEl.innerHTML = `${vnLabel}: <span class="venue-highlight">${cleanVn}</span>`;
+        targetHtml = `${vnLabel}: <span class="venue-highlight">${cleanVn}</span>`;
       } else {
-        txtEl.textContent = 'HOOP CULTURE NETWORK';
+        targetHtml = 'HOOP CULTURE NETWORK';
       }
+    }
+    if (txtEl.dataset.renderedHtml !== targetHtml) {
+      txtEl.dataset.renderedHtml = targetHtml;
+      txtEl.innerHTML = targetHtml;
     }
   }
 
@@ -552,35 +622,25 @@ function render(){
 
   const hSB = document.getElementById('homeScoreBlock');
   const aSB = document.getElementById('awayScoreBlock');
-  if(hSB) hSB.style.background = hc;
-  if(aSB) aSB.style.background = ac;
+  if(hSB && hSB.dataset.color !== hc){ hSB.dataset.color = hc; hSB.style.background = hc; }
+  if(aSB && aSB.dataset.color !== ac){ aSB.dataset.color = ac; aSB.style.background = ac; }
 
   const hSeg = document.getElementById('homeSegOv2');
   const aSeg = document.getElementById('awaySegOv2');
-  if(hSeg) hSeg.style.background = hc;
-  if(aSeg) aSeg.style.background = ac;
+  if(hSeg && hSeg.dataset.color !== hc){ hSeg.dataset.color = hc; hSeg.style.background = hc; }
+  if(aSeg && aSeg.dataset.color !== ac){ aSeg.dataset.color = ac; aSeg.style.background = ac; }
 
   const hArrow = document.getElementById('possArrowHomeOv2');
   const aArrow = document.getElementById('possArrowAwayOv2');
-  if(hArrow) hArrow.style.background = hc;
-  if(aArrow) aArrow.style.background = ac;
+  if(hArrow && hArrow.dataset.color !== hc){ hArrow.dataset.color = hc; hArrow.style.background = hc; }
+  if(aArrow && aArrow.dataset.color !== ac){ aArrow.dataset.color = ac; aArrow.style.background = ac; }
 
-  const hL = document.getElementById('homeLogoOv2');
-  const aL = document.getElementById('awayLogoOv2');
   const hLogo = S.homeLogo || S.homeLogoThumb;
-  if(hL){
-    hL.innerHTML = hLogo ? `<img src="${hLogo}" alt="">` : '<div class="logo-ph">LOGO</div>';
-    hL.style.borderColor = hc;
-    hL.style.background = darken(hc, 0.4);
-    hL.style.boxShadow = `0 0 0.8vw ${hc}, 0 0 2vw ${hc}66, 0 0.16vw 1vw rgba(0,0,0,0.8)`;
-  }
+  setSafeLogo('homeLogoOv2', hLogo, hc);
+
   const aLogo = S.awayLogo || S.awayLogoThumb;
-  if(aL){
-    aL.innerHTML = aLogo ? `<img src="${aLogo}" alt="">` : '<div class="logo-ph">LOGO</div>';
-    aL.style.borderColor = ac;
-    aL.style.background = darken(ac, 0.4);
-    aL.style.boxShadow = `0 0 0.8vw ${ac}, 0 0 2vw ${ac}66, 0 0.16vw 1vw rgba(0,0,0,0.8)`;
-  }
+  setSafeLogo('awayLogoOv2', aLogo, ac);
+
   // Possession
   document.getElementById('possArrowHomeOv2')?.classList.toggle('on', S.possession==='home');
   document.getElementById('possArrowAwayOv2')?.classList.toggle('on', S.possession==='away');
@@ -611,7 +671,7 @@ function connectSSE(){
       if (Date.now() - _lastLocalMsgTime < 2000) return;
       const d = snapshot.val();
       if (!d) return;
-      stopLocalTick(); S={...DEF,...d}; render(); syncLocalTick();
+      applyStateMessage(d);
     });
     db.ref(`ocr/${fbUser}`).on('value', snapshot => {
       const d = snapshot.val();
@@ -636,7 +696,7 @@ function connectSSE(){
       }
       else if(msg.type==='state'){
         if (Date.now() - _lastLocalMsgTime < 2000) return;
-        stopLocalTick(); S={...DEF,...msg.data}; render(); syncLocalTick();
+        applyStateMessage(msg.data);
       }
       else if(msg.type==='stream'){
         applyStreamData(msg.data);

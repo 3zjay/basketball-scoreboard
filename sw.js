@@ -1,9 +1,10 @@
 // Service Worker — enables PWA install on Android & iOS
-const CACHE = 'scoreboard-v6';
+const CACHE = 'scoreboard-v7';
 const ASSETS = [
   '/control',
   '/shotclock',
   '/manifest.json',
+  '/hoop-culture-logo-enhanced.png',
   '/hoop-culture-logo2.png',
   '/buzzer.mp3',
   '/icon-192.png',
