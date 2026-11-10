@@ -1,12 +1,12 @@
 {
-  "name": "Scoreboard Control",
+  "name": "Hoop Culture Scoreboard",
   "short_name": "Scoreboard",
-  "description": "Basketball Scoreboard Control Panel",
+  "description": "Hoop Culture Basketball Scoreboard Control Panel",
   "start_url": "/control",
   "display": "standalone",
   "background_color": "#0d1117",
   "theme_color": "#0d1117",
-  "orientation": "portrait",
+  "orientation": "any",
   "icons": [
     {
       "src": "/icon-192.png",
