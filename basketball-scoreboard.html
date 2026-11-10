@@ -796,6 +796,10 @@ body.light .reset-btn:hover { background:#fee2e2; }
       </div>
       <div style="display:flex; align-items:center; gap:8px;">
         <span id="aiFeedStatusBadge" style="font-size:11px; padding:4px 10px; border-radius:12px; background:#2a1f0a; border:1px solid #7f500d; color:#f5c842; font-weight:700;">🟡 Waiting for Scanner...</span>
+        <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:#d6dbe6; font-weight:700; cursor:pointer; background:#1a1410; border:1px solid #332318; padding:5px 10px; border-radius:4px;" title="Invert optical scanner digits so they blend as crisp black digits on overlays (Multiply blend)">
+          <input type="checkbox" id="feedInvertToggle" onchange="toggleFeedInvert(this.checked)" style="accent-color:var(--orange); cursor:pointer;">
+          <span>🌓 Invert Digits (Black on Overlays)</span>
+        </label>
         <button class="btn" onclick="openRemoteAlignModal(event)" style="font-size:11px; padding:6px 14px; background:linear-gradient(135deg, #e8430a, #ff6b1a); color:#fff; border:none; font-weight:800; border-radius:4px; box-shadow: 0 0 10px rgba(232,67,10,0.4); cursor:pointer;">
           🎯 Adjust Crops Remotely
         </button>
@@ -1365,7 +1369,8 @@ const DEF = {
   rp2Title:'VENUE', rp2Value:'Audley',
   barColor:'#0d1117',
   possession:null,
-  aiSyncEnabled:false
+  aiSyncEnabled:false,
+  feedInvert:'white'
 };
 
 let S = {...DEF};
@@ -1526,6 +1531,9 @@ function renderAll(){
   // Sync AI Sync checkbox state
   const aiToggleEl = document.getElementById('aiSyncToggle');
   if(aiToggleEl) aiToggleEl.checked = S.aiSyncEnabled || false;
+
+  const feedInvToggle = document.getElementById('feedInvertToggle');
+  if(feedInvToggle) feedInvToggle.checked = (S.feedInvert === 'black');
 }
 
 function t(id,val){ if(val===null)return; const e=document.getElementById(id); if(e) e.textContent=val; }
@@ -2763,6 +2771,14 @@ function toggleAiSync(enabled) {
     el.style.display = enabled ? 'flex' : 'none';
   });
 
+  saveNow();
+}
+
+function toggleFeedInvert(checked) {
+  S.feedInvert = checked ? 'black' : 'white';
+  try { localStorage.setItem('hc_feed_invert_mode', S.feedInvert); } catch(e) {}
+  const feedInvToggle = document.getElementById('feedInvertToggle');
+  if (feedInvToggle) feedInvToggle.checked = checked;
   saveNow();
 }
 

@@ -236,8 +236,58 @@ const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 let aiSyncActive = false;
 let aiState = { gameSeconds: null, clockStr: null, homeScore: null, awayScore: null, quarter: null, shotSeconds: null };
 
+let feedInvertMode = (urlParams.get('invert') === 'black' || urlParams.get('invert') === '1' || urlParams.get('black') === '1' || urlParams.get('feedInvert') === 'black')
+  ? 'black'
+  : (localStorage.getItem('hc_feed_invert_mode') || 'white');
+
+function applyStreamImgStyles(img) {
+  if (!img) return;
+  let isLightBg = false;
+  try {
+    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+      const c = document.createElement('canvas');
+      c.width = 4; c.height = 4;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, 4, 4);
+      const p = ctx.getImageData(0, 0, 1, 1).data;
+      isLightBg = (p[0] * 0.299 + p[1] * 0.587 + p[2] * 0.114) > 140;
+    }
+  } catch(e) {}
+
+  if (feedInvertMode === 'black') {
+    img.style.mixBlendMode = 'multiply';
+    img.style.filter = isLightBg ? 'contrast(1.35) brightness(0.9)' : 'invert(1) contrast(1.35) brightness(0.9)';
+  } else {
+    img.style.mixBlendMode = 'screen';
+    img.style.filter = isLightBg ? 'invert(1) contrast(1.35) brightness(1.25)' : 'contrast(1.35) brightness(1.25)';
+  }
+}
+
+function updateAllStreamImagesStyle() {
+  document.querySelectorAll('img.stream-bin-img').forEach(applyStreamImgStyles);
+}
+
+function setFeedInvertMode(mode) {
+  feedInvertMode = (mode === 'black') ? 'black' : 'white';
+  try { localStorage.setItem('hc_feed_invert_mode', feedInvertMode); } catch(e) {}
+  updateAllStreamImagesStyle();
+}
+
+function toggleFeedInvert() {
+  setFeedInvertMode(feedInvertMode === 'black' ? 'white' : 'black');
+}
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'i' || e.key === 'I') {
+    toggleFeedInvert();
+  }
+});
+
 function applyStreamData(data) {
   if (!data) return;
+  if (data.feedInvert && data.feedInvert !== feedInvertMode) {
+    setFeedInvertMode(data.feedInvert);
+  }
   if (data.streamActive === false) {
     aiSyncActive = false;
     S.gameClockStream = null;
@@ -283,6 +333,9 @@ function applyStateMessage(msgData) {
   if (!msgData) return;
   if (msgData.aiSyncActive !== undefined) aiSyncActive = !!msgData.aiSyncActive;
   if (msgData.aiSyncEnabled !== undefined) aiSyncActive = !!msgData.aiSyncEnabled;
+  if (msgData.feedInvert && msgData.feedInvert !== feedInvertMode) {
+    setFeedInvertMode(msgData.feedInvert);
+  }
   const nonClockChanged = hasStateNonClockChanged(S, msgData);
   S = { ...S, ...msgData };
   if (nonClockChanged) {
@@ -348,7 +401,6 @@ function renderStreamOrText(elId, streamImgUrl, fallbackText, maxHeightCss) {
       img.style.objectFit = 'contain';
       img.style.flexShrink = '0';
       img.style.verticalAlign = 'middle';
-      img.style.filter = 'contrast(1.35) brightness(1.25)';
       img.style.borderRadius = '0';
       img.style.border = 'none';
       img.style.outline = 'none';
@@ -356,26 +408,13 @@ function renderStreamOrText(elId, streamImgUrl, fallbackText, maxHeightCss) {
       img.style.boxShadow = 'none';
       img.style.padding = '0';
       img.style.margin = '0';
-      img.style.mixBlendMode = 'screen';
       img.style.boxSizing = 'border-box';
       img.style.display = 'inline-block';
       img.style.pointerEvents = 'none';
       img.onload = function() {
-        try {
-          const c = document.createElement('canvas');
-          c.width = 4;
-          c.height = 4;
-          const ctx = c.getContext('2d');
-          ctx.drawImage(img, 0, 0, 4, 4);
-          const p = ctx.getImageData(0, 0, 1, 1).data;
-          const isLightBg = (p[0] * 0.299 + p[1] * 0.587 + p[2] * 0.114) > 140;
-          if (isLightBg) {
-            img.style.filter = 'invert(1) contrast(1.35) brightness(1.25)';
-          } else {
-            img.style.filter = 'contrast(1.35) brightness(1.25)';
-          }
-        } catch(e) {}
+        applyStreamImgStyles(img);
       };
+      applyStreamImgStyles(img);
       el.appendChild(img);
     } else {
       img.style.maxHeight = maxHeightCss || '100%';
@@ -383,6 +422,7 @@ function renderStreamOrText(elId, streamImgUrl, fallbackText, maxHeightCss) {
     if (img.src !== streamImgUrl) {
       img.src = streamImgUrl;
     }
+    applyStreamImgStyles(img);
   } else {
     const img = el.querySelector('img.stream-bin-img');
     if (img) {

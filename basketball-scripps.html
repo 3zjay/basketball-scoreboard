@@ -798,6 +798,12 @@
     <option value="dark">Dark Blended Pod</option>
   </select>
 
+  <label>Scanner Digits Polarity (or press 'I'):</label>
+  <select id="hudFeedInvert" onchange="setFeedInvertMode(this.value)">
+    <option value="white">⚪ White Digits (Screen Blend)</option>
+    <option value="black">⚫ Black Digits (Multiply Blend)</option>
+  </select>
+
   <label>Broadcast Brand:</label>
   <input type="text" id="hudBroadcast" value="HOOP CULTURE" oninput="overrideBroadcast(this.value)">
   <label>Venue Name:</label>
@@ -866,6 +872,51 @@ const scaleParam = parseFloat(gP('scale') || '1.0');
 
 // Clock Pod Styling Option ('white' = authentic Scripps Sports white pod; 'dark' = dark blended pod)
 let clockTheme = gP('clock') || 'white';
+
+// Scanner Digits Invert Polarity Option ('white' = Screen blend for white digits; 'black' = Multiply blend for black digits)
+let feedInvertMode = (gP('invert') === 'black' || gP('invert') === '1' || gP('black') === '1' || gP('feedInvert') === 'black')
+  ? 'black'
+  : (localStorage.getItem('hc_feed_invert_mode') || 'white');
+
+function applyStreamImgStyles(img) {
+  if (!img) return;
+  let isLightBg = false;
+  try {
+    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+      const c = document.createElement('canvas');
+      c.width = 4; c.height = 4;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, 4, 4);
+      const p = ctx.getImageData(0, 0, 1, 1).data;
+      isLightBg = (p[0] * 0.299 + p[1] * 0.587 + p[2] * 0.114) > 140;
+    }
+  } catch(e) {}
+
+  if (feedInvertMode === 'black') {
+    img.style.mixBlendMode = 'multiply';
+    img.style.filter = isLightBg ? 'contrast(1.35) brightness(0.9)' : 'invert(1) contrast(1.35) brightness(0.9)';
+  } else {
+    img.style.mixBlendMode = 'screen';
+    img.style.filter = isLightBg ? 'invert(1) contrast(1.35) brightness(1.25)' : 'contrast(1.35) brightness(1.25)';
+  }
+}
+
+function updateAllStreamImagesStyle() {
+  document.querySelectorAll('img.stream-bin-img').forEach(applyStreamImgStyles);
+}
+
+function setFeedInvertMode(mode) {
+  feedInvertMode = (mode === 'black') ? 'black' : 'white';
+  try { localStorage.setItem('hc_feed_invert_mode', feedInvertMode); } catch(e) {}
+  const sel = $('hudFeedInvert');
+  if (sel) sel.value = feedInvertMode;
+  updateAllStreamImagesStyle();
+  showToast(feedInvertMode === 'black' ? '⚫ Feed Invert: Black Digits (Multiply Blend)' : '⚪ Feed Invert: White Digits (Screen Blend)');
+}
+
+function toggleFeedInvert() {
+  setFeedInvertMode(feedInvertMode === 'black' ? 'white' : 'black');
+}
 
 /* ══ STATE DEFINITION ══ */
 const DEFAULT_STATE = {
@@ -1243,21 +1294,9 @@ function renderStreamOrText(el, streamImgUrl, fallbackText, maxHeightCss) {
       img.style.flexShrink = '0';
       img.style.verticalAlign = 'middle';
       img.onload = function() {
-        try {
-          const c = document.createElement('canvas');
-          c.width = 4;
-          c.height = 4;
-          const ctx = c.getContext('2d');
-          ctx.drawImage(img, 0, 0, 4, 4);
-          const p = ctx.getImageData(0, 0, 1, 1).data;
-          const isLightBg = (p[0] * 0.299 + p[1] * 0.587 + p[2] * 0.114) > 140;
-          if (isLightBg) {
-            img.style.filter = 'invert(1) contrast(1.35) brightness(1.25)';
-          } else {
-            img.style.filter = 'contrast(1.35) brightness(1.25)';
-          }
-        } catch(e) {}
+        applyStreamImgStyles(img);
       };
+      applyStreamImgStyles(img);
       el.appendChild(img);
     } else if (maxHeightCss) {
       img.style.maxHeight = maxHeightCss;
@@ -1265,6 +1304,7 @@ function renderStreamOrText(el, streamImgUrl, fallbackText, maxHeightCss) {
     if (img.getAttribute('src') !== streamImgUrl) {
       img.src = streamImgUrl;
     }
+    applyStreamImgStyles(img);
   } else {
     const img = el.querySelector('img.stream-bin-img');
     if (img) el.innerHTML = '';
@@ -1412,7 +1452,7 @@ function hasStateNonClockChanged(oldS, newD) {
     'homeColor', 'awayColor', 'homeLogo', 'awayLogo', 'homeLogoThumb', 'awayLogoThumb',
     'quarter', 'period', 'possession', 'homeFouls', 'awayFouls', 'homeBonus', 'awayBonus',
     'rp1Title', 'rp1Value', 'rp2Title', 'rp2Value', 'venue', 'broadcast', 'aiSyncActive', 'aiSyncEnabled',
-    'homeScoreStream', 'awayScoreStream', 'periodStream'
+    'homeScoreStream', 'awayScoreStream', 'periodStream', 'feedInvert'
   ];
   for (let i = 0; i < nonClockKeys.length; i++) {
     const k = nonClockKeys[i];
@@ -1426,6 +1466,9 @@ function applyStateMessage(msgData) {
   _lastStateMsgTime = Date.now();
   if (msgData.aiSyncActive !== undefined) aiSyncActive = !!msgData.aiSyncActive;
   if (msgData.aiSyncEnabled !== undefined) aiSyncActive = !!msgData.aiSyncEnabled;
+  if (msgData.feedInvert && msgData.feedInvert !== feedInvertMode) {
+    setFeedInvertMode(msgData.feedInvert);
+  }
   // Ensure team names update if scoreboard transmits homeAbbr / awayAbbr / homeTeam / awayTeam
   if (msgData.homeAbbr) {
     msgData.homeName = msgData.homeAbbr;
@@ -1457,6 +1500,9 @@ function applyStateMessage(msgData) {
 function applyStreamData(streamData) {
   if (!streamData) return;
   _lastStateMsgTime = Date.now();
+  if (streamData.feedInvert && streamData.feedInvert !== feedInvertMode) {
+    setFeedInvertMode(streamData.feedInvert);
+  }
   if (streamData.streamActive === false) {
     aiSyncActive = false;
     S.gameClockStream = null;
@@ -1683,6 +1729,8 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'h' || e.key === 'H') {
     const hud = $('hud-panel');
     if (hud) hud.classList.toggle('show');
+  } else if (e.key === 'i' || e.key === 'I') {
+    toggleFeedInvert();
   }
 });
 
@@ -1746,6 +1794,8 @@ function toggleSwap() {
 
 // Initial draw & setup
 applyClockTheme();
+const selInv = $('hudFeedInvert');
+if (selInv) selInv.value = feedInvertMode;
 renderAll();
 </script>
 </body>
