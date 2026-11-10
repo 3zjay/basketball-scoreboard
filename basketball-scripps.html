@@ -187,20 +187,18 @@
 
     /* Team Circular Logo Badges */
     .team-logo-circle {
-      width: 3.4vw;
-      height: 3.4vw;
+      width: 3.8vw;
+      height: 3.8vw;
       border-radius: 50%;
-      background: #ffffff;
-      border: 2px solid rgba(255, 255, 255, 0.95);
-      box-shadow: 0 0.25vw 0.8vw rgba(0, 0, 0, 0.45);
+      background: transparent;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
       flex-shrink: 0;
-      padding: 0.2vw;
       position: relative;
       z-index: 2;
+      filter: drop-shadow(0 0.15vw 0.4vw rgba(0, 0, 0, 0.55));
     }
 
     .team-logo-circle img {
@@ -212,9 +210,17 @@
 
     .team-logo-fallback {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: 0.9vw;
+      font-size: 1vw;
       font-weight: 900;
-      color: #111;
+      color: #ffffff;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1.5px solid rgba(255, 255, 255, 0.35);
+      border-radius: 50%;
+      width: 3.4vw;
+      height: 3.4vw;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       text-transform: uppercase;
       letter-spacing: 0.05vw;
       text-align: center;
@@ -337,22 +343,24 @@
       opacity: 1;
     }
 
-    /* Official Hoop Culture Center Medallion */
+    /* Official Hoop Culture Center Medallion (Elevated Chrome Bezel on Bright Brushed Silver Face) */
     .hc-medallion-anchor {
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      z-index: 25;
+      margin: 0 -0.2vw;
     }
 
     .hc-medallion-ring {
-      width: 3.7vw;
-      height: 3.7vw;
+      width: 4.6vw;
+      height: 4.6vw;
       border-radius: 50%;
-      background: linear-gradient(135deg, #e2e8f0 0%, #64748b 50%, #1e293b 100%);
-      border: 1.5px solid rgba(255, 255, 255, 0.7);
-      box-shadow: 0 0.3vw 1vw rgba(0, 0, 0, 0.9), inset 0 1px 2px rgba(255, 255, 255, 0.6);
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 35%, #94a3b8 70%, #475569 100%);
+      border: 1.5px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 0.4vw 1.2vw rgba(0, 0, 0, 0.85), inset 0 2px 3px rgba(255, 255, 255, 0.9);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -364,20 +372,20 @@
       width: 100%;
       height: 100%;
       border-radius: 50%;
-      background: #080605;
+      background: radial-gradient(circle at 48% 36%, #ffffff 0%, #f8fafc 45%, #e2e8f0 85%, #cbd5e1 100%);
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      box-shadow: inset 0 0 0.4vw rgba(0,0,0,0.9);
+      box-shadow: inset 0 0.1vw 0.3vw rgba(0, 0, 0, 0.25), 0 0.05vw 0.1vw rgba(0, 0, 0, 0.15);
       position: relative;
     }
 
     .hc-medallion-logo {
-      width: 88%;
-      height: 88%;
+      width: 84%;
+      height: 84%;
       object-fit: contain;
-      filter: drop-shadow(0 0.1vw 0.2vw rgba(0, 0, 0, 0.9));
+      filter: drop-shadow(0 0.12vw 0.25vw rgba(0, 0, 0, 0.3));
     }
 
     /* ════ 5. CLOCK & SHOT CLOCK SEGMENT (FAR RIGHT END) ════ */
@@ -480,6 +488,33 @@
     @keyframes scPulse {
       0% { opacity: 1; }
       100% { opacity: 0.35; }
+    }
+
+    /* ════ OPTICAL AI SCANNER STREAM CROPS ════ */
+    img.stream-bin-img {
+      max-height: 100%;
+      max-width: 100%;
+      object-fit: contain;
+      filter: brightness(1.25) contrast(1.25);
+      border-radius: 3px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .game-clock-val img.stream-bin-img {
+      height: 2.2vw;
+      max-width: 5.8vw;
+    }
+    .shot-clock-val img.stream-bin-img {
+      height: 1.8vw;
+      max-width: 2.2vw;
+    }
+    .period-val img.stream-bin-img {
+      height: 1.5vw;
+      max-width: 2.4vw;
+    }
+    .score-num img.stream-bin-img {
+      height: 2.8vw;
+      max-width: 4.8vw;
     }
 
     /* ════ FLOATING BROADCAST CONTROLS HUD (Press 'H' to toggle) ════ */
@@ -675,6 +710,11 @@ const DEFAULT_STATE = {
   awayLogo: '',
   homeLogoThumb: '',
   awayLogoThumb: '',
+  gameClockStream: null,
+  shotClockStream: null,
+  homeScoreStream: null,
+  awayScoreStream: null,
+  periodStream: null,
   homeFouls: 0,
   awayFouls: 0,
   homeBonus: false,
@@ -722,13 +762,21 @@ window.addEventListener('storage', (e) => {
   }
 });
 
-// Fast initial REST fetch: immediately fetch active game data with zero SSL delay
+// Fast initial REST fetch: immediately fetch active game data & OCR stream with zero SSL delay
 const targetInitRoom = fbUser || 'isidro_pascua@gmail_com';
 fetch(`https://hoop-culture-scoreboard-default-rtdb.firebaseio.com/states/${targetInitRoom}.json`)
   .then(r => r.json())
   .then(data => {
     if (data && typeof data === 'object') {
       applyStateMessage(data);
+    }
+  }).catch(() => {});
+
+fetch(`https://hoop-culture-scoreboard-default-rtdb.firebaseio.com/ocr/${targetInitRoom}.json`)
+  .then(r => r.json())
+  .then(data => {
+    if (data && typeof data === 'object') {
+      applyStreamData(data);
     }
   }).catch(() => {});
 
@@ -792,8 +840,8 @@ function renderTeams() {
   const leftName  = (S[leftTeamKey + 'Name'] || S[leftTeamKey + 'Abbr'] || (isSwapped ? 'FREEDOM' : 'PINTURA')).toUpperCase();
   const rightName = (S[rightTeamKey + 'Name'] || S[rightTeamKey + 'Abbr'] || (isSwapped ? 'PINTURA' : 'FREEDOM')).toUpperCase();
 
-  const leftLogo  = S[leftTeamKey + 'LogoThumb'] || S[leftTeamKey + 'Logo'] || '';
-  const rightLogo = S[rightTeamKey + 'LogoThumb'] || S[rightTeamKey + 'Logo'] || '';
+  const leftLogo  = S[leftTeamKey + 'Logo'] || S[leftTeamKey + 'LogoThumb'] || '';
+  const rightLogo = S[rightTeamKey + 'Logo'] || S[rightTeamKey + 'LogoThumb'] || '';
 
   // Apply Colors to CSS Variables
   document.documentElement.style.setProperty('--away-color', leftColor);
@@ -875,29 +923,72 @@ function setLogoBadge(circleId, fallbackId, logoUrl, fallbackAbbr) {
   }
 }
 
+/* Helper to render optical stream images or digital text */
+function renderStreamOrText(el, streamImgUrl, fallbackText, maxHeightCss) {
+  if (typeof el === 'string') el = $(el);
+  if (!el) return;
+  if (aiSyncActive && streamImgUrl) {
+    let img = el.querySelector('img.stream-bin-img');
+    if (!img) {
+      el.innerHTML = '';
+      img = document.createElement('img');
+      img.className = 'stream-bin-img';
+      if (maxHeightCss) img.style.maxHeight = maxHeightCss;
+      el.appendChild(img);
+    } else if (maxHeightCss) {
+      img.style.maxHeight = maxHeightCss;
+    }
+    if (img.getAttribute('src') !== streamImgUrl) {
+      img.src = streamImgUrl;
+    }
+  } else {
+    const img = el.querySelector('img.stream-bin-img');
+    if (img) el.innerHTML = '';
+    const txt = (fallbackText !== null && fallbackText !== undefined) ? String(fallbackText) : '';
+    if (el.children.length === 0 && el.textContent !== txt) {
+      el.textContent = txt;
+    }
+  }
+}
+
 /* 3. Scores */
 function renderScores() {
   const leftTeamKey  = isSwapped ? 'home' : 'away';
   const rightTeamKey = isSwapped ? 'away' : 'home';
 
-  const leftScore  = aiSyncActive && aiState.homeScore !== null ? (isSwapped ? aiState.homeScore : aiState.awayScore) : (S[leftTeamKey + 'Score'] || 0);
-  const rightScore = aiSyncActive && aiState.awayScore !== null ? (isSwapped ? aiState.awayScore : aiState.homeScore) : (S[rightTeamKey + 'Score'] || 0);
+  const leftScore  = aiSyncActive && aiState.homeScore !== null ? (isSwapped ? aiState.homeScore : aiState.awayScore) : (S[leftTeamKey + 'Score'] !== undefined ? S[leftTeamKey + 'Score'] : 0);
+  const rightScore = aiSyncActive && aiState.awayScore !== null ? (isSwapped ? aiState.awayScore : aiState.homeScore) : (S[rightTeamKey + 'Score'] !== undefined ? S[rightTeamKey + 'Score'] : 0);
+
+  const leftStream  = aiSyncActive ? (isSwapped ? S.homeScoreStream : S.awayScoreStream) : null;
+  const rightStream = aiSyncActive ? (isSwapped ? S.awayScoreStream : S.homeScoreStream) : null;
 
   const leftScoreEl = $('awayScore');
   if (leftScoreEl) {
-    const sStr = String(leftScore);
-    if (leftScoreEl.textContent !== sStr) {
-      leftScoreEl.textContent = sStr;
-      if (lastHomeScore !== -1) triggerBump(leftScoreEl);
+    if (leftStream && (aiState.awayScore == null && aiState.homeScore == null)) {
+      renderStreamOrText(leftScoreEl, leftStream, String(leftScore), '2.8vw');
+    } else {
+      const img = leftScoreEl.querySelector('img.stream-bin-img');
+      if (img) leftScoreEl.innerHTML = '';
+      const sStr = String(leftScore);
+      if (leftScoreEl.textContent !== sStr) {
+        leftScoreEl.textContent = sStr;
+        if (lastHomeScore !== -1) triggerBump(leftScoreEl);
+      }
     }
   }
 
   const rightScoreEl = $('homeScore');
   if (rightScoreEl) {
-    const sStr = String(rightScore);
-    if (rightScoreEl.textContent !== sStr) {
-      rightScoreEl.textContent = sStr;
-      if (lastAwayScore !== -1) triggerBump(rightScoreEl);
+    if (rightStream && (aiState.awayScore == null && aiState.homeScore == null)) {
+      renderStreamOrText(rightScoreEl, rightStream, String(rightScore), '2.8vw');
+    } else {
+      const img = rightScoreEl.querySelector('img.stream-bin-img');
+      if (img) rightScoreEl.innerHTML = '';
+      const sStr = String(rightScore);
+      if (rightScoreEl.textContent !== sStr) {
+        rightScoreEl.textContent = sStr;
+        if (lastAwayScore !== -1) triggerBump(rightScoreEl);
+      }
     }
   }
 
@@ -927,9 +1018,16 @@ function renderClock() {
   else if (q === 4) pText = '4<sup>TH</sup>';
   else if (q === 5) pText = 'OT';
   else if (q > 5) pText = `${q - 4}OT`;
-  if (perEl.innerHTML !== pText) perEl.innerHTML = pText;
 
-  // Clock
+  if (aiSyncActive && S.periodStream) {
+    renderStreamOrText(perEl, S.periodStream, pText, '1.6vw');
+  } else {
+    const pImg = perEl.querySelector('img.stream-bin-img');
+    if (pImg) perEl.innerHTML = '';
+    if (perEl.innerHTML !== pText) perEl.innerHTML = pText;
+  }
+
+  // Clock Text Calculation
   let cStr = '10:00';
   let secs = S.gameSeconds;
   if (aiSyncActive && aiState.clockStr) {
@@ -938,17 +1036,23 @@ function renderClock() {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
     if (secs < 60) {
-      // Under 1 minute: display tenths if available, or .0
       cStr = `${secs}.0`;
     } else {
       cStr = `${m}:${s.toString().padStart(2, '0')}`;
     }
   }
-  if (clkEl.textContent !== cStr) clkEl.textContent = cStr;
 
-  // Clock Warning state (< 60s)
-  const isWarn = secs !== undefined && secs !== null && secs < 60;
-  clkEl.classList.toggle('warn', isWarn);
+  // Optical Feed or Digital Text
+  if (aiSyncActive && S.gameClockStream) {
+    renderStreamOrText(clkEl, S.gameClockStream, cStr, '2.3vw');
+    clkEl.classList.remove('warn');
+  } else {
+    const img = clkEl.querySelector('img.stream-bin-img');
+    if (img) clkEl.innerHTML = '';
+    if (clkEl.textContent !== cStr) clkEl.textContent = cStr;
+    const isWarn = secs !== undefined && secs !== null && secs < 60;
+    clkEl.classList.toggle('warn', isWarn);
+  }
 }
 
 /* 5. Shot Clock */
@@ -957,10 +1061,18 @@ function renderShotClock() {
   if (!scEl) return;
   const s = aiSyncActive && aiState.shotSeconds !== null ? aiState.shotSeconds : (S.shotSeconds !== undefined ? S.shotSeconds : 24);
   const sStr = String(s);
-  if (scEl.textContent !== sStr) scEl.textContent = sStr;
 
-  scEl.classList.toggle('urgent', s <= 5 && s > 0);
-  scEl.classList.toggle('zero', s === 0);
+  if (aiSyncActive && S.shotClockStream) {
+    renderStreamOrText(scEl, S.shotClockStream, sStr, '1.8vw');
+    scEl.classList.remove('urgent');
+    scEl.classList.remove('zero');
+  } else {
+    const img = scEl.querySelector('img.stream-bin-img');
+    if (img) scEl.innerHTML = '';
+    if (scEl.textContent !== sStr) scEl.textContent = sStr;
+    scEl.classList.toggle('urgent', s <= 5 && s > 0);
+    scEl.classList.toggle('zero', s === 0);
+  }
 }
 
 /* ══ REALTIME DATA SYNCHRONIZATION ══ */
@@ -980,15 +1092,38 @@ function applyStreamData(streamData) {
   if (!streamData) return;
   if (streamData.streamActive === false) {
     aiSyncActive = false;
+    S.gameClockStream = null;
+    S.shotClockStream = null;
+    S.homeScoreStream = null;
+    S.awayScoreStream = null;
+    S.periodStream = null;
     renderAll();
     return;
   }
   aiSyncActive = true;
-  if (streamData.clock != null) aiState.clockStr = String(streamData.clock).trim();
+
+  if (streamData.clock != null) {
+    const cStr = String(streamData.clock).trim();
+    aiState.clockStr = cStr;
+    if (cStr.includes(':')) {
+      const parts = cStr.split(':');
+      aiState.gameSeconds = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+    } else {
+      const p = parseFloat(cStr);
+      if (!isNaN(p)) aiState.gameSeconds = Math.round(p);
+    }
+  }
   if (streamData.homeScore != null && !isNaN(parseInt(streamData.homeScore, 10))) aiState.homeScore = parseInt(streamData.homeScore, 10);
   if (streamData.awayScore != null && !isNaN(parseInt(streamData.awayScore, 10))) aiState.awayScore = parseInt(streamData.awayScore, 10);
   if (streamData.period != null && !isNaN(parseInt(streamData.period, 10))) aiState.quarter = parseInt(streamData.period, 10);
   if (streamData.shotClock != null && !isNaN(parseInt(streamData.shotClock, 10))) aiState.shotSeconds = parseInt(streamData.shotClock, 10);
+
+  if (streamData.gameClockStream) S.gameClockStream = streamData.gameClockStream;
+  if (streamData.shotClockStream) S.shotClockStream = streamData.shotClockStream;
+  if (streamData.homeScoreStream) S.homeScoreStream = streamData.homeScoreStream;
+  if (streamData.awayScoreStream) S.awayScoreStream = streamData.awayScoreStream;
+  if (streamData.periodStream) S.periodStream = streamData.periodStream;
+
   renderAll();
 }
 
@@ -1026,16 +1161,14 @@ function syncLocalTimers() {
 // 1. BroadcastChannels
 function setupBroadcastChannels() {
   if (typeof BroadcastChannel === 'undefined') return;
-  ['hc_scoreboard_sync', 'basketball_scoreboard', 'ezlive_scoreboard_channel'].forEach(chName => {
+  ['hc_scoreboard_sync', 'basketball_scoreboard', 'ezlive_scoreboard_channel', 'ocr_stream'].forEach(chName => {
     try {
       const bc = new BroadcastChannel(chName);
       bc.onmessage = (e) => {
         if (!e || !e.data) return;
-        if (fbUser && e.data.user && e.data.user !== fbUser && e.data.user !== currentUser) {
-          if (!e.data.data && !e.data.homeScore && !e.data.awayScore) return;
-        }
         if (e.data.type === 'state') applyStateMessage(e.data.data);
         else if (e.data.type === 'stream' || e.data.type === 'ocr') applyStreamData(e.data.data || e.data);
+        else if (e.data.gameClockStream || e.data.shotClockStream) applyStreamData(e.data);
         else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined) applyStateMessage(e.data);
       };
     } catch(err) {}
@@ -1046,11 +1179,9 @@ setupBroadcastChannels();
 // 2. Window PostMessage (for OBS Browser Source / iframe embedding)
 window.addEventListener('message', (e) => {
   if (!e || !e.data) return;
-  if (fbUser && e.data.user && e.data.user !== fbUser && e.data.user !== currentUser) {
-    if (!e.data.data && !e.data.homeScore && !e.data.awayScore) return;
-  }
   if (e.data.type === 'state') applyStateMessage(e.data.data);
   else if (e.data.type === 'stream' || e.data.type === 'ocr') applyStreamData(e.data.data || e.data);
+  else if (e.data.gameClockStream || e.data.shotClockStream) applyStreamData(e.data);
   else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined) applyStateMessage(e.data);
 });
 
@@ -1075,10 +1206,27 @@ if (useFirebase && db) {
       if (val) applyStateMessage(val);
     });
 
-    // Live optical scanner stream
-    db.ref(`ocr/${roomKey}`).on('value', snap => {
-      const d = snap.val();
-      if (d) applyStreamData(d);
+    // Live optical scanner stream (listen to both exact roomKey and underscore-replaced variant)
+    const ocrKeys = [roomKey];
+    if (roomKey.includes('@')) ocrKeys.push(roomKey.replace(/@/g, '_'));
+    ocrKeys.forEach(p => {
+      db.ref(`ocr/${p}`).once('value').then(snap => {
+        const d = snap.val();
+        if (d) applyStreamData(d);
+      }).catch(() => {});
+
+      db.ref(`ocr/${p}`).on('value', snap => {
+        const d = snap.val();
+        if (d) applyStreamData(d);
+      });
+    });
+
+    // Also listen to any OCR child updates matching user prefix
+    const baseEmail = roomKey.split('@')[0];
+    db.ref('ocr').on('child_changed', snap => {
+      if (snap.key.startsWith(baseEmail) || snap.key === roomKey) {
+        applyStreamData(snap.val());
+      }
     });
 
     // Live buzzer / horn listener
