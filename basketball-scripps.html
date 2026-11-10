@@ -396,6 +396,9 @@
       text-shadow: 0 0.1vw 0.4vw rgba(0, 0, 0, 0.85);
       transition: transform 0.15s ease-out, color 0.15s ease-out;
       margin-top: 0.32vw;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     @keyframes scoreBump {
@@ -602,37 +605,40 @@
       color: #ffffff;
     }
 
-    /* ════ OPTICAL SCANNER LIVE FEED STREAM CROPS ════ */
+    /* ════ OPTICAL SCANNER LIVE FEED STREAM CROPS (Seamless Stadium Blending) ════ */
     img.stream-bin-img {
       max-height: 100%;
       max-width: 100%;
       object-fit: contain;
-      filter: brightness(1.25) contrast(1.25);
-      border-radius: 3px;
-      border: 1px solid rgba(255, 255, 255, 0.45);
-      outline: 1px solid rgba(0, 0, 0, 0.9);
-      background: #080c14;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.8), inset 0 0 3px rgba(255, 255, 255, 0.2);
-      padding: 1px 3px;
-      box-sizing: border-box;
+      filter: contrast(1.35) brightness(1.25);
+      border: none !important;
+      outline: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
       display: inline-block;
       vertical-align: middle;
+      mix-blend-mode: screen;
+      pointer-events: none;
     }
     .game-clock-val img.stream-bin-img {
-      height: 2.3vw;
-      max-width: 5.6vw;
+      height: 2.1vw;
+      max-width: 5.4vw;
     }
     .shot-clock-val img.stream-bin-img {
-      height: 2.2vw;
+      height: 2.1vw;
       max-width: 2.4vw;
     }
     .period-val img.stream-bin-img {
-      height: 1.8vw;
-      max-width: 2.5vw;
+      height: 1.5vw;
+      max-width: 2.4vw;
     }
     .score-block img.stream-bin-img {
-      height: 3.2vw;
-      max-width: 5.2vw;
+      height: 2.35vw;
+      max-width: 4.4vw;
+      margin-top: 0;
     }
 
 
@@ -900,7 +906,6 @@ const DEFAULT_STATE = {
 
 let S = { ...DEFAULT_STATE };
 let aiSyncActive = false;
-let aiState = { gameSeconds: null, clockStr: null, homeScore: null, awayScore: null, quarter: null, shotSeconds: null };
 let lastHomeScore = -1;
 let lastAwayScore = -1;
 
@@ -1237,6 +1242,22 @@ function renderStreamOrText(el, streamImgUrl, fallbackText, maxHeightCss) {
       img.style.objectFit = 'contain';
       img.style.flexShrink = '0';
       img.style.verticalAlign = 'middle';
+      img.onload = function() {
+        try {
+          const c = document.createElement('canvas');
+          c.width = 4;
+          c.height = 4;
+          const ctx = c.getContext('2d');
+          ctx.drawImage(img, 0, 0, 4, 4);
+          const p = ctx.getImageData(0, 0, 1, 1).data;
+          const isLightBg = (p[0] * 0.299 + p[1] * 0.587 + p[2] * 0.114) > 140;
+          if (isLightBg) {
+            img.style.filter = 'invert(1) contrast(1.35) brightness(1.25)';
+          } else {
+            img.style.filter = 'contrast(1.35) brightness(1.25)';
+          }
+        } catch(e) {}
+      };
       el.appendChild(img);
     } else if (maxHeightCss) {
       img.style.maxHeight = maxHeightCss;
@@ -1259,15 +1280,8 @@ function renderScores() {
   const leftTeamKey  = isSwapped ? 'home' : 'away';
   const rightTeamKey = isSwapped ? 'away' : 'home';
 
-  function getEffectiveScore(teamKey) {
-    if (aiSyncActive && aiState[teamKey + 'Score'] !== null && aiState[teamKey + 'Score'] !== undefined) {
-      return aiState[teamKey + 'Score'];
-    }
-    return (S[teamKey + 'Score'] !== undefined && S[teamKey + 'Score'] !== null) ? S[teamKey + 'Score'] : 0;
-  }
-
-  const leftScore  = getEffectiveScore(leftTeamKey);
-  const rightScore = getEffectiveScore(rightTeamKey);
+  const leftScore  = (S[leftTeamKey + 'Score'] !== undefined && S[leftTeamKey + 'Score'] !== null) ? S[leftTeamKey + 'Score'] : 0;
+  const rightScore = (S[rightTeamKey + 'Score'] !== undefined && S[rightTeamKey + 'Score'] !== null) ? S[rightTeamKey + 'Score'] : 0;
 
   const leftStream  = isSwapped ? S.homeScoreStream : S.awayScoreStream;
   const rightStream = isSwapped ? S.awayScoreStream : S.homeScoreStream;
@@ -1275,7 +1289,7 @@ function renderScores() {
   const leftScoreEl = $('awayScore');
   if (leftScoreEl) {
     if (aiSyncActive && leftStream) {
-      renderStreamOrText(leftScoreEl, leftStream, String(leftScore), '3.2vw');
+      renderStreamOrText(leftScoreEl, leftStream, String(leftScore), '2.35vw');
     } else {
       const img = leftScoreEl.querySelector('img.stream-bin-img');
       if (img) leftScoreEl.innerHTML = '';
@@ -1290,7 +1304,7 @@ function renderScores() {
   const rightScoreEl = $('homeScore');
   if (rightScoreEl) {
     if (aiSyncActive && rightStream) {
-      renderStreamOrText(rightScoreEl, rightStream, String(rightScore), '3.2vw');
+      renderStreamOrText(rightScoreEl, rightStream, String(rightScore), '2.35vw');
     } else {
       const img = rightScoreEl.querySelector('img.stream-bin-img');
       if (img) rightScoreEl.innerHTML = '';
@@ -1319,8 +1333,8 @@ function renderClock() {
   const perEl = $('periodVal');
   if (!clkEl || !perEl) return;
 
-  // Period
-  const q = (aiSyncActive && aiState.quarter !== null) ? aiState.quarter : (S.quarter || 1);
+  // Period: strictly authoritative from scoreboard S.quarter
+  const q = S.quarter || 1;
   let pText = '1<sup>ST</sup>';
   if (q === 1) pText = '1<sup>ST</sup>';
   else if (q === 2) pText = '2<sup>ND</sup>';
@@ -1330,19 +1344,17 @@ function renderClock() {
   else if (q > 5) pText = `${q - 4}OT`;
 
   if (aiSyncActive && S.periodStream) {
-    renderStreamOrText(perEl, S.periodStream, pText, '1.8vw');
+    renderStreamOrText(perEl, S.periodStream, pText, '1.5vw');
   } else {
     const perImg = perEl.querySelector('img');
     if (perImg) perEl.innerHTML = '';
     if (perEl.innerHTML !== pText) perEl.innerHTML = pText;
   }
 
-  // Clock Text Calculation
+  // Clock Text Calculation: strictly authoritative from scoreboard S.gameSeconds
   let cStr = '10:00';
   let secs = S.gameSeconds;
-  if (aiSyncActive && aiState.clockStr) {
-    cStr = aiState.clockStr;
-  } else if (secs !== undefined && secs !== null) {
+  if (secs !== undefined && secs !== null) {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
     if (secs < 60) {
@@ -1353,7 +1365,7 @@ function renderClock() {
   }
 
   if (aiSyncActive && S.gameClockStream) {
-    renderStreamOrText(clkEl, S.gameClockStream, cStr, '2.3vw');
+    renderStreamOrText(clkEl, S.gameClockStream, cStr, '2.1vw');
     clkEl.classList.remove('warn');
   } else {
     const strayImg = clkEl.querySelector('img');
@@ -1368,18 +1380,11 @@ function renderClock() {
 function renderShotClock() {
   const scEl = $('shotClockVal');
   if (!scEl) return;
-  // If shot clock is running, prioritize authoritative S.shotSeconds to prevent OCR jitter / rapid counting.
-  // When stopped or reset, allow optical OCR calibration or S.shotSeconds.
-  let s;
-  if (S.shotRunning) {
-    s = (S.shotSeconds !== undefined && S.shotSeconds !== null) ? S.shotSeconds : 24;
-  } else {
-    s = (aiSyncActive && aiState.shotSeconds !== null) ? aiState.shotSeconds : (S.shotSeconds !== undefined ? S.shotSeconds : 24);
-  }
+  const s = (S.shotSeconds !== undefined && S.shotSeconds !== null) ? S.shotSeconds : 24;
   const sStr = String(s);
 
   if (aiSyncActive && S.shotClockStream) {
-    renderStreamOrText(scEl, S.shotClockStream, sStr, '2.2vw');
+    renderStreamOrText(scEl, S.shotClockStream, sStr, '2.1vw');
     scEl.classList.remove('urgent');
     scEl.classList.remove('zero');
   } else {
@@ -1459,80 +1464,40 @@ function applyStreamData(streamData) {
     S.homeScoreStream = null;
     S.awayScoreStream = null;
     S.periodStream = null;
-    aiState.clockStr = null;
-    aiState.gameSeconds = null;
-    aiState.homeScore = null;
-    aiState.awayScore = null;
-    aiState.quarter = null;
-    aiState.shotSeconds = null;
     renderAll();
     syncLocalTick();
     return;
   }
   aiSyncActive = true;
 
-  let nonClockChanged = false;
+  let streamImagesChanged = false;
 
-  if (streamData.gameClockStream) S.gameClockStream = streamData.gameClockStream;
-  if (streamData.shotClockStream) S.shotClockStream = streamData.shotClockStream;
-  if (streamData.homeScoreStream && S.homeScoreStream !== streamData.homeScoreStream) {
+  if (streamData.gameClockStream !== undefined && S.gameClockStream !== streamData.gameClockStream) {
+    S.gameClockStream = streamData.gameClockStream;
+  }
+  if (streamData.shotClockStream !== undefined && S.shotClockStream !== streamData.shotClockStream) {
+    S.shotClockStream = streamData.shotClockStream;
+  }
+  if (streamData.homeScoreStream !== undefined && S.homeScoreStream !== streamData.homeScoreStream) {
     S.homeScoreStream = streamData.homeScoreStream;
-    nonClockChanged = true;
+    streamImagesChanged = true;
   }
-  if (streamData.awayScoreStream && S.awayScoreStream !== streamData.awayScoreStream) {
+  if (streamData.awayScoreStream !== undefined && S.awayScoreStream !== streamData.awayScoreStream) {
     S.awayScoreStream = streamData.awayScoreStream;
-    nonClockChanged = true;
+    streamImagesChanged = true;
   }
-  if (streamData.periodStream && S.periodStream !== streamData.periodStream) {
+  if (streamData.periodStream !== undefined && S.periodStream !== streamData.periodStream) {
     S.periodStream = streamData.periodStream;
-    nonClockChanged = true;
+    streamImagesChanged = true;
   }
 
-  if (streamData.clock != null && String(streamData.clock).trim()) {
-    const cStr = String(streamData.clock).trim();
-    aiState.clockStr = cStr;
-    if (cStr.includes(':')) {
-      const parts = cStr.split(':');
-      aiState.gameSeconds = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
-    } else {
-      const p = parseFloat(cStr);
-      if (!isNaN(p)) aiState.gameSeconds = Math.round(p);
-    }
-  }
-  if (streamData.homeScore != null && streamData.homeScore !== '' && !isNaN(parseInt(streamData.homeScore, 10))) {
-    const hs = parseInt(streamData.homeScore, 10);
-    if (aiState.homeScore !== hs) {
-      aiState.homeScore = hs;
-      nonClockChanged = true;
-    }
-  }
-  if (streamData.awayScore != null && streamData.awayScore !== '' && !isNaN(parseInt(streamData.awayScore, 10))) {
-    const as = parseInt(streamData.awayScore, 10);
-    if (aiState.awayScore !== as) {
-      aiState.awayScore = as;
-      nonClockChanged = true;
-    }
-  }
-  if (streamData.period != null && streamData.period !== '' && !isNaN(parseInt(streamData.period, 10))) {
-    const q = parseInt(streamData.period, 10);
-    if (aiState.quarter !== q) {
-      aiState.quarter = q;
-      nonClockChanged = true;
-    }
-  }
-  if (streamData.shotClock != null && streamData.shotClock !== '' && !isNaN(parseInt(streamData.shotClock, 10))) {
-    const parsedShot = parseInt(streamData.shotClock, 10);
-    if (parsedShot >= 0 && parsedShot <= 35) {
-      if (!S.shotRunning) {
-        aiState.shotSeconds = parsedShot;
-        S.shotSeconds = parsedShot;
-      }
-    }
-  }
+  // NO OCR DIGIT GUESSING: We NEVER read or guess streamData.clock, streamData.homeScore, etc.
+  // The scanner live feed is purely optical crops that blend directly into the scorebug.
 
-  if (nonClockChanged) {
+  if (streamImagesChanged) {
     renderScores();
     renderClock();
+    renderShotClock();
   } else {
     renderClock();
     renderShotClock();
