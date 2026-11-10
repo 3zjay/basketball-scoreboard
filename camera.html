@@ -1714,11 +1714,22 @@
           });
           delete fbPayload.invertStates;
         }
+        // Flatten crops so multi-cameras never overwrite each other's crop coordinates
+        if (fbPayload.crops && typeof fbPayload.crops === 'object') {
+          Object.keys(fbPayload.crops).forEach(k => {
+            fbPayload[`crops/${k}`] = fbPayload.crops[k];
+          });
+          delete fbPayload.crops;
+        }
+        // Remove nested frames object to prevent Firebase update() path conflict with frames/${deviceRole}
+        delete fbPayload.frames;
+        if (payload.fullFrame) {
+          fbPayload[`frames/${deviceRole}`] = payload.fullFrame;
+        }
+
         // Cam 2 (shot clock) only writes to frames/shot, preserving main board view for default remote aligner
         if (deviceRole === 'shot') {
           delete fbPayload.fullFrame;
-          delete fbPayload.crops;
-          delete fbPayload.aspectRatio;
         }
         db.ref(`ocr/${fbUser}`).update(fbPayload)
           .then(() => {
@@ -1728,7 +1739,8 @@
               statusEl.style.color = '#16c784';
             }
           })
-          .catch(() => {
+          .catch((err) => {
+            console.error('Firebase OCR update error:', err);
             const statusEl = document.getElementById('status-text');
             if (statusEl) {
               statusEl.textContent = 'Firebase Connection Error';

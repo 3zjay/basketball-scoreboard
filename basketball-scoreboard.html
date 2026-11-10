@@ -3147,9 +3147,9 @@ function switchScannerQrTab(role) {
   if (location.protocol === 'http:' && (location.port === '3000' || location.port === '')) {
     let host = location.hostname;
     if ((host === 'localhost' || host === '127.0.0.1') && serverNetworkIp) host = serverNetworkIp;
-    scannerUrl = `https://${host}:3001/camera${suffix}`;
+    scannerUrl = `https://${host}:3001/camera.html${suffix}`;
   } else {
-    scannerUrl = `${window.location.origin}/camera${suffix}`;
+    scannerUrl = `${window.location.origin}/camera.html${suffix}`;
   }
 
   const descEl = document.getElementById('scannerTabDesc');
@@ -3305,7 +3305,7 @@ function switchRemoteCamera(role) {
   if (role === 'shot') {
     selectRemoteCrop('shot');
   } else if (role === 'main') {
-    if (activeRemoteCrop === 'shot') selectRemoteCrop('clock');
+    selectRemoteCrop(activeRemoteCrop === 'shot' ? 'clock' : activeRemoteCrop);
   }
 
   applyRemoteBoxStyles();
