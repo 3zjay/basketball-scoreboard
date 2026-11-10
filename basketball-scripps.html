@@ -161,13 +161,13 @@
     /* ════ 2 & 4. TEAM BANNERS (AWAY ON LEFT, HOME ON RIGHT) ════ */
     .seg-team {
       flex: 1 1 0;
-      min-width: 13.5vw;
-      max-width: 17.5vw;
+      min-width: 14vw;
+      max-width: 18.5vw;
       height: 100%;
       display: flex;
       align-items: center;
       padding: 0 0.9vw;
-      gap: 0.6vw;
+      gap: 0.5vw;
       position: relative;
       transition: background 0.4s ease;
       overflow: hidden;
@@ -226,14 +226,16 @@
       text-align: center;
     }
 
-    /* Team Names (Dynamic scaling for 3-letters or full names) */
+    /* Team Names (Supports 1 or 2 lines cleanly, never truncates with ellipsis) */
     .team-name-wrap {
-      flex: 1;
+      flex: 1 1 0;
       min-width: 0;
       display: flex;
       flex-direction: column;
+      justify-content: center;
       position: relative;
       z-index: 2;
+      overflow: hidden;
     }
 
     .seg-team.away .team-name-wrap {
@@ -248,16 +250,20 @@
 
     .team-name-text {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: clamp(1vw, 1.8vw, 2.2vw);
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 0.04vw;
-      line-height: 0.92;
+      letter-spacing: 0.02vw;
+      line-height: 0.88;
       color: #ffffff;
       text-shadow: 0 0.15vw 0.5vw rgba(0, 0, 0, 0.85), 0 0.05vw 0.1vw rgba(0,0,0,0.9);
-      white-space: nowrap;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      max-height: 3.8vw;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
       overflow: hidden;
-      text-overflow: ellipsis;
       max-width: 100%;
       transition: font-size 0.2s ease;
     }
@@ -890,14 +896,15 @@ function renderTeams() {
 function adjustTeamFontSize(el, text) {
   if (!el) return;
   const len = text.length;
+  const words = text.trim().split(/\s+/).length;
   if (len <= 4) {
-    el.style.fontSize = '2.1vw';
-  } else if (len <= 7) {
-    el.style.fontSize = '1.8vw';
-  } else if (len <= 11) {
-    el.style.fontSize = '1.4vw';
+    el.style.fontSize = '1.7vw';
+  } else if (len <= 8) {
+    el.style.fontSize = '1.25vw';
+  } else if (len <= 13 || words >= 2) {
+    el.style.fontSize = '1.0vw';
   } else {
-    el.style.fontSize = '1.1vw';
+    el.style.fontSize = '0.85vw';
   }
 }
 
@@ -956,44 +963,40 @@ function renderScores() {
   const leftTeamKey  = isSwapped ? 'home' : 'away';
   const rightTeamKey = isSwapped ? 'away' : 'home';
 
-  const leftScore  = aiSyncActive && aiState.homeScore !== null ? (isSwapped ? aiState.homeScore : aiState.awayScore) : (S[leftTeamKey + 'Score'] !== undefined ? S[leftTeamKey + 'Score'] : 0);
-  const rightScore = aiSyncActive && aiState.awayScore !== null ? (isSwapped ? aiState.awayScore : aiState.homeScore) : (S[rightTeamKey + 'Score'] !== undefined ? S[rightTeamKey + 'Score'] : 0);
+  function getEffectiveScore(teamKey) {
+    if (aiSyncActive && aiState[teamKey + 'Score'] !== null && aiState[teamKey + 'Score'] !== undefined) {
+      return aiState[teamKey + 'Score'];
+    }
+    return (S[teamKey + 'Score'] !== undefined && S[teamKey + 'Score'] !== null) ? S[teamKey + 'Score'] : 0;
+  }
 
-  const leftStream  = aiSyncActive ? (isSwapped ? S.homeScoreStream : S.awayScoreStream) : null;
-  const rightStream = aiSyncActive ? (isSwapped ? S.awayScoreStream : S.homeScoreStream) : null;
+  const leftScore  = getEffectiveScore(leftTeamKey);
+  const rightScore = getEffectiveScore(rightTeamKey);
 
   const leftScoreEl = $('awayScore');
   if (leftScoreEl) {
-    if (leftStream && (aiState.awayScore == null && aiState.homeScore == null)) {
-      renderStreamOrText(leftScoreEl, leftStream, String(leftScore), '2.8vw');
-    } else {
-      const img = leftScoreEl.querySelector('img.stream-bin-img');
-      if (img) leftScoreEl.innerHTML = '';
-      const sStr = String(leftScore);
-      if (leftScoreEl.textContent !== sStr) {
-        leftScoreEl.textContent = sStr;
-        if (lastHomeScore !== -1) triggerBump(leftScoreEl);
-      }
+    const strayImg = leftScoreEl.querySelector('img');
+    if (strayImg) leftScoreEl.innerHTML = '';
+    const sStr = String(leftScore);
+    if (leftScoreEl.textContent !== sStr) {
+      leftScoreEl.textContent = sStr;
+      if (lastAwayScore !== -1) triggerBump(leftScoreEl);
     }
   }
 
   const rightScoreEl = $('homeScore');
   if (rightScoreEl) {
-    if (rightStream && (aiState.awayScore == null && aiState.homeScore == null)) {
-      renderStreamOrText(rightScoreEl, rightStream, String(rightScore), '2.8vw');
-    } else {
-      const img = rightScoreEl.querySelector('img.stream-bin-img');
-      if (img) rightScoreEl.innerHTML = '';
-      const sStr = String(rightScore);
-      if (rightScoreEl.textContent !== sStr) {
-        rightScoreEl.textContent = sStr;
-        if (lastAwayScore !== -1) triggerBump(rightScoreEl);
-      }
+    const strayImg = rightScoreEl.querySelector('img');
+    if (strayImg) rightScoreEl.innerHTML = '';
+    const sStr = String(rightScore);
+    if (rightScoreEl.textContent !== sStr) {
+      rightScoreEl.textContent = sStr;
+      if (lastHomeScore !== -1) triggerBump(rightScoreEl);
     }
   }
 
-  lastHomeScore = leftScore;
-  lastAwayScore = rightScore;
+  lastAwayScore = leftScore;
+  lastHomeScore = rightScore;
 }
 
 function triggerBump(el) {
@@ -1010,7 +1013,7 @@ function renderClock() {
   if (!clkEl || !perEl) return;
 
   // Period
-  const q = aiSyncActive && aiState.quarter !== null ? aiState.quarter : (S.quarter || 1);
+  const q = (aiSyncActive && aiState.quarter !== null) ? aiState.quarter : (S.quarter || 1);
   let pText = '1<sup>ST</sup>';
   if (q === 1) pText = '1<sup>ST</sup>';
   else if (q === 2) pText = '2<sup>ND</sup>';
@@ -1019,13 +1022,9 @@ function renderClock() {
   else if (q === 5) pText = 'OT';
   else if (q > 5) pText = `${q - 4}OT`;
 
-  if (aiSyncActive && S.periodStream) {
-    renderStreamOrText(perEl, S.periodStream, pText, '1.6vw');
-  } else {
-    const pImg = perEl.querySelector('img.stream-bin-img');
-    if (pImg) perEl.innerHTML = '';
-    if (perEl.innerHTML !== pText) perEl.innerHTML = pText;
-  }
+  const perImg = perEl.querySelector('img');
+  if (perImg) perEl.innerHTML = '';
+  if (perEl.innerHTML !== pText) perEl.innerHTML = pText;
 
   // Clock Text Calculation
   let cStr = '10:00';
@@ -1042,37 +1041,29 @@ function renderClock() {
     }
   }
 
-  // Optical Feed or Digital Text
-  if (aiSyncActive && S.gameClockStream) {
-    renderStreamOrText(clkEl, S.gameClockStream, cStr, '2.3vw');
-    clkEl.classList.remove('warn');
-  } else {
-    const img = clkEl.querySelector('img.stream-bin-img');
-    if (img) clkEl.innerHTML = '';
-    if (clkEl.textContent !== cStr) clkEl.textContent = cStr;
-    const isWarn = secs !== undefined && secs !== null && secs < 60;
-    clkEl.classList.toggle('warn', isWarn);
-  }
+  // Clear any stray image if present so clock digits are never occluded
+  const strayImg = clkEl.querySelector('img');
+  if (strayImg) clkEl.innerHTML = '';
+
+  if (clkEl.textContent !== cStr) clkEl.textContent = cStr;
+  const isWarn = secs !== undefined && secs !== null && secs < 60;
+  clkEl.classList.toggle('warn', isWarn);
 }
 
 /* 5. Shot Clock */
 function renderShotClock() {
   const scEl = $('shotClockVal');
   if (!scEl) return;
-  const s = aiSyncActive && aiState.shotSeconds !== null ? aiState.shotSeconds : (S.shotSeconds !== undefined ? S.shotSeconds : 24);
+  const s = (aiSyncActive && aiState.shotSeconds !== null) ? aiState.shotSeconds : (S.shotSeconds !== undefined ? S.shotSeconds : 24);
   const sStr = String(s);
 
-  if (aiSyncActive && S.shotClockStream) {
-    renderStreamOrText(scEl, S.shotClockStream, sStr, '1.8vw');
-    scEl.classList.remove('urgent');
-    scEl.classList.remove('zero');
-  } else {
-    const img = scEl.querySelector('img.stream-bin-img');
-    if (img) scEl.innerHTML = '';
-    if (scEl.textContent !== sStr) scEl.textContent = sStr;
-    scEl.classList.toggle('urgent', s <= 5 && s > 0);
-    scEl.classList.toggle('zero', s === 0);
-  }
+  // Clear any stray image if present so shot clock is never occluded
+  const strayImg = scEl.querySelector('img');
+  if (strayImg) scEl.innerHTML = '';
+
+  if (scEl.textContent !== sStr) scEl.textContent = sStr;
+  scEl.classList.toggle('urgent', s <= 5 && s > 0);
+  scEl.classList.toggle('zero', s === 0);
 }
 
 /* ══ REALTIME DATA SYNCHRONIZATION ══ */
@@ -1092,17 +1083,18 @@ function applyStreamData(streamData) {
   if (!streamData) return;
   if (streamData.streamActive === false) {
     aiSyncActive = false;
-    S.gameClockStream = null;
-    S.shotClockStream = null;
-    S.homeScoreStream = null;
-    S.awayScoreStream = null;
-    S.periodStream = null;
+    aiState.clockStr = null;
+    aiState.gameSeconds = null;
+    aiState.homeScore = null;
+    aiState.awayScore = null;
+    aiState.quarter = null;
+    aiState.shotSeconds = null;
     renderAll();
     return;
   }
   aiSyncActive = true;
 
-  if (streamData.clock != null) {
+  if (streamData.clock != null && String(streamData.clock).trim()) {
     const cStr = String(streamData.clock).trim();
     aiState.clockStr = cStr;
     if (cStr.includes(':')) {
@@ -1113,16 +1105,18 @@ function applyStreamData(streamData) {
       if (!isNaN(p)) aiState.gameSeconds = Math.round(p);
     }
   }
-  if (streamData.homeScore != null && !isNaN(parseInt(streamData.homeScore, 10))) aiState.homeScore = parseInt(streamData.homeScore, 10);
-  if (streamData.awayScore != null && !isNaN(parseInt(streamData.awayScore, 10))) aiState.awayScore = parseInt(streamData.awayScore, 10);
-  if (streamData.period != null && !isNaN(parseInt(streamData.period, 10))) aiState.quarter = parseInt(streamData.period, 10);
-  if (streamData.shotClock != null && !isNaN(parseInt(streamData.shotClock, 10))) aiState.shotSeconds = parseInt(streamData.shotClock, 10);
-
-  if (streamData.gameClockStream) S.gameClockStream = streamData.gameClockStream;
-  if (streamData.shotClockStream) S.shotClockStream = streamData.shotClockStream;
-  if (streamData.homeScoreStream) S.homeScoreStream = streamData.homeScoreStream;
-  if (streamData.awayScoreStream) S.awayScoreStream = streamData.awayScoreStream;
-  if (streamData.periodStream) S.periodStream = streamData.periodStream;
+  if (streamData.homeScore != null && streamData.homeScore !== '' && !isNaN(parseInt(streamData.homeScore, 10))) {
+    aiState.homeScore = parseInt(streamData.homeScore, 10);
+  }
+  if (streamData.awayScore != null && streamData.awayScore !== '' && !isNaN(parseInt(streamData.awayScore, 10))) {
+    aiState.awayScore = parseInt(streamData.awayScore, 10);
+  }
+  if (streamData.period != null && streamData.period !== '' && !isNaN(parseInt(streamData.period, 10))) {
+    aiState.quarter = parseInt(streamData.period, 10);
+  }
+  if (streamData.shotClock != null && streamData.shotClock !== '' && !isNaN(parseInt(streamData.shotClock, 10))) {
+    aiState.shotSeconds = parseInt(streamData.shotClock, 10);
+  }
 
   renderAll();
 }
@@ -1206,27 +1200,15 @@ if (useFirebase && db) {
       if (val) applyStateMessage(val);
     });
 
-    // Live optical scanner stream (listen to both exact roomKey and underscore-replaced variant)
-    const ocrKeys = [roomKey];
-    if (roomKey.includes('@')) ocrKeys.push(roomKey.replace(/@/g, '_'));
-    ocrKeys.forEach(p => {
-      db.ref(`ocr/${p}`).once('value').then(snap => {
-        const d = snap.val();
-        if (d) applyStreamData(d);
-      }).catch(() => {});
+    // Live optical scanner stream (listen strictly to user's active room)
+    db.ref(`ocr/${roomKey}`).once('value').then(snap => {
+      const d = snap.val();
+      if (d) applyStreamData(d);
+    }).catch(() => {});
 
-      db.ref(`ocr/${p}`).on('value', snap => {
-        const d = snap.val();
-        if (d) applyStreamData(d);
-      });
-    });
-
-    // Also listen to any OCR child updates matching user prefix
-    const baseEmail = roomKey.split('@')[0];
-    db.ref('ocr').on('child_changed', snap => {
-      if (snap.key.startsWith(baseEmail) || snap.key === roomKey) {
-        applyStreamData(snap.val());
-      }
+    db.ref(`ocr/${roomKey}`).on('value', snap => {
+      const d = snap.val();
+      if (d) applyStreamData(d);
     });
 
     // Live buzzer / horn listener

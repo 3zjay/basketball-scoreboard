@@ -1369,6 +1369,16 @@
 
         preprocess(ctx, canvas.width, canvas.height, key);
 
+        // Run OCR digit recognition on the preprocessed crop
+        const recognized = recognizeCanvasDigits(ctx, canvas.width, canvas.height, key);
+        if (recognized) {
+          if (key === 'clock') payload.clock = recognized;
+          else if (key === 'home') payload.homeScore = recognized;
+          else if (key === 'away') payload.awayScore = recognized;
+          else if (key === 'shot') payload.shotClock = recognized;
+          else if (key === 'period') payload.period = recognized;
+        }
+
         // Update in-box binarized canvas preview
         const cPreview = document.getElementById(`crop-preview-${key}`);
         if (cPreview) {
@@ -1391,8 +1401,8 @@
           }
           const ocrTextEl = document.getElementById('ocr-recognized-text');
           if (ocrTextEl) {
-            ocrTextEl.textContent = 'Live Feed Stream';
-            ocrTextEl.style.color = '#16c784';
+            ocrTextEl.textContent = recognized ? `OCR: ${recognized}` : 'Live Feed Stream';
+            ocrTextEl.style.color = recognized ? '#16c784' : '#f5c842';
           }
         }
 
