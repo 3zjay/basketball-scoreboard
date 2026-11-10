@@ -101,10 +101,10 @@
       position: relative;
     }
 
-    /* ════ 1. VENUE SEGMENT (FAR LEFT END) ════ */
+    /* ════ 1. VENUE SEGMENT (FAR LEFT END — Matches Scripps Sports style) ════ */
     .seg-venue {
-      min-width: 9.2vw;
-      max-width: 12.5vw;
+      min-width: 9.5vw;
+      max-width: 13vw;
       background: linear-gradient(180deg, #181922 0%, #0d0e13 100%);
       border-right: 1.5px solid rgba(255, 255, 255, 0.12);
       display: flex;
@@ -120,22 +120,22 @@
     .venue-tag {
       display: flex;
       align-items: center;
-      gap: 0.3vw;
-      font-size: 0.52vw;
+      gap: 0.35vw;
+      font-size: 0.58vw;
       font-weight: 800;
-      letter-spacing: 0.14vw;
+      letter-spacing: 0.16vw;
       text-transform: uppercase;
       color: #ffaa00;
       line-height: 1;
-      margin-bottom: 0.15vw;
+      margin-bottom: 0.2vw;
     }
 
     .venue-pulse-dot {
-      width: 0.36vw;
-      height: 0.36vw;
+      width: 0.38vw;
+      height: 0.38vw;
       border-radius: 50%;
       background: #ff3b30;
-      box-shadow: 0 0 0.3vw #ff3b30;
+      box-shadow: 0 0 0.35vw #ff3b30;
       animation: venuePulse 1.2s infinite alternate;
     }
     @keyframes venuePulse {
@@ -145,29 +145,29 @@
 
     .venue-name {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: 0.95vw;
+      font-size: 1.25vw;
       font-weight: 900;
       color: #ffffff;
       text-transform: uppercase;
-      letter-spacing: 0.05vw;
+      letter-spacing: 0.04vw;
       line-height: 1;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 10vw;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      max-width: 10.5vw;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
     }
 
     /* ════ 2 & 4. TEAM BANNERS (AWAY ON LEFT, HOME ON RIGHT) ════ */
     .seg-team {
       flex: 1 1 0;
       min-width: 14vw;
-      max-width: 18.5vw;
+      max-width: 19vw;
       height: 100%;
       display: flex;
       align-items: center;
-      padding: 0 0.9vw;
-      gap: 0.5vw;
+      padding: 0 1vw;
+      gap: 0.6vw;
       position: relative;
       transition: background 0.4s ease;
       overflow: hidden;
@@ -210,14 +210,14 @@
 
     .team-logo-fallback {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: 1vw;
+      font-size: 1.1vw;
       font-weight: 900;
       color: #ffffff;
       background: rgba(0, 0, 0, 0.4);
       border: 1.5px solid rgba(255, 255, 255, 0.35);
       border-radius: 50%;
-      width: 3.4vw;
-      height: 3.4vw;
+      width: 3.5vw;
+      height: 3.5vw;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -226,7 +226,7 @@
       text-align: center;
     }
 
-    /* Team Names (Supports 1 or 2 lines cleanly, never truncates with ellipsis) */
+    /* Team Names (Large, bold athletic display matching Scripps Sports LAL/DET) */
     .team-name-wrap {
       flex: 1 1 0;
       min-width: 0;
@@ -252,20 +252,18 @@
       font-family: 'Barlow Condensed', sans-serif;
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 0.02vw;
-      line-height: 0.88;
-      color: #ffffff;
-      text-shadow: 0 0.15vw 0.5vw rgba(0, 0, 0, 0.85), 0 0.05vw 0.1vw rgba(0,0,0,0.9);
+      letter-spacing: 0.03vw;
+      line-height: 0.9;
       white-space: normal;
       word-break: break-word;
       overflow-wrap: break-word;
-      max-height: 3.8vw;
+      max-height: 4.0vw;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
       max-width: 100%;
-      transition: font-size 0.2s ease;
+      transition: font-size 0.2s ease, color 0.2s ease;
     }
 
     /* Possession Indicators */
@@ -394,26 +392,56 @@
       filter: drop-shadow(0 0.12vw 0.25vw rgba(0, 0, 0, 0.3));
     }
 
-    /* ════ 5. CLOCK & SHOT CLOCK SEGMENT (FAR RIGHT END) ════ */
-    /* Blends seamlessly with dark score capsule and left venue */
+    /* ════ 5. CLOCK & SHOT CLOCK SEGMENT (FAR RIGHT END — Authentic Scripps Sports Capsule) ════ */
     .seg-clock {
-      min-width: 13.5vw;
+      min-width: 14vw;
       background: linear-gradient(180deg, #181922 0%, #0d0e13 100%);
       border-left: 1.5px solid rgba(255, 255, 255, 0.12);
       border-radius: 0 9999px 9999px 0;
       display: flex;
       align-items: center;
-      justify-content: space-evenly;
-      padding: 0 1.6vw 0 1.2vw;
+      justify-content: center;
+      padding: 0 1.4vw 0 1vw;
       flex-shrink: 0;
-      gap: 0.8vw;
+      gap: 0.6vw;
+      position: relative;
     }
 
-    .clock-col {
-      display: flex;
-      flex-direction: column;
+    /* Authentic Scripps Sports White Pod for Period & Game Clock */
+    .clock-white-pod {
+      display: inline-flex;
       align-items: center;
       justify-content: center;
+      background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+      border: 1.5px solid rgba(255, 255, 255, 0.95);
+      border-radius: 0.45vw;
+      padding: 0.15vw 0.75vw;
+      height: 2.7vw;
+      box-shadow: 0 0.15vw 0.5vw rgba(0, 0, 0, 0.65), inset 0 1px 1px #ffffff;
+      gap: 0.5vw;
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+
+    /* Dark Clock Pod Variant */
+    .seg-clock.dark-clock .clock-white-pod {
+      background: #000000;
+      border-color: rgba(255, 255, 255, 0.22);
+      box-shadow: inset 0 0 0.3vw rgba(0, 0, 0, 0.9);
+    }
+    .seg-clock.dark-clock .clock-white-pod .period-val,
+    .seg-clock.dark-clock .clock-white-pod .game-clock-val {
+      color: #ffffff;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+    }
+    .seg-clock.dark-clock .clock-pod-divider {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .clock-pod-divider {
+      width: 1.5px;
+      height: 1.6vw;
+      background: rgba(10, 13, 20, 0.22);
+      flex-shrink: 0;
     }
 
     /* Period */
@@ -421,16 +449,18 @@
       font-family: 'Barlow Condensed', sans-serif;
       font-size: 1.25vw;
       font-weight: 900;
-      letter-spacing: 0.04vw;
-      color: #ffffff;
+      letter-spacing: 0.03vw;
+      color: #0a0d14;
       text-transform: uppercase;
       line-height: 1;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
       white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .period-val sup {
       font-size: 0.65em;
-      color: #ffaa00;
+      color: #e8430a;
       margin-left: 0.05vw;
     }
 
@@ -439,18 +469,19 @@
       font-family: 'Teko', sans-serif;
       font-size: 2.35vw;
       font-weight: 700;
-      color: #ffffff;
-      line-height: 0.9;
-      letter-spacing: 0.06vw;
+      color: #0a0d14;
+      line-height: 0.85;
+      letter-spacing: 0.04vw;
       font-variant-numeric: tabular-nums;
-      text-shadow: 0 0.1vw 0.3vw rgba(0, 0, 0, 0.8);
-      min-width: 4.8vw;
+      min-width: 4.4vw;
       text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transition: color 0.3s ease;
     }
     .game-clock-val.warn {
-      color: #ff4d4d;
-      text-shadow: 0 0 0.6vw rgba(255, 77, 77, 0.8);
+      color: #dc2626;
       animation: clkWarnPulse 0.5s infinite alternate;
     }
     @keyframes clkWarnPulse {
@@ -460,23 +491,24 @@
 
     /* Shot Clock Stadium Box */
     .shot-clock-pill {
-      background: #000000;
-      border: 1.5px solid rgba(255, 255, 255, 0.2);
+      background: #181b24;
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
       border-radius: 0.4vw;
-      padding: 0.1vw 0.55vw;
-      box-shadow: inset 0 0 0.3vw rgba(0, 0, 0, 0.9);
+      padding: 0.1vw 0.5vw;
+      box-shadow: inset 0 0 0.3vw rgba(0, 0, 0, 0.9), 0 0.15vw 0.4vw rgba(0,0,0,0.5);
       display: flex;
       align-items: center;
       justify-content: center;
-      min-width: 2.4vw;
-      height: 2.1vw;
+      min-width: 2.6vw;
+      height: 2.7vw;
+      flex-shrink: 0;
     }
 
     .shot-clock-val {
       font-family: 'Teko', sans-serif;
-      font-size: 1.85vw;
+      font-size: 2.1vw;
       font-weight: 700;
-      color: #ffaa00;
+      color: #ffffff;
       line-height: 0.85;
       font-variant-numeric: tabular-nums;
       text-align: center;
@@ -488,7 +520,7 @@
     }
     .shot-clock-val.zero {
       color: #ff0000;
-      text-shadow: 0 0 0.9vw #ff0000;
+      text-shadow: 0 0 0.8vw #ff0000;
       font-weight: 800;
     }
     @keyframes scPulse {
@@ -496,31 +528,111 @@
       100% { opacity: 0.35; }
     }
 
-    /* ════ OPTICAL AI SCANNER STREAM CROPS ════ */
+    /* ════ OPTICAL SCANNER LIVE FEED STREAM CROPS ════ */
     img.stream-bin-img {
       max-height: 100%;
       max-width: 100%;
       object-fit: contain;
       filter: brightness(1.25) contrast(1.25);
       border-radius: 3px;
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      outline: 1px solid rgba(0, 0, 0, 0.9);
+      background: #080c14;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.8), inset 0 0 3px rgba(255, 255, 255, 0.2);
+      padding: 1px 3px;
+      box-sizing: border-box;
       display: inline-block;
       vertical-align: middle;
     }
     .game-clock-val img.stream-bin-img {
-      height: 2.2vw;
-      max-width: 5.8vw;
+      height: 2.3vw;
+      max-width: 5.6vw;
     }
     .shot-clock-val img.stream-bin-img {
-      height: 1.8vw;
-      max-width: 2.2vw;
-    }
-    .period-val img.stream-bin-img {
-      height: 1.5vw;
+      height: 2.2vw;
       max-width: 2.4vw;
     }
-    .score-num img.stream-bin-img {
-      height: 2.8vw;
-      max-width: 4.8vw;
+    .period-val img.stream-bin-img {
+      height: 1.8vw;
+      max-width: 2.5vw;
+    }
+    .score-block img.stream-bin-img {
+      height: 3.2vw;
+      max-width: 5.2vw;
+    }
+
+    /* ════ FLOATING OPTICAL QUICK-TOGGLE BADGE ════ */
+    #optical-quick-badge {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      background: rgba(13, 17, 23, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 9999px;
+      padding: 5px 12px;
+      color: #94a3b8;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08vw;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 999;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+    #optical-quick-badge:hover {
+      background: rgba(22, 27, 34, 0.95);
+      border-color: rgba(255, 255, 255, 0.4);
+      color: #ffffff;
+      transform: scale(1.03);
+    }
+    #optical-quick-badge.active {
+      background: rgba(20, 56, 32, 0.9);
+      border-color: #10b981;
+      color: #10b981;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+    }
+    #optical-quick-badge .opt-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #64748b;
+      transition: background 0.2s ease;
+    }
+    #optical-quick-badge.active .opt-dot {
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
+    }
+
+    /* ════ FLOATING TOAST NOTIFICATION ════ */
+    #toast-alert {
+      position: fixed;
+      top: 1.5vw;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(13, 17, 23, 0.95);
+      border: 1.5px solid #ffaa00;
+      color: #ffffff;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.1vw;
+      font-weight: 800;
+      letter-spacing: 0.05vw;
+      text-transform: uppercase;
+      padding: 0.4vw 1.2vw;
+      border-radius: 9999px;
+      box-shadow: 0 0.5vw 2vw rgba(0,0,0,0.85);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+      z-index: 99999;
+    }
+    #toast-alert.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
     }
 
     /* ════ FLOATING BROADCAST CONTROLS HUD (Press 'H' to toggle) ════ */
@@ -613,35 +725,54 @@
       </div>
     </div>
 
-    <!-- ⑤ PERIOD · GAME CLOCK · SHOT CLOCK (Far Right - Blends seamlessly into dark theme) -->
-    <div class="seg-clock">
-      <!-- Period -->
-      <div class="clock-col">
+    <!-- ⑤ CLOCK & SHOT CLOCK SEGMENT (Far Right — Authentic Scripps Sports Capsule) -->
+    <div class="seg-clock" id="segClock">
+      <!-- White Scripps Clock Pod containing Period and Game Clock -->
+      <div class="clock-white-pod" id="clockWhitePod">
         <div class="period-val" id="periodVal">1<sup>ST</sup></div>
-      </div>
-
-      <!-- Game Time -->
-      <div class="clock-col">
+        <div class="clock-pod-divider" id="clockPodDivider"></div>
         <div class="game-clock-val" id="gameClockVal">10:00</div>
       </div>
 
-      <!-- Shot Clock -->
-      <div class="clock-col">
-        <div class="shot-clock-pill">
-          <div class="shot-clock-val" id="shotClockVal">14</div>
-        </div>
+      <!-- Adjacent Shot Clock Stadium Box -->
+      <div class="shot-clock-pill" id="shotClockPill">
+        <div class="shot-clock-val" id="shotClockVal">14</div>
       </div>
     </div>
 
   </div><!-- /#scorebug -->
 </div><!-- /#scorebug-wrapper -->
 
+<!-- Floating Optical Quick Toggle Badge (Clickable or press 'O') -->
+<div id="optical-quick-badge" onclick="toggleOpticalMode()" title="Click or Press 'O' to toggle Optical Scanner Live Feed">
+  <span class="opt-dot"></span>
+  <span id="optBadgeText">OPTICAL FEED: OFF</span>
+</div>
+
+<!-- Floating Toast Message -->
+<div id="toast-alert"></div>
+
 <!-- Operator Test HUD Panel (Toggle with 'H' key) -->
 <div id="hud-panel">
   <h4>⚙ Scorebug Controls</h4>
-  <p style="font-size:11px;color:#8a95a8;margin-bottom:8px;">Press <strong>H</strong> anytime to show/hide this panel.</p>
+  <p style="font-size:11px;color:#8a95a8;margin-bottom:8px;">Press <strong>H</strong> to toggle this panel • Press <strong>O</strong> to toggle Optical Feed</p>
+  
+  <div style="margin-bottom:10px; padding:8px 10px; background:#161c27; border-radius:6px; border:1px solid #2d3748;">
+    <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin:0;">
+      <span style="font-weight:700; color:#ffaa00; font-size:12px;">📷 Optical Scanner Feed:</span>
+      <input type="checkbox" id="hudOpticalToggle" onchange="setOpticalMode(this.checked)" style="width:16px; height:16px; accent-color:#e8430a; cursor:pointer;">
+    </label>
+    <div id="hudOpticalStatus" style="font-size:10px; color:#10b981; margin-top:4px;">Feed: Active (Phone Connected)</div>
+  </div>
+
+  <label>Clock Pod Style:</label>
+  <select id="hudClockTheme" onchange="setClockTheme(this.value)">
+    <option value="white">Scripps White Pod (Authentic)</option>
+    <option value="dark">Dark Blended Pod</option>
+  </select>
+
   <label>Venue Name:</label>
-  <input type="text" id="hudVenue" value="HOOP CULTURE ARENA" oninput="overrideVenue(this.value)">
+  <input type="text" id="hudVenue" value="AUDLEY" oninput="overrideVenue(this.value)">
   <label>Scorebug Position:</label>
   <select id="hudPos" onchange="overridePos(this.value)">
     <option value="bottom">Bottom Center</option>
@@ -651,6 +782,7 @@
   <input type="range" min="0.6" max="1.5" step="0.05" value="1.0" oninput="overrideScale(this.value)">
   <div class="btn-row">
     <button onclick="toggleSwap()">⇄ Swap Home/Away</button>
+    <button onclick="toggleOpticalMode()" style="background:#e8430a;">📷 Toggle Optical</button>
   </div>
 </div>
 
@@ -701,6 +833,18 @@ let isSwapped = gP('swap') === '1' || gP('homeleft') === '1';
 const customVenueParam = gP('venue');
 const posParam = gP('pos') || 'bottom';
 const scaleParam = parseFloat(gP('scale') || '1.0');
+
+// Optical Scanner Live Feed Option
+let opticalMode = gP('optical') === '1' || gP('optical') === 'true' || gP('feed') === '1' || gP('scanner') === '1';
+if (!opticalMode) {
+  try {
+    const savedOpt = localStorage.getItem('hc_scripps_optical');
+    if (savedOpt !== null) opticalMode = savedOpt === '1';
+  } catch(e) {}
+}
+
+// Clock Pod Styling Option ('white' = authentic Scripps Sports white pod; 'dark' = dark blended pod)
+let clockTheme = gP('clock') || 'white';
 
 /* ══ STATE DEFINITION ══ */
 const DEFAULT_STATE = {
@@ -813,6 +957,7 @@ function renderAll() {
   renderScores();
   renderClock();
   renderShotClock();
+  applyClockTheme();
 }
 
 /* 1. Venue */
@@ -834,6 +979,17 @@ function renderVenue() {
   if (el.textContent !== text) el.textContent = text;
 }
 
+/* Perceived Luminance Contrast (ITU-R BT.709) */
+function getContrastColor(hexColor) {
+  if (!hexColor || hexColor[0] !== '#') return '#ffffff';
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16) || 0;
+  const g = parseInt(hex.substr(2, 2), 16) || 0;
+  const b = parseInt(hex.substr(4, 2), 16) || 0;
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return lum > 140 ? '#0a0d14' : '#ffffff';
+}
+
 /* 2. Teams (Names, Colors, Logos, Possession) */
 function renderTeams() {
   // Determine Left Team (Away by default) and Right Team (Home by default)
@@ -853,17 +1009,33 @@ function renderTeams() {
   document.documentElement.style.setProperty('--away-color', leftColor);
   document.documentElement.style.setProperty('--home-color', rightColor);
 
+  // Dynamic contrast colors for team names (Dark text on yellow/gold like Scripps Sports LAL, white on dark like DET)
+  const leftTextColor = getContrastColor(leftColor);
+  const rightTextColor = getContrastColor(rightColor);
+
   // Team Names
   const leftNameEl = $('awayTeamName');
-  if (leftNameEl && leftNameEl.textContent !== leftName) {
-    leftNameEl.textContent = leftName;
+  if (leftNameEl) {
+    if (leftNameEl.textContent !== leftName) leftNameEl.textContent = leftName;
     adjustTeamFontSize(leftNameEl, leftName);
+    leftNameEl.style.color = leftTextColor;
+    if (leftTextColor === '#0a0d14') {
+      leftNameEl.style.textShadow = '0 1px 0 rgba(255,255,255,0.4), 0 0 3px rgba(255,255,255,0.3)';
+    } else {
+      leftNameEl.style.textShadow = '0 0.15vw 0.5vw rgba(0, 0, 0, 0.85), 0 0.05vw 0.1vw rgba(0,0,0,0.9)';
+    }
   }
 
   const rightNameEl = $('homeTeamName');
-  if (rightNameEl && rightNameEl.textContent !== rightName) {
-    rightNameEl.textContent = rightName;
+  if (rightNameEl) {
+    if (rightNameEl.textContent !== rightName) rightNameEl.textContent = rightName;
     adjustTeamFontSize(rightNameEl, rightName);
+    rightNameEl.style.color = rightTextColor;
+    if (rightTextColor === '#0a0d14') {
+      rightNameEl.style.textShadow = '0 1px 0 rgba(255,255,255,0.4), 0 0 3px rgba(255,255,255,0.3)';
+    } else {
+      rightNameEl.style.textShadow = '0 0.15vw 0.5vw rgba(0, 0, 0, 0.85), 0 0.05vw 0.1vw rgba(0,0,0,0.9)';
+    }
   }
 
   // Logos
@@ -898,13 +1070,13 @@ function adjustTeamFontSize(el, text) {
   const len = text.length;
   const words = text.trim().split(/\s+/).length;
   if (len <= 4) {
-    el.style.fontSize = '1.7vw';
-  } else if (len <= 8) {
-    el.style.fontSize = '1.25vw';
-  } else if (len <= 13 || words >= 2) {
-    el.style.fontSize = '1.0vw';
+    el.style.fontSize = '2.4vw'; // Large athletic display like LAL / DET in Scripps Sports
+  } else if (len <= 7) {
+    el.style.fontSize = '1.85vw'; // Bold presence for PINTURA / FREEDOM
+  } else if (len <= 11) {
+    el.style.fontSize = words >= 2 ? '1.35vw' : '1.55vw';
   } else {
-    el.style.fontSize = '0.85vw';
+    el.style.fontSize = '1.15vw';
   }
 }
 
@@ -934,7 +1106,7 @@ function setLogoBadge(circleId, fallbackId, logoUrl, fallbackAbbr) {
 function renderStreamOrText(el, streamImgUrl, fallbackText, maxHeightCss) {
   if (typeof el === 'string') el = $(el);
   if (!el) return;
-  if (aiSyncActive && streamImgUrl) {
+  if (opticalMode && streamImgUrl) {
     let img = el.querySelector('img.stream-bin-img');
     if (!img) {
       el.innerHTML = '';
@@ -973,25 +1145,36 @@ function renderScores() {
   const leftScore  = getEffectiveScore(leftTeamKey);
   const rightScore = getEffectiveScore(rightTeamKey);
 
+  const leftStream  = isSwapped ? S.homeScoreStream : S.awayScoreStream;
+  const rightStream = isSwapped ? S.awayScoreStream : S.homeScoreStream;
+
   const leftScoreEl = $('awayScore');
   if (leftScoreEl) {
-    const strayImg = leftScoreEl.querySelector('img');
-    if (strayImg) leftScoreEl.innerHTML = '';
-    const sStr = String(leftScore);
-    if (leftScoreEl.textContent !== sStr) {
-      leftScoreEl.textContent = sStr;
-      if (lastAwayScore !== -1) triggerBump(leftScoreEl);
+    if (opticalMode && leftStream) {
+      renderStreamOrText(leftScoreEl, leftStream, String(leftScore), '3.2vw');
+    } else {
+      const img = leftScoreEl.querySelector('img.stream-bin-img');
+      if (img) leftScoreEl.innerHTML = '';
+      const sStr = String(leftScore);
+      if (leftScoreEl.textContent !== sStr) {
+        leftScoreEl.textContent = sStr;
+        if (lastAwayScore !== -1) triggerBump(leftScoreEl);
+      }
     }
   }
 
   const rightScoreEl = $('homeScore');
   if (rightScoreEl) {
-    const strayImg = rightScoreEl.querySelector('img');
-    if (strayImg) rightScoreEl.innerHTML = '';
-    const sStr = String(rightScore);
-    if (rightScoreEl.textContent !== sStr) {
-      rightScoreEl.textContent = sStr;
-      if (lastHomeScore !== -1) triggerBump(rightScoreEl);
+    if (opticalMode && rightStream) {
+      renderStreamOrText(rightScoreEl, rightStream, String(rightScore), '3.2vw');
+    } else {
+      const img = rightScoreEl.querySelector('img.stream-bin-img');
+      if (img) rightScoreEl.innerHTML = '';
+      const sStr = String(rightScore);
+      if (rightScoreEl.textContent !== sStr) {
+        rightScoreEl.textContent = sStr;
+        if (lastHomeScore !== -1) triggerBump(rightScoreEl);
+      }
     }
   }
 
@@ -1022,9 +1205,13 @@ function renderClock() {
   else if (q === 5) pText = 'OT';
   else if (q > 5) pText = `${q - 4}OT`;
 
-  const perImg = perEl.querySelector('img');
-  if (perImg) perEl.innerHTML = '';
-  if (perEl.innerHTML !== pText) perEl.innerHTML = pText;
+  if (opticalMode && S.periodStream) {
+    renderStreamOrText(perEl, S.periodStream, pText, '1.8vw');
+  } else {
+    const perImg = perEl.querySelector('img');
+    if (perImg) perEl.innerHTML = '';
+    if (perEl.innerHTML !== pText) perEl.innerHTML = pText;
+  }
 
   // Clock Text Calculation
   let cStr = '10:00';
@@ -1041,13 +1228,16 @@ function renderClock() {
     }
   }
 
-  // Clear any stray image if present so clock digits are never occluded
-  const strayImg = clkEl.querySelector('img');
-  if (strayImg) clkEl.innerHTML = '';
-
-  if (clkEl.textContent !== cStr) clkEl.textContent = cStr;
-  const isWarn = secs !== undefined && secs !== null && secs < 60;
-  clkEl.classList.toggle('warn', isWarn);
+  if (opticalMode && S.gameClockStream) {
+    renderStreamOrText(clkEl, S.gameClockStream, cStr, '2.3vw');
+    clkEl.classList.remove('warn');
+  } else {
+    const strayImg = clkEl.querySelector('img');
+    if (strayImg) clkEl.innerHTML = '';
+    if (clkEl.textContent !== cStr) clkEl.textContent = cStr;
+    const isWarn = secs !== undefined && secs !== null && secs < 60;
+    clkEl.classList.toggle('warn', isWarn);
+  }
 }
 
 /* 5. Shot Clock */
@@ -1057,13 +1247,23 @@ function renderShotClock() {
   const s = (aiSyncActive && aiState.shotSeconds !== null) ? aiState.shotSeconds : (S.shotSeconds !== undefined ? S.shotSeconds : 24);
   const sStr = String(s);
 
-  // Clear any stray image if present so shot clock is never occluded
-  const strayImg = scEl.querySelector('img');
-  if (strayImg) scEl.innerHTML = '';
+  if (opticalMode && S.shotClockStream) {
+    renderStreamOrText(scEl, S.shotClockStream, sStr, '2.2vw');
+    scEl.classList.remove('urgent');
+    scEl.classList.remove('zero');
+  } else {
+    const strayImg = scEl.querySelector('img');
+    if (strayImg) scEl.innerHTML = '';
+    if (scEl.textContent !== sStr) scEl.textContent = sStr;
+    scEl.classList.toggle('urgent', s <= 5 && s > 0);
+    scEl.classList.toggle('zero', s === 0);
+  }
+}
 
-  if (scEl.textContent !== sStr) scEl.textContent = sStr;
-  scEl.classList.toggle('urgent', s <= 5 && s > 0);
-  scEl.classList.toggle('zero', s === 0);
+/* 6. Clock Capsule Theme */
+function applyClockTheme() {
+  const seg = $('segClock');
+  if (seg) seg.classList.toggle('dark-clock', clockTheme === 'dark');
 }
 
 /* ══ REALTIME DATA SYNCHRONIZATION ══ */
@@ -1074,6 +1274,10 @@ function applyStateMessage(msgData) {
   _lastStateMsgTime = Date.now();
   if (msgData.aiSyncActive !== undefined) aiSyncActive = !!msgData.aiSyncActive;
   if (msgData.aiSyncEnabled !== undefined) aiSyncActive = !!msgData.aiSyncEnabled;
+  if (msgData.opticalFeed !== undefined) {
+    opticalMode = !!msgData.opticalFeed;
+    updateOpticalHudUI();
+  }
   S = { ...S, ...msgData };
   renderAll();
   syncLocalTimers();
@@ -1083,6 +1287,11 @@ function applyStreamData(streamData) {
   if (!streamData) return;
   if (streamData.streamActive === false) {
     aiSyncActive = false;
+    S.gameClockStream = null;
+    S.shotClockStream = null;
+    S.homeScoreStream = null;
+    S.awayScoreStream = null;
+    S.periodStream = null;
     aiState.clockStr = null;
     aiState.gameSeconds = null;
     aiState.homeScore = null;
@@ -1090,9 +1299,16 @@ function applyStreamData(streamData) {
     aiState.quarter = null;
     aiState.shotSeconds = null;
     renderAll();
+    updateOpticalHudUI();
     return;
   }
   aiSyncActive = true;
+
+  if (streamData.gameClockStream) S.gameClockStream = streamData.gameClockStream;
+  if (streamData.shotClockStream) S.shotClockStream = streamData.shotClockStream;
+  if (streamData.homeScoreStream) S.homeScoreStream = streamData.homeScoreStream;
+  if (streamData.awayScoreStream) S.awayScoreStream = streamData.awayScoreStream;
+  if (streamData.periodStream) S.periodStream = streamData.periodStream;
 
   if (streamData.clock != null && String(streamData.clock).trim()) {
     const cStr = String(streamData.clock).trim();
@@ -1119,6 +1335,7 @@ function applyStreamData(streamData) {
   }
 
   renderAll();
+  updateOpticalHudUI();
 }
 
 /* Local clock tickers for smooth continuous decrement between network pulses */
@@ -1305,8 +1522,77 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'h' || e.key === 'H') {
     const hud = $('hud-panel');
     if (hud) hud.classList.toggle('show');
+  } else if (e.key === 'o' || e.key === 'O') {
+    toggleOpticalMode();
   }
 });
+
+let toastTimer = null;
+function showToast(msg) {
+  const t = $('toast-alert');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    t.classList.remove('show');
+  }, 2200);
+}
+
+function setOpticalMode(enabled) {
+  opticalMode = !!enabled;
+  try {
+    localStorage.setItem('hc_scripps_optical', opticalMode ? '1' : '0');
+  } catch(e) {}
+  updateOpticalHudUI();
+  renderAll();
+  showToast(opticalMode ? '📷 Optical Scanner Live Feed: ON' : '🔢 Digital Broadcast Numbers: ON');
+}
+
+function toggleOpticalMode() {
+  setOpticalMode(!opticalMode);
+}
+
+function setClockTheme(theme) {
+  clockTheme = theme;
+  const segClock = $('segClock');
+  if (segClock) {
+    segClock.classList.toggle('dark-clock', clockTheme === 'dark');
+  }
+  const sel = $('hudClockTheme');
+  if (sel) sel.value = clockTheme;
+  renderClock();
+  showToast(clockTheme === 'dark' ? '⏱ Dark Clock Pod Active' : '⏱ Scripps White Clock Pod Active');
+}
+
+function updateOpticalHudUI() {
+  const toggle = $('hudOpticalToggle');
+  if (toggle) toggle.checked = opticalMode;
+
+  const badgeText = $('optBadgeText');
+  const badge = $('optical-quick-badge');
+  if (badgeText && badge) {
+    if (opticalMode) {
+      badgeText.textContent = 'OPTICAL FEED: ON';
+      badge.classList.add('active');
+    } else {
+      badgeText.textContent = 'OPTICAL FEED: OFF';
+      badge.classList.remove('active');
+    }
+  }
+
+  const statusHint = $('hudOpticalStatus');
+  if (statusHint) {
+    const hasStreams = !!(S.gameClockStream || S.shotClockStream || S.homeScoreStream || S.awayScoreStream);
+    if (hasStreams) {
+      statusHint.textContent = 'Scanner: Connected & Streaming Live';
+      statusHint.style.color = '#10b981';
+    } else {
+      statusHint.textContent = 'Scanner: Standby (Waiting for camera)';
+      statusHint.style.color = '#f59e0b';
+    }
+  }
+}
 
 function overrideVenue(val) {
   S.venue = val;
@@ -1334,9 +1620,12 @@ function overrideScale(val) {
 function toggleSwap() {
   isSwapped = !isSwapped;
   renderAll();
+  showToast('⇄ Teams Swapped');
 }
 
-// Initial draw
+// Initial draw & setup
+applyClockTheme();
+updateOpticalHudUI();
 renderAll();
 </script>
 </body>
