@@ -126,7 +126,7 @@ html, body {
 
 <div id="unlock" onclick="initAudio()">
   <h2>⏱ Shot Clock</h2>
-  <button>TAP TO ACTIVATE</button>
+  <button type="button" onclick="initAudio(); event.stopPropagation();">TAP TO ACTIVATE</button>
 </div>
 
 <div id="noSignal" class="show">NO SIGNAL</div>
@@ -204,16 +204,23 @@ _buzzAudio.preload = 'auto';
 _buzzAudio.load();
 
 function initAudio() {
-  if (!audioCtx) audioCtx = new AudioCtx();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  // Pre-warm buzzer audio in hardware buffer
-  _buzzAudio.volume = 0;
-  _buzzAudio.play().then(() => { 
-    _buzzAudio.pause(); 
-    _buzzAudio.currentTime = 0; 
-    _buzzAudio.volume = 1.0;
-  }).catch(() => {});
-  document.getElementById('unlock').style.display = 'none';
+  try {
+    if (!audioCtx) audioCtx = new AudioCtx();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch(e) { console.warn("AudioContext init error:", e); }
+
+  try {
+    // Pre-warm buzzer audio in hardware buffer
+    _buzzAudio.volume = 0;
+    _buzzAudio.play().then(() => { 
+      _buzzAudio.pause(); 
+      _buzzAudio.currentTime = 0; 
+      _buzzAudio.volume = 1.0;
+    }).catch(() => {});
+  } catch(e) { console.warn("Audio pre-warm error:", e); }
+
+  const unlockEl = document.getElementById('unlock');
+  if (unlockEl) unlockEl.style.display = 'none';
 }
 
 document.addEventListener('touchstart', () => {
@@ -254,7 +261,6 @@ function render() {
 }
 
 // ── SSE ── Server pushes every second — no local tick needed ──
-let _lastBuzzTime = 0;
 function connectSSE() {
   if (useFirebase && db) {
     const ns = document.getElementById('noSignal');
