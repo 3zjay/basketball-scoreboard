@@ -101,33 +101,33 @@
       position: relative;
     }
 
-    /* ════ 1. VENUE SEGMENT (FAR LEFT END — Matches Scripps Sports style) ════ */
+    /* ════ 1. BROADCAST & VENUE SEGMENT (FAR LEFT END — Matches Scripps Sports width and layout) ════ */
     .seg-venue {
-      min-width: 9.5vw;
-      max-width: 12.5vw;
+      width: 14.8vw;
+      min-width: 14.8vw;
+      max-width: 14.8vw;
+      flex: 0 0 14.8vw;
       background: linear-gradient(180deg, #101524 0%, #060910 100%);
       border-radius: 9999px 0 0 9999px;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: flex-start;
-      padding: 0 2vw 0 1.6vw;
+      padding: 0 2.2vw 0 1.8vw;
       flex-shrink: 0;
       position: relative;
       z-index: 5;
     }
 
-    .venue-tag {
+    .broadcast-line {
       display: flex;
       align-items: center;
-      gap: 0.35vw;
-      font-size: 0.58vw;
-      font-weight: 800;
-      letter-spacing: 0.16vw;
-      text-transform: uppercase;
-      color: #ffaa00;
+      gap: 0.4vw;
       line-height: 1;
-      margin-bottom: 0.2vw;
+      margin-bottom: 0.28vw;
+      white-space: nowrap;
+      overflow: hidden;
+      max-width: 100%;
     }
 
     .venue-pulse-dot {
@@ -137,24 +137,60 @@
       background: #ff3b30;
       box-shadow: 0 0 0.35vw #ff3b30;
       animation: venuePulse 1.2s infinite alternate;
+      flex-shrink: 0;
     }
     @keyframes venuePulse {
       0% { opacity: 0.4; transform: scale(0.85); }
       100% { opacity: 1; transform: scale(1.15); box-shadow: 0 0 0.5vw #ff3b30; }
     }
 
-    .venue-name {
+    .broadcast-brand-val {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: 1.25vw;
+      font-size: 1.15vw;
       font-weight: 900;
       color: #ffffff;
       text-transform: uppercase;
-      letter-spacing: 0.04vw;
+      letter-spacing: 0.05vw;
       line-height: 1;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 10.5vw;
+      max-width: 10vw;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+    }
+
+    .venue-line {
+      display: flex;
+      align-items: center;
+      gap: 0.4vw;
+      line-height: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      max-width: 100%;
+    }
+
+    .venue-tag-label {
+      font-size: 0.55vw;
+      font-weight: 800;
+      letter-spacing: 0.14vw;
+      text-transform: uppercase;
+      color: #ffaa00;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .venue-name-val {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.15vw;
+      font-weight: 900;
+      color: #ffffff;
+      text-transform: uppercase;
+      letter-spacing: 0.05vw;
+      line-height: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 8vw;
       text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
     }
 
@@ -174,8 +210,8 @@
     .seg-team.away {
       margin-left: -1.4vw;
       border-radius: 9999px 0 0 9999px;
-      padding: 0 1vw 0 1.4vw;
-      gap: 0.7vw;
+      padding: 0 1vw 0 1.8vw;
+      gap: 0.75vw;
       z-index: 10;
       box-shadow: -0.25vw 0 0.8vw rgba(0, 0, 0, 0.55);
       border-left: 1.5px solid rgba(255, 255, 255, 0.38);
@@ -187,8 +223,8 @@
     .seg-team.home {
       margin-right: -1.4vw;
       border-radius: 0 9999px 9999px 0;
-      padding: 0 1.4vw 0 1vw;
-      gap: 0.7vw;
+      padding: 0 1.8vw 0 1vw;
+      gap: 0.75vw;
       z-index: 10;
       box-shadow: 0.25vw 0 0.8vw rgba(0, 0, 0, 0.55);
       border-right: 1.5px solid rgba(255, 255, 255, 0.38);
@@ -345,6 +381,7 @@
       align-items: center;
       justify-content: center;
       min-width: 4.6vw;
+      position: relative;
     }
 
     .score-num {
@@ -357,6 +394,7 @@
       font-variant-numeric: tabular-nums;
       text-shadow: 0 0.1vw 0.4vw rgba(0, 0, 0, 0.85);
       transition: transform 0.15s ease-out, color 0.15s ease-out;
+      margin-top: 0.32vw;
     }
 
     @keyframes scoreBump {
@@ -377,8 +415,9 @@
       opacity: 0;
       transition: opacity 0.3s ease;
       line-height: 1;
-      margin-top: 0.1vw;
       text-shadow: 0 0 0.3vw rgba(255, 170, 0, 0.6);
+      position: absolute;
+      bottom: 0.1vw;
     }
     .bonus-tag.active {
       opacity: 1;
@@ -431,7 +470,10 @@
 
     /* ════ 5. CLOCK & SHOT CLOCK SEGMENT (FAR RIGHT END — Symmetrical Dark End Cap matching Venue) ════ */
     .seg-clock {
-      min-width: 13.5vw;
+      width: 14.8vw;
+      min-width: 14.8vw;
+      max-width: 14.8vw;
+      flex: 0 0 14.8vw;
       display: flex;
       align-items: center;
       justify-content: flex-end;
@@ -694,13 +736,16 @@
 <div id="scorebug-wrapper">
   <div id="scorebug">
 
-    <!-- ① VENUE BLOCK (Far Left - Matches Scripps Sports placement) -->
-    <div class="seg-venue">
-      <div class="venue-tag">
+    <!-- ① BROADCAST & VENUE BLOCK (Far Left - Matches Scripps Sports placement) -->
+    <div class="seg-venue" id="segVenue">
+      <div class="broadcast-line">
         <span class="venue-pulse-dot"></span>
-        <span id="venueTag">VENUE</span>
+        <span class="broadcast-brand-val" id="broadcastName">HOOP CULTURE</span>
       </div>
-      <div class="venue-name" id="venueName">AUDLEY</div>
+      <div class="venue-line">
+        <span class="venue-tag-label">VENUE</span>
+        <span class="venue-name-val" id="venueName">AUDLEY</span>
+      </div>
     </div>
 
     <!-- ② AWAY TEAM (Left Team - Vibrant Team Color Banner) -->
@@ -802,6 +847,8 @@
     <option value="dark">Dark Blended Pod</option>
   </select>
 
+  <label>Broadcast Brand:</label>
+  <input type="text" id="hudBroadcast" value="HOOP CULTURE" oninput="overrideBroadcast(this.value)">
   <label>Venue Name:</label>
   <input type="text" id="hudVenue" value="AUDLEY" oninput="overrideVenue(this.value)">
   <label>Scorebug Position:</label>
@@ -991,23 +1038,35 @@ function renderAll() {
   applyClockTheme();
 }
 
-/* 1. Venue */
+/* 1. Broadcast & Venue */
 function renderVenue() {
-  const el = $('venueName');
-  if (!el) return;
-  let text = 'AUDLEY';
+  const vEl = $('venueName');
+  const bEl = $('broadcastName');
+
+  // Venue Name
+  let venueText = 'AUDLEY';
   if (customVenueParam) {
-    text = customVenueParam.toUpperCase();
-  } else if (S.rp2Value && S.rp2Value !== '—') {
-    text = S.rp2Value.trim().toUpperCase();
+    venueText = customVenueParam.toUpperCase();
   } else if (S.venue && S.venue.trim() && S.venue.trim().toUpperCase() !== 'HOOP CULTURE ARENA') {
-    text = S.venue.trim().toUpperCase();
-  } else if (S.rp1Value && S.rp1Value !== '—' && S.rp1Value.toLowerCase() !== 'facebook') {
-    text = S.rp1Value.trim().toUpperCase();
+    venueText = S.venue.trim().toUpperCase();
+  } else if (S.rp2Value && S.rp2Value !== '—') {
+    venueText = S.rp2Value.trim().toUpperCase();
   } else if (S.venue && S.venue.trim()) {
-    text = S.venue.trim().toUpperCase();
+    venueText = S.venue.trim().toUpperCase();
   }
-  if (el.textContent !== text) el.textContent = text;
+  if (vEl && vEl.textContent !== venueText) vEl.textContent = venueText;
+
+  // Broadcast Name
+  let broadcastText = 'HOOP CULTURE';
+  const customBroadcastParam = gP('broadcast') || gP('network');
+  if (customBroadcastParam) {
+    broadcastText = customBroadcastParam.toUpperCase();
+  } else if (S.broadcast && S.broadcast.trim()) {
+    broadcastText = S.broadcast.trim().toUpperCase();
+  } else if (S.rp1Value && S.rp1Value !== '—' && S.rp1Value.toLowerCase() !== 'facebook') {
+    broadcastText = S.rp1Value.trim().toUpperCase();
+  }
+  if (bEl && bEl.textContent !== broadcastText) bEl.textContent = broadcastText;
 }
 
 /* Perceived Luminance Contrast (ITU-R BT.709) */
@@ -1671,6 +1730,11 @@ function updateOpticalHudUI() {
       statusHint.style.color = '#f59e0b';
     }
   }
+}
+
+function overrideBroadcast(val) {
+  S.broadcast = val;
+  renderVenue();
 }
 
 function overrideVenue(val) {
