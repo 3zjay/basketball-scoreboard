@@ -470,6 +470,8 @@
       db = firebase.database();
     }
 
+    const myClientId = 'cam_' + Math.random().toString(36).slice(2, 9) + '_' + Date.now();
+
     // Drag-and-drop state
     let activeDragFrame = null;
     let activeResizeFrame = null;
@@ -485,6 +487,154 @@
     };
 
     let currentDeviceId = null;
+
+    // ── Normalized Video Space (0.0 to 1.0) Mapping Helpers ──
+    function screenToVideoNorm(frame) {
+      const video = document.getElementById('camera-view');
+      if (!video || !video.videoWidth || !video.offsetWidth) return null;
+      const videoW = video.videoWidth;
+      const videoH = video.videoHeight;
+      const viewW = video.offsetWidth;
+      const viewH = video.offsetHeight;
+      const streamRatio = videoW / videoH;
+      const viewRatio = viewW / viewH;
+
+      let scaledWidth, scaledHeight;
+      let offsetX = 0, offsetY = 0;
+
+      if (viewRatio > streamRatio) {
+        scaledWidth = viewW;
+        scaledHeight = viewW / streamRatio;
+        offsetY = (scaledHeight - viewH) / 2;
+      } else {
+        scaledWidth = viewH * streamRatio;
+        scaledHeight = viewH;
+        offsetX = (scaledWidth - viewW) / 2;
+      }
+
+      const boxX = frame.offsetLeft;
+      const boxY = frame.offsetTop;
+      const boxW = frame.offsetWidth;
+      const boxH = frame.offsetHeight;
+
+      const xInScaled = boxX + offsetX;
+      const yInScaled = boxY + offsetY;
+
+      const cropX = Math.max(0, Math.min(videoW - 1, (xInScaled / scaledWidth) * videoW));
+      const cropY = Math.max(0, Math.min(videoH - 1, (yInScaled / scaledHeight) * videoH));
+      const cropW = Math.max(1, Math.min(videoW - cropX, (boxW / scaledWidth) * videoW));
+      const cropH = Math.max(1, Math.min(videoH - cropY, (boxH / scaledHeight) * videoH));
+
+      return {
+        x: +(cropX / videoW).toFixed(4),
+        y: +(cropY / videoH).toFixed(4),
+        w: +(cropW / videoW).toFixed(4),
+        h: +(cropH / videoH).toFixed(4)
+      };
+    }
+
+    function videoNormToScreen(norm) {
+      const video = document.getElementById('camera-view');
+      if (!video || !video.videoWidth || !video.offsetWidth) return null;
+      const videoW = video.videoWidth;
+      const videoH = video.videoHeight;
+      const viewW = video.offsetWidth;
+      const viewH = video.offsetHeight;
+      const streamRatio = videoW / videoH;
+      const viewRatio = viewW / viewH;
+
+      let scaledWidth, scaledHeight;
+      let offsetX = 0, offsetY = 0;
+
+      if (viewRatio > streamRatio) {
+        scaledWidth = viewW;
+        scaledHeight = viewW / streamRatio;
+        offsetY = (scaledHeight - viewH) / 2;
+      } else {
+        scaledWidth = viewH * streamRatio;
+        scaledHeight = viewH;
+        offsetX = (scaledWidth - viewW) / 2;
+      }
+
+      const cropX = norm.x * videoW;
+      const cropY = norm.y * videoH;
+      const cropW = norm.w * videoW;
+      const cropH = norm.h * videoH;
+
+      const xInScaled = (cropX / videoW) * scaledWidth;
+      const yInScaled = (cropY / videoH) * scaledHeight;
+      const boxX = xInScaled - offsetX;
+      const boxY = yInScaled - offsetY;
+      const boxW = (cropW / videoW) * scaledWidth;
+      const boxH = (cropH / videoH) * scaledHeight;
+
+      return {
+        left: Math.round(boxX) + 'px',
+        top: Math.round(boxY) + 'px',
+        width: Math.max(30, Math.round(boxW)) + 'px',
+        height: Math.max(20, Math.round(boxH)) + 'px'
+      };
+    }
+
+    function getNormalizedCrops() {
+      const norm = {};
+      const keys = ['clock', 'home', 'away', 'period', 'shot'];
+      keys.forEach(k => {
+        const f = frames[k];
+        if (f) {
+          const n = screenToVideoNorm(f);
+          if (n) norm[k] = n;
+        }
+      });
+      return norm;
+    }
+
+    function applyRemoteCropPositions(data) {
+      if (!data || !data.crops) return;
+      const crops = data.crops;
+      const video = document.getElementById('camera-view');
+      if (!video || !video.videoWidth) return;
+
+      Object.keys(crops).forEach(k => {
+        const norm = crops[k];
+        const frame = frames[k];
+        if (norm && frame) {
+          const domPos = videoNormToScreen(norm);
+          if (domPos) {
+            frame.style.left = domPos.left;
+            frame.style.top = domPos.top;
+            frame.style.width = domPos.width;
+            frame.style.height = domPos.height;
+          }
+        }
+      });
+
+      if (data.enabledCrops) {
+        enabledCrops = Object.assign(enabledCrops, data.enabledCrops);
+        Object.keys(enabledCrops).forEach(k => {
+          const cb = document.getElementById(`crop-toggle-${k}`);
+          if (cb) cb.checked = !!enabledCrops[k];
+          const frame = frames[k];
+          if (frame) frame.style.opacity = enabledCrops[k] ? '1' : '0.2';
+        });
+        localStorage.setItem('hc_ocr_enabled_crops', JSON.stringify(enabledCrops));
+      }
+
+      if (data.thresholds) {
+        thresholds = Object.assign(thresholds, data.thresholds);
+        localStorage.setItem('hc_ocr_thresholds', JSON.stringify(thresholds));
+        updateThreshold(thresholds[activeCrop] || 120);
+      }
+
+      if (data.invertStates) {
+        invertStates = Object.assign(invertStates, data.invertStates);
+        localStorage.setItem('hc_ocr_invert_states', JSON.stringify(invertStates));
+        const checkbox = document.getElementById('invert-toggle');
+        if (checkbox) checkbox.checked = !!invertStates[activeCrop];
+      }
+
+      saveCropPositions(false);
+    }
 
     function toggleCropField(key, enabled) {
       enabledCrops[key] = enabled;
@@ -651,7 +801,7 @@
       activeDragFrame.style.top = `${dragStartTop + dy}px`;
     }
 
-    function saveCropPositions() {
+    function saveCropPositions(broadcast = true) {
       const positions = {};
       Object.keys(frames).forEach(k => {
         const f = frames[k];
@@ -665,6 +815,33 @@
         }
       });
       localStorage.setItem('hc_ocr_crop_positions', JSON.stringify(positions));
+
+      if (broadcast) {
+        const normCrops = getNormalizedCrops();
+        const user = (document.getElementById('session-input') && document.getElementById('session-input').value) || 'default';
+        const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
+        if (db) {
+          db.ref(`camera_crops/${fbUser}`).set({
+            sender: myClientId,
+            timestamp: Date.now(),
+            crops: normCrops,
+            thresholds: thresholds,
+            invertStates: invertStates,
+            enabledCrops: enabledCrops
+          }).catch(() => {});
+        }
+        if (bc2) {
+          bc2.postMessage({
+            type: 'crop_update',
+            user: fbUser,
+            sender: myClientId,
+            crops: normCrops,
+            thresholds: thresholds,
+            invertStates: invertStates,
+            enabledCrops: enabledCrops
+          });
+        }
+      }
     }
 
     function restoreCropPositions() {
@@ -1097,7 +1274,29 @@
         payload[fieldMap[key]] = dataUrl;
       }
 
-      if (syncActive) {
+      // Check if remote alignment or live stream needs full camera frame
+      const now = Date.now();
+      const needFullFrame = window.remoteActive || (now - (window.lastRemoteActiveTime || 0) < 15000) || (now - (window.lastFullFrameSent || 0) > 3000);
+      if (needFullFrame && (now - (window.lastFullFrameSent || 0) >= 240)) {
+        window.lastFullFrameSent = now;
+        if (!window._fullCanvas) {
+          window._fullCanvas = document.createElement('canvas');
+        }
+        const fc = window._fullCanvas;
+        const targetW = 480;
+        const targetH = Math.round(480 * (videoH / videoW));
+        if (fc.width !== targetW || fc.height !== targetH) {
+          fc.width = targetW;
+          fc.height = targetH;
+        }
+        const fctx = fc.getContext('2d');
+        fctx.drawImage(video, 0, 0, targetW, targetH);
+        payload.fullFrame = fc.toDataURL('image/jpeg', 0.55);
+        payload.crops = getNormalizedCrops();
+        payload.aspectRatio = +(videoW / videoH).toFixed(3);
+      }
+
+      if (syncActive || window.remoteActive) {
         sendUpdate(payload);
       }
 
@@ -1391,8 +1590,44 @@
         });
       });
 
+      function initRemoteCropListeners() {
+        const user = (document.getElementById('session-input') && document.getElementById('session-input').value) || 'default';
+        const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
+
+        if (db) {
+          db.ref(`camera_crops/${fbUser}`).on('value', snapshot => {
+            const val = snapshot.val();
+            if (val && val.sender !== myClientId) {
+              applyRemoteCropPositions(val);
+            }
+          });
+
+          db.ref(`ocr/${fbUser}/remoteActive`).on('value', snapshot => {
+            window.remoteActive = snapshot.val() === true;
+            if (window.remoteActive) {
+              window.lastRemoteActiveTime = Date.now();
+            }
+          });
+        }
+
+        if (bc2) {
+          bc2.addEventListener('message', (e) => {
+            if (!e || !e.data) return;
+            if (e.data.user && e.data.user !== fbUser) return;
+            if (e.data.type === 'crop_update' && e.data.sender !== myClientId) {
+              applyRemoteCropPositions(e.data);
+            } else if (e.data.type === 'remote_active') {
+              window.remoteActive = !!e.data.active;
+              if (window.remoteActive) window.lastRemoteActiveTime = Date.now();
+            }
+          });
+        }
+      }
+
       restoreCropPositions();
       startCamera();
+      initRemoteCropListeners();
+      setTimeout(() => saveCropPositions(true), 1500);
       
       toggleSync();
       opticalStreamLoop();

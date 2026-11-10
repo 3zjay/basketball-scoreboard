@@ -502,6 +502,9 @@ const requestHandler = async (req, res) => {
         if (incoming.awayScoreStream) states[user].awayScoreStream = incoming.awayScoreStream;
         if (incoming.periodStream) states[user].periodStream = incoming.periodStream;
         if (incoming.shotClockStream) states[user].shotClockStream = incoming.shotClockStream;
+        if (incoming.fullFrame) states[user].fullFrame = incoming.fullFrame;
+        if (incoming.crops) states[user].crops = incoming.crops;
+        if (incoming.aspectRatio) states[user].aspectRatio = incoming.aspectRatio;
         if (incoming.streamActive !== undefined) states[user].streamActive = incoming.streamActive;
 
         pushToAll(user, { type: 'stream', data: incoming });
@@ -526,6 +529,9 @@ const requestHandler = async (req, res) => {
         if (incoming.awayScoreStream) states[user].awayScoreStream = incoming.awayScoreStream;
         if (incoming.periodStream) states[user].periodStream = incoming.periodStream;
         if (incoming.shotClockStream) states[user].shotClockStream = incoming.shotClockStream;
+        if (incoming.fullFrame) states[user].fullFrame = incoming.fullFrame;
+        if (incoming.crops) states[user].crops = incoming.crops;
+        if (incoming.aspectRatio) states[user].aspectRatio = incoming.aspectRatio;
         if (incoming.streamActive !== undefined) states[user].streamActive = incoming.streamActive;
 
         pushToAll(user, { type: 'stream', data: incoming });

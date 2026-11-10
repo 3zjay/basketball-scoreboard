@@ -585,6 +585,104 @@ body.light .reset-btn:hover { background:#fee2e2; }
   .inp { font-size: 14px; padding: 8px 10px; }
 }
 
+/* ── Remote Scanner Aligner Styles ── */
+.rcrop-box {
+  position: absolute;
+  box-sizing: border-box;
+  cursor: move;
+  border: 2px solid #ff6b1a;
+  background: rgba(255, 107, 26, 0.16);
+  border-radius: 4px;
+  touch-action: none;
+  z-index: 10;
+  transition: box-shadow 0.15s, opacity 0.2s;
+}
+.rcrop-box:hover {
+  box-shadow: 0 0 12px currentColor;
+}
+.rcrop-box.active {
+  box-shadow: 0 0 20px currentColor, inset 0 0 12px currentColor;
+  z-index: 20;
+}
+.rcrop-box.rcrop-clock { border-color: #ff6b1a; color: #ff6b1a; background: rgba(255, 107, 26, 0.18); }
+.rcrop-box.rcrop-home  { border-color: #f5c842; color: #f5c842; background: rgba(245, 200, 66, 0.18); }
+.rcrop-box.rcrop-away  { border-color: #ef4444; color: #ef4444; background: rgba(239, 68, 68, 0.18); }
+.rcrop-box.rcrop-period{ border-color: #a855f7; color: #a855f7; background: rgba(168, 85, 247, 0.18); }
+.rcrop-box.rcrop-shot  { border-color: #00d2ff; color: #00d2ff; background: rgba(0, 210, 255, 0.18); }
+
+.rcrop-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-bottom-right-radius: 4px;
+  pointer-events: none;
+  line-height: 1.2;
+}
+.rcrop-handle {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  border-radius: 2px;
+  cursor: nwse-resize;
+  border: 1.5px solid #000;
+  touch-action: none;
+  z-index: 25;
+}
+.rcrop-tab {
+  background: #140e0a;
+  border: 1px solid #332316;
+  border-radius: 4px;
+  padding: 6px 2px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rcrop-tab.active {
+  background: currentColor;
+  color: #000 !important;
+}
+.rcrop-nudge-btn {
+  padding: 8px 4px;
+  font-size: 11px;
+  font-weight: bold;
+  background: #18120c;
+  border: 1px solid #2a1e14;
+  color: #f2ede8;
+}
+.rcrop-nudge-btn:hover {
+  background: #251b12;
+  border-color: #ff6b1a;
+  color: #fff;
+}
+.rcrop-nudge-btn:active {
+  transform: scale(0.95);
+}
+.rcrop-step-btn {
+  background: #18120c;
+  border: 1px solid #332316;
+  color: #888;
+  border-radius: 3px;
+  padding: 2px 7px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.rcrop-step-btn.active {
+  background: #ff6b1a;
+  color: #fff;
+  border-color: #ff6b1a;
+}
+
 </style>
 </head>
 <body>
@@ -615,6 +713,9 @@ body.light .reset-btn:hover { background:#fee2e2; }
     <a href="#" id="scannerLink" onclick="openScannerModal(event)" class="mode-toggle" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:4px;border-color:#16c784;color:#16c784;">
       📱 Scanner
     </a>
+    <button class="mode-toggle" id="remoteAlignBtn" onclick="openRemoteAlignModal(event)" style="border-color:#00d2ff;color:#00d2ff;display:inline-flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;">
+      🎯 Scanner Alignment
+    </button>
     <div class="live-badge connecting" id="liveBadge">
       <div class="live-dot"></div>
       <div class="live-text" id="liveText">Connecting…</div>
@@ -634,10 +735,13 @@ body.light .reset-btn:hover { background:#fee2e2; }
           <div style="font-size:11px; color:var(--text2);">Live camera crops are shown directly inside each scoreboard card below for visual operator reference.</div>
         </div>
       </div>
-      <div style="display:flex; align-items:center; gap:10px;">
+      <div style="display:flex; align-items:center; gap:8px;">
         <span id="aiFeedStatusBadge" style="font-size:11px; padding:4px 10px; border-radius:12px; background:#2a1f0a; border:1px solid #7f500d; color:#f5c842; font-weight:700;">🟡 Waiting for Scanner...</span>
+        <button class="btn" onclick="openRemoteAlignModal(event)" style="font-size:11px; padding:6px 14px; background:linear-gradient(135deg, #e8430a, #ff6b1a); color:#fff; border:none; font-weight:800; border-radius:4px; box-shadow: 0 0 10px rgba(232,67,10,0.4); cursor:pointer;">
+          🎯 Adjust Crops Remotely
+        </button>
         <button class="btn" onclick="openScannerModal(event)" style="font-size:11px; padding:6px 12px; background:var(--surface2); border-color:#16c784; color:#16c784;">
-          📱 Open Scanner Camera
+          📱 Phone QR
         </button>
       </div>
     </div>
@@ -1084,6 +1188,15 @@ bc.onmessage = (e) => {
   if (e.data.type === 'stream' || e.data.type === 'ocr') {
     if (typeof processOcrData === 'function') {
       processOcrData(e.data.data || e.data);
+    }
+  } else if (e.data.type === 'crop_update') {
+    if (e.data.user && e.data.user !== fbUser) return;
+    if (e.data.sender !== myClientId && !isDraggingRemote && !isResizingRemote) {
+      if (e.data.crops) remoteNormCrops = Object.assign(remoteNormCrops, e.data.crops);
+      if (e.data.thresholds) remoteThresholds = Object.assign(remoteThresholds, e.data.thresholds);
+      if (e.data.invertStates) remoteInvertStates = Object.assign(remoteInvertStates, e.data.invertStates);
+      if (e.data.enabledCrops) remoteEnabledCrops = Object.assign(remoteEnabledCrops, e.data.enabledCrops);
+      applyRemoteBoxStyles();
     }
   } else if (e.data.type === 'state') {
     if (e.data.user && e.data.user !== fbUser) return;
@@ -2358,6 +2471,38 @@ function updateFeedMonitorUI(incoming) {
   updateCrop('Clock', incoming.gameClockStream);
   updateCrop('Shot', incoming.shotClockStream);
   updateCrop('Period', incoming.periodStream);
+
+  // Update Remote Alignment Aligner if active
+  if (incoming.fullFrame) {
+    const feedImg = document.getElementById('remoteCameraFeed');
+    const feedPh = document.getElementById('remotePlaceholder');
+    const statusBadge = document.getElementById('remoteFeedStatusBadge');
+    if (feedImg) {
+      feedImg.src = incoming.fullFrame;
+      feedImg.style.display = 'block';
+    }
+    if (feedPh) feedPh.style.display = 'none';
+    if (statusBadge) {
+      statusBadge.textContent = '🟢 Phone Streaming Live';
+      statusBadge.style.background = '#143820';
+      statusBadge.style.borderColor = '#16c784';
+      statusBadge.style.color = '#16c784';
+    }
+  }
+
+  if (incoming.aspectRatio) {
+    const container = document.getElementById('remoteVideoContainer');
+    if (container) container.style.aspectRatio = String(incoming.aspectRatio);
+  }
+
+  if (incoming.crops && !isDraggingRemote && !isResizingRemote) {
+    remoteNormCrops = Object.assign(remoteNormCrops, incoming.crops);
+    applyRemoteBoxStyles();
+  }
+
+  if (typeof updateRemoteActiveCropPreview === 'function') {
+    updateRemoteActiveCropPreview(incoming);
+  }
 }
 
 // Monitor for stale scanner stream
@@ -2369,6 +2514,13 @@ setInterval(() => {
       badge.style.background = '#2a1f0a';
       badge.style.borderColor = '#7f500d';
       badge.style.color = '#f5c842';
+    }
+    const rBadge = document.getElementById('remoteFeedStatusBadge');
+    if (rBadge) {
+      rBadge.textContent = '🟡 Waiting for Phone Stream...';
+      rBadge.style.background = '#2a1f0a';
+      rBadge.style.borderColor = '#7f500d';
+      rBadge.style.color = '#f5c842';
     }
   }
 }, 3000);
@@ -2437,6 +2589,17 @@ function connectSSE(){
 
     db.ref(`ocr/${fbUser}`).on('value', snapshot => {
       processOcrData(snapshot.val());
+    });
+
+    db.ref(`camera_crops/${fbUser}`).on('value', snapshot => {
+      const val = snapshot.val();
+      if (val && val.sender !== myClientId && !isDraggingRemote && !isResizingRemote) {
+        if (val.crops) remoteNormCrops = Object.assign(remoteNormCrops, val.crops);
+        if (val.thresholds) remoteThresholds = Object.assign(remoteThresholds, val.thresholds);
+        if (val.invertStates) remoteInvertStates = Object.assign(remoteInvertStates, val.invertStates);
+        if (val.enabledCrops) remoteEnabledCrops = Object.assign(remoteEnabledCrops, val.enabledCrops);
+        applyRemoteBoxStyles();
+      }
     });
 
     db.ref(`buzz/${fbUser}`).on('value', snapshot => {
@@ -2683,6 +2846,386 @@ function openScannerModal(e) {
 function closeScannerModal() {
   document.getElementById('scannerModal').style.display = 'none';
 }
+
+// ── OPTICAL SCANNER REMOTE ALIGNMENT STUDIO ─────────────────────────────
+const DEFAULT_NORM_CROPS = {
+  clock:  { x: 0.15, y: 0.15, w: 0.22, h: 0.14 },
+  home:   { x: 0.15, y: 0.38, w: 0.18, h: 0.14 },
+  away:   { x: 0.55, y: 0.38, w: 0.18, h: 0.14 },
+  period: { x: 0.65, y: 0.15, w: 0.12, h: 0.14 },
+  shot:   { x: 0.42, y: 0.55, w: 0.16, h: 0.14 }
+};
+
+let remoteAlignActive = false;
+let activeRemoteCrop = 'clock';
+let nudgeStep = 0.005; // 0.5% default step
+let remoteNormCrops = { ...DEFAULT_NORM_CROPS };
+let remoteEnabledCrops = { clock: true, home: true, away: true, period: true, shot: true };
+let remoteThresholds = { clock: 120, home: 120, away: 120, period: 120, shot: 120 };
+let remoteInvertStates = { clock: false, home: false, away: false, period: false, shot: false };
+
+let isDraggingRemote = false;
+let isResizingRemote = false;
+let dragCropKey = null;
+let dragStartPointer = { x: 0, y: 0 };
+let dragStartNorm = { x: 0, y: 0, w: 0, h: 0 };
+let lastRemoteBroadcastTime = 0;
+
+function openRemoteAlignModal(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  remoteAlignActive = true;
+  const modal = document.getElementById('remoteAlignModal');
+  if (modal) modal.style.display = 'flex';
+
+  // Signal phone to begin high-rate full-frame snapshot stream
+  if (useFirebase && db) {
+    db.ref(`ocr/${fbUser}/remoteActive`).set(true).catch(() => {});
+  }
+  bc.postMessage({ type: 'remote_active', user: fbUser, active: true });
+
+  loadSavedRemoteCrops();
+  applyRemoteBoxStyles();
+  selectRemoteCrop(activeRemoteCrop);
+  initRemoteBoxEventListeners();
+}
+
+function closeRemoteAlignModal() {
+  remoteAlignActive = false;
+  const modal = document.getElementById('remoteAlignModal');
+  if (modal) modal.style.display = 'none';
+
+  // Tell phone full-frame stream can throttle down
+  if (useFirebase && db) {
+    db.ref(`ocr/${fbUser}/remoteActive`).set(false).catch(() => {});
+  }
+  bc.postMessage({ type: 'remote_active', user: fbUser, active: false });
+  broadcastRemoteCrops();
+}
+
+function loadSavedRemoteCrops() {
+  try {
+    const saved = localStorage.getItem('hc_remote_norm_crops');
+    if (saved) {
+      remoteNormCrops = Object.assign(remoteNormCrops, JSON.parse(saved));
+    }
+  } catch(e) {}
+}
+
+function saveRemoteCropsLocally() {
+  try {
+    localStorage.setItem('hc_remote_norm_crops', JSON.stringify(remoteNormCrops));
+  } catch(e) {}
+}
+
+function applyRemoteBoxStyles() {
+  const keys = ['clock', 'home', 'away', 'period', 'shot'];
+  keys.forEach(k => {
+    const box = document.getElementById(`rcrop-${k}`);
+    const c = remoteNormCrops[k];
+    if (box && c) {
+      box.style.left = `${(c.x * 100).toFixed(2)}%`;
+      box.style.top = `${(c.y * 100).toFixed(2)}%`;
+      box.style.width = `${(c.w * 100).toFixed(2)}%`;
+      box.style.height = `${(c.h * 100).toFixed(2)}%`;
+      box.style.opacity = remoteEnabledCrops[k] === false ? '0.25' : '1';
+    }
+  });
+}
+
+function selectRemoteCrop(key) {
+  activeRemoteCrop = key;
+  const keys = ['clock', 'home', 'away', 'period', 'shot'];
+  keys.forEach(k => {
+    const box = document.getElementById(`rcrop-${k}`);
+    if (box) {
+      if (k === key) box.classList.add('active');
+      else box.classList.remove('active');
+    }
+    const tab = document.getElementById(`rcrop-tab-${k}`);
+    if (tab) {
+      if (k === key) tab.classList.add('active');
+      else tab.classList.remove('active');
+    }
+  });
+
+  const titles = {
+    clock: 'CLOCK Live Stream',
+    home: 'HOME SCORE Live Stream',
+    away: 'AWAY SCORE Live Stream',
+    period: 'PERIOD / QTR Live Stream',
+    shot: 'SHOT CLOCK Live Stream'
+  };
+  const colors = {
+    clock: '#ff6b1a',
+    home: '#f5c842',
+    away: '#ef4444',
+    period: '#a855f7',
+    shot: '#00d2ff'
+  };
+
+  const labelEl = document.getElementById('rcropSelectedLabel');
+  if (labelEl) {
+    labelEl.textContent = titles[key] || `${key.toUpperCase()} Live Stream`;
+    labelEl.style.color = colors[key] || '#ff6b1a';
+  }
+
+  const pBox = document.getElementById('rcropPreviewBox');
+  if (pBox) pBox.style.borderColor = colors[key] || '#ff6b1a';
+
+  const cbEnable = document.getElementById('rcropEnableCb');
+  if (cbEnable) cbEnable.checked = remoteEnabledCrops[key] !== false;
+
+  const cbInvert = document.getElementById('rcropInvertCb');
+  if (cbInvert) cbInvert.checked = !!remoteInvertStates[key];
+
+  const slider = document.getElementById('rcropThresholdSlider');
+  const tVal = remoteThresholds[key] != null ? remoteThresholds[key] : 120;
+  if (slider) slider.value = tVal;
+  const tLabel = document.getElementById('rcropThresholdVal');
+  if (tLabel) {
+    tLabel.textContent = tVal;
+    tLabel.style.color = colors[key] || '#ff6b1a';
+  }
+
+  // Refresh active preview image
+  if (window.lastOcrIncoming) {
+    updateRemoteActiveCropPreview(window.lastOcrIncoming);
+  }
+}
+
+function toggleRemoteCropEnabled(enabled) {
+  remoteEnabledCrops[activeRemoteCrop] = enabled;
+  const box = document.getElementById(`rcrop-${activeRemoteCrop}`);
+  if (box) box.style.opacity = enabled ? '1' : '0.25';
+  broadcastRemoteCrops();
+}
+
+function toggleRemoteInvert(inverted) {
+  remoteInvertStates[activeRemoteCrop] = inverted;
+  broadcastRemoteCrops();
+}
+
+function updateRemoteThreshold(val) {
+  const n = parseInt(val, 10);
+  remoteThresholds[activeRemoteCrop] = n;
+  const label = document.getElementById('rcropThresholdVal');
+  if (label) label.textContent = n;
+  broadcastRemoteCrops();
+}
+
+function setNudgeStep(normStep, pxLabel) {
+  nudgeStep = normStep;
+  const b1 = document.getElementById('rcrop-step-1');
+  const b5 = document.getElementById('rcrop-step-5');
+  if (pxLabel === 1) {
+    if (b1) b1.classList.add('active');
+    if (b5) b5.classList.remove('active');
+  } else {
+    if (b1) b1.classList.remove('active');
+    if (b5) b5.classList.add('active');
+  }
+}
+
+function nudgeRemoteCrop(dx, dy) {
+  const c = remoteNormCrops[activeRemoteCrop];
+  if (!c) return;
+  c.x = +Math.max(0, Math.min(1 - c.w, c.x + (dx * nudgeStep))).toFixed(4);
+  c.y = +Math.max(0, Math.min(1 - c.h, c.y + (dy * nudgeStep))).toFixed(4);
+  applyRemoteBoxStyles();
+  broadcastRemoteCrops();
+  saveRemoteCropsLocally();
+}
+
+function resizeRemoteCrop(dw, dh) {
+  const c = remoteNormCrops[activeRemoteCrop];
+  if (!c) return;
+  c.w = +Math.max(0.04, Math.min(1 - c.x, c.w + (dw * nudgeStep))).toFixed(4);
+  c.h = +Math.max(0.03, Math.min(1 - c.y, c.h + (dh * nudgeStep))).toFixed(4);
+  applyRemoteBoxStyles();
+  broadcastRemoteCrops();
+  saveRemoteCropsLocally();
+}
+
+function applyCropPreset(type) {
+  if (type === 'standard') {
+    remoteNormCrops = {
+      clock:  { x: 0.15, y: 0.15, w: 0.22, h: 0.14 },
+      home:   { x: 0.15, y: 0.38, w: 0.18, h: 0.14 },
+      away:   { x: 0.55, y: 0.38, w: 0.18, h: 0.14 },
+      period: { x: 0.65, y: 0.15, w: 0.12, h: 0.14 },
+      shot:   { x: 0.42, y: 0.55, w: 0.16, h: 0.14 }
+    };
+    remoteEnabledCrops = { clock: true, home: true, away: true, period: true, shot: true };
+  } else if (type === 'split') {
+    remoteNormCrops = {
+      clock:  { x: 0.35, y: 0.14, w: 0.30, h: 0.16 },
+      home:   { x: 0.05, y: 0.35, w: 0.24, h: 0.18 },
+      away:   { x: 0.71, y: 0.35, w: 0.24, h: 0.18 },
+      period: { x: 0.42, y: 0.38, w: 0.16, h: 0.14 },
+      shot:   { x: 0.40, y: 0.60, w: 0.20, h: 0.16 }
+    };
+    remoteEnabledCrops = { clock: true, home: true, away: true, period: true, shot: true };
+  } else if (type === 'shot') {
+    remoteNormCrops.shot = { x: 0.28, y: 0.22, w: 0.44, h: 0.48 };
+    remoteEnabledCrops = { clock: false, home: false, away: false, period: false, shot: true };
+  } else if (type === 'reset') {
+    remoteNormCrops = { ...DEFAULT_NORM_CROPS };
+    remoteEnabledCrops = { clock: true, home: true, away: true, period: true, shot: true };
+  }
+  applyRemoteBoxStyles();
+  selectRemoteCrop(activeRemoteCrop);
+  broadcastRemoteCrops();
+  saveRemoteCropsLocally();
+}
+
+function broadcastRemoteCrops() {
+  const payload = {
+    sender: myClientId,
+    timestamp: Date.now(),
+    crops: remoteNormCrops,
+    thresholds: remoteThresholds,
+    invertStates: remoteInvertStates,
+    enabledCrops: remoteEnabledCrops
+  };
+  if (useFirebase && db) {
+    db.ref(`camera_crops/${fbUser}`).set(payload).catch(() => {});
+  }
+  bc.postMessage({
+    type: 'crop_update',
+    user: fbUser,
+    ...payload
+  });
+}
+
+function updateRemoteActiveCropPreview(incoming) {
+  window.lastOcrIncoming = incoming;
+  const pImg = document.getElementById('rcropPreviewImg');
+  const pEmpty = document.getElementById('rcropPreviewEmpty');
+  if (!pImg || !pEmpty) return;
+
+  const streamMap = {
+    clock: incoming.gameClockStream,
+    home: incoming.homeScoreStream,
+    away: incoming.awayScoreStream,
+    period: incoming.periodStream,
+    shot: incoming.shotClockStream
+  };
+
+  const dataUrl = streamMap[activeRemoteCrop];
+  if (dataUrl) {
+    pImg.src = dataUrl;
+    pImg.style.display = 'block';
+    pEmpty.style.display = 'none';
+  } else {
+    pImg.style.display = 'none';
+    pEmpty.style.display = 'inline';
+  }
+}
+
+function getPointerPos(e) {
+  if (e.touches && e.touches[0]) {
+    return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+  return { x: e.clientX, y: e.clientY };
+}
+
+let _remoteEventsBound = false;
+function initRemoteBoxEventListeners() {
+  if (_remoteEventsBound) return;
+  _remoteEventsBound = true;
+
+  const keys = ['clock', 'home', 'away', 'period', 'shot'];
+  keys.forEach(k => {
+    const box = document.getElementById(`rcrop-${k}`);
+    if (box) {
+      box.addEventListener('mousedown', (e) => startRemoteDrag(e, k));
+      box.addEventListener('touchstart', (e) => startRemoteDrag(e, k), { passive: false });
+
+      const handle = box.querySelector('.rcrop-handle');
+      if (handle) {
+        handle.addEventListener('mousedown', (e) => startRemoteResize(e, k));
+        handle.addEventListener('touchstart', (e) => startRemoteResize(e, k), { passive: false });
+      }
+    }
+  });
+}
+
+function startRemoteDrag(e, key) {
+  if (e.target.classList.contains('rcrop-handle')) return;
+  e.preventDefault();
+  selectRemoteCrop(key);
+  isDraggingRemote = true;
+  dragCropKey = key;
+  dragStartPointer = getPointerPos(e);
+  dragStartNorm = { ...remoteNormCrops[key] };
+
+  window.addEventListener('mousemove', onRemotePointerMove);
+  window.addEventListener('touchmove', onRemotePointerMove, { passive: false });
+  window.addEventListener('mouseup', endRemotePointer);
+  window.addEventListener('touchend', endRemotePointer);
+}
+
+function startRemoteResize(e, key) {
+  e.stopPropagation();
+  e.preventDefault();
+  selectRemoteCrop(key);
+  isResizingRemote = true;
+  dragCropKey = key;
+  dragStartPointer = getPointerPos(e);
+  dragStartNorm = { ...remoteNormCrops[key] };
+
+  window.addEventListener('mousemove', onRemotePointerMove);
+  window.addEventListener('touchmove', onRemotePointerMove, { passive: false });
+  window.addEventListener('mouseup', endRemotePointer);
+  window.addEventListener('touchend', endRemotePointer);
+}
+
+function onRemotePointerMove(e) {
+  if (!isDraggingRemote && !isResizingRemote) return;
+  e.preventDefault();
+  const container = document.getElementById('remoteVideoContainer');
+  if (!container) return;
+  const rect = container.getBoundingClientRect();
+  const p = getPointerPos(e);
+  const dxNorm = (p.x - dragStartPointer.x) / rect.width;
+  const dyNorm = (p.y - dragStartPointer.y) / rect.height;
+
+  if (isDraggingRemote) {
+    const w = dragStartNorm.w;
+    const h = dragStartNorm.h;
+    const newX = Math.max(0, Math.min(1 - w, dragStartNorm.x + dxNorm));
+    const newY = Math.max(0, Math.min(1 - h, dragStartNorm.y + dyNorm));
+    remoteNormCrops[dragCropKey].x = +newX.toFixed(4);
+    remoteNormCrops[dragCropKey].y = +newY.toFixed(4);
+  } else if (isResizingRemote) {
+    const newW = Math.max(0.04, Math.min(1 - dragStartNorm.x, dragStartNorm.w + dxNorm));
+    const newH = Math.max(0.03, Math.min(1 - dragStartNorm.y, dragStartNorm.h + dyNorm));
+    remoteNormCrops[dragCropKey].w = +newW.toFixed(4);
+    remoteNormCrops[dragCropKey].h = +newH.toFixed(4);
+  }
+
+  applyRemoteBoxStyles();
+
+  const now = Date.now();
+  if (now - lastRemoteBroadcastTime > 60) {
+    lastRemoteBroadcastTime = now;
+    broadcastRemoteCrops();
+  }
+}
+
+function endRemotePointer() {
+  if (isDraggingRemote || isResizingRemote) {
+    isDraggingRemote = false;
+    isResizingRemote = false;
+    dragCropKey = null;
+    broadcastRemoteCrops();
+    saveRemoteCropsLocally();
+  }
+  window.removeEventListener('mousemove', onRemotePointerMove);
+  window.removeEventListener('touchmove', onRemotePointerMove);
+  window.removeEventListener('mouseup', endRemotePointer);
+  window.removeEventListener('touchend', endRemotePointer);
+}
 </script>
 
 <!-- Scanner Connect Modal -->
@@ -2695,14 +3238,187 @@ function closeScannerModal() {
       <img id="scannerQrImage" src="" alt="QR Code" style="width:180px; height:180px; display:block;">
     </div>
 
-    <div style="margin-bottom:24px;">
+    <div style="margin-bottom:18px;">
       <span style="display:block; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--grey); margin-bottom:6px;">Scanner URL:</span>
       <input type="text" id="scannerCopyUrl" readonly style="width:100%; background:#100b08; border:1px solid var(--border); color:#fff; padding:8px 12px; border-radius:6px; font-size:11px; text-align:center; outline:none; font-family:monospace;" onclick="this.select()">
     </div>
 
-    <div style="display:flex; gap:12px; justify-content:center;">
+    <div style="display:flex; gap:12px; justify-content:center; margin-bottom:14px;">
       <a id="scannerOpenBtn" href="" target="_blank" class="mode-toggle" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center; border-color:var(--orange); color:var(--orange); padding:8px 16px; border-radius:6px;">Open in Tab</a>
       <button class="mode-toggle" onclick="closeScannerModal()" style="border-color:var(--grey); color:var(--grey); padding:8px 16px; border-radius:6px;">Close</button>
+    </div>
+
+    <div style="border-top:1px solid #221810; padding-top:14px;">
+      <button class="btn" onclick="closeScannerModal(); openRemoteAlignModal(event);" style="width:100%; background:#121824; border-color:#00d2ff; color:#00d2ff; font-weight:800; font-size:12px; padding:10px; border-radius:6px; cursor:pointer;">
+        🎯 Open Remote Aligner (Adjust Crops Here)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Remote Optical Scanner Alignment Modal -->
+<div id="remoteAlignModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(4,3,2,0.94); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); z-index:12000; align-items:center; justify-content:center; padding:12px;">
+  <div style="background:#0a0806; border:1px solid #2a1e14; border-radius:14px; max-width:1160px; width:100%; height:min(860px, 94vh); display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,0.8);">
+    
+    <!-- Header -->
+    <div style="padding:14px 20px; border-bottom:1px solid #2a1e14; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; background:#120d09;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="font-size:24px;">🎯</span>
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:var(--orange2); line-height:1.2;">Optical Scanner Remote Alignment</div>
+          <div style="font-size:11px; color:var(--grey); line-height:1.2;">Live phone camera feed — drag, resize, or nudge crop boxes directly from this laptop.</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span id="remoteFeedStatusBadge" style="font-size:11px; padding:4px 10px; border-radius:12px; background:#2a1f0a; border:1px solid #7f500d; color:#f5c842; font-weight:700;">🟡 Waiting for Phone Stream...</span>
+        <button class="btn" onclick="openScannerModal(event)" style="font-size:11px; padding:5px 10px; background:#18110b; border-color:#16c784; color:#16c784;">📱 Phone QR</button>
+        <button class="btn" onclick="closeRemoteAlignModal()" style="font-size:14px; padding:4px 12px; border-color:#444; color:#fff; cursor:pointer;">✕</button>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div style="flex:1; display:flex; flex-direction:row; overflow:hidden; min-height:0;">
+      
+      <!-- Left Viewport (Live Camera + Drag Boxes) -->
+      <div style="flex:1 1 65%; padding:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#050403; position:relative; overflow:hidden; min-width:0;">
+        <div id="remoteVideoContainer" style="position:relative; width:100%; max-width:800px; aspect-ratio:16/9; background:#000; border:2px solid #2a1e14; border-radius:8px; overflow:hidden; user-select:none; box-shadow:0 8px 30px rgba(0,0,0,0.7);">
+          
+          <!-- Live Camera Image Feed -->
+          <img id="remoteCameraFeed" alt="Phone Camera Feed" style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:none; pointer-events:none;">
+
+          <!-- Waiting Placeholder -->
+          <div id="remotePlaceholder" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; background:radial-gradient(ellipse at center, #150f0a 0%, #000 100%);">
+            <div style="font-size:42px; margin-bottom:10px; opacity:0.8;">📹</div>
+            <div style="font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:800; color:#f5c842; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px;">Connecting to Phone Camera...</div>
+            <div style="font-size:12px; color:var(--grey); max-width:360px; line-height:1.5; margin-bottom:16px;">Make sure the scanner is open on your phone (<code style="color:#ff6b1a;">camera.html</code>). You can still pre-align the crop boxes below while connecting!</div>
+            <button class="btn" onclick="openScannerModal(event)" style="font-size:12px; padding:6px 14px; background:#18110b; border-color:#16c784; color:#16c784;">📱 Scan Phone Connect QR Code</button>
+          </div>
+
+          <!-- 5 Draggable / Resizable Crop Boxes -->
+          <!-- CLOCK (Orange) -->
+          <div class="rcrop-box rcrop-clock" id="rcrop-clock" style="top:15%; left:15%; width:22%; height:14%;">
+            <div class="rcrop-label" style="background:#ff6b1a; color:#fff;">CLOCK</div>
+            <div class="rcrop-handle" data-crop="clock"></div>
+          </div>
+
+          <!-- HOME (Gold) -->
+          <div class="rcrop-box rcrop-home" id="rcrop-home" style="top:38%; left:15%; width:18%; height:14%;">
+            <div class="rcrop-label" style="background:#f5c842; color:#000;">HOME</div>
+            <div class="rcrop-handle" data-crop="home"></div>
+          </div>
+
+          <!-- AWAY (Red) -->
+          <div class="rcrop-box rcrop-away" id="rcrop-away" style="top:38%; left:55%; width:18%; height:14%;">
+            <div class="rcrop-label" style="background:#ef4444; color:#fff;">AWAY</div>
+            <div class="rcrop-handle" data-crop="away"></div>
+          </div>
+
+          <!-- QTR (Purple) -->
+          <div class="rcrop-box rcrop-period" id="rcrop-period" style="top:15%; left:65%; width:12%; height:14%;">
+            <div class="rcrop-label" style="background:#a855f7; color:#fff;">QTR</div>
+            <div class="rcrop-handle" data-crop="period"></div>
+          </div>
+
+          <!-- SHOT (Cyan) -->
+          <div class="rcrop-box rcrop-shot" id="rcrop-shot" style="top:55%; left:42%; width:16%; height:14%;">
+            <div class="rcrop-label" style="background:#00d2ff; color:#000;">SHOT</div>
+            <div class="rcrop-handle" data-crop="shot"></div>
+          </div>
+
+        </div>
+
+        <div style="margin-top:10px; font-size:11px; color:#776a5c; font-family:'Barlow Condensed',sans-serif; letter-spacing:0.5px; text-align:center;">
+          🖱️ <strong>Click & Drag</strong> to move any box • Drag corner handle <strong>⇲</strong> to resize • Or use Fine Nudge buttons on right
+        </div>
+      </div>
+
+      <!-- Right Sidebar Controls -->
+      <div style="flex:0 0 340px; border-left:1px solid #2a1e14; background:#0e0a07; padding:16px; display:flex; flex-direction:column; gap:12px; overflow-y:auto;">
+        
+        <!-- Field Tabs -->
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--grey); margin-bottom:6px;">Select Box to Fine-Tune:</div>
+          <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:4px;">
+            <button class="rcrop-tab active" id="rcrop-tab-clock" onclick="selectRemoteCrop('clock')" style="border-color:#ff6b1a; color:#ff6b1a;">CLK</button>
+            <button class="rcrop-tab" id="rcrop-tab-home" onclick="selectRemoteCrop('home')" style="border-color:#f5c842; color:#f5c842;">HOM</button>
+            <button class="rcrop-tab" id="rcrop-tab-away" onclick="selectRemoteCrop('away')" style="border-color:#ef4444; color:#ef4444;">AWY</button>
+            <button class="rcrop-tab" id="rcrop-tab-period" onclick="selectRemoteCrop('period')" style="border-color:#a855f7; color:#a855f7;">QTR</button>
+            <button class="rcrop-tab" id="rcrop-tab-shot" onclick="selectRemoteCrop('shot')" style="border-color:#00d2ff; color:#00d2ff;">SHT</button>
+          </div>
+        </div>
+
+        <!-- Live Crop Monitor for Selected Field -->
+        <div style="background:#060403; border:1px solid #221810; border-radius:8px; padding:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--orange2);" id="rcropSelectedLabel">CLOCK Live Feed</span>
+            <label style="font-size:11px; display:inline-flex; align-items:center; gap:4px; color:var(--grey); cursor:pointer;">
+              <input type="checkbox" id="rcropEnableCb" onchange="toggleRemoteCropEnabled(this.checked)" checked style="accent-color:var(--orange);"> Enabled
+            </label>
+          </div>
+          <div style="height:60px; background:#000; border:1.5px solid #ff6b1a; border-radius:6px; display:flex; align-items:center; justify-content:center; overflow:hidden;" id="rcropPreviewBox">
+            <img id="rcropPreviewImg" alt="Crop Stream" style="height:100%; width:auto; image-rendering:pixelated; display:none;">
+            <span id="rcropPreviewEmpty" style="font-size:11px; color:#555;">Waiting for camera stream…</span>
+          </div>
+        </div>
+
+        <!-- Directional Nudge Pad -->
+        <div style="background:#060403; border:1px solid #221810; border-radius:8px; padding:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--grey);">Fine Pixel Nudge:</span>
+            <div style="display:flex; gap:4px;">
+              <button class="rcrop-step-btn active" id="rcrop-step-1" onclick="setNudgeStep(0.005, 1)">1px</button>
+              <button class="rcrop-step-btn" id="rcrop-step-5" onclick="setNudgeStep(0.02, 5)">5px</button>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; max-width:200px; margin:0 auto;">
+            <div></div>
+            <button class="btn rcrop-nudge-btn" onclick="nudgeRemoteCrop(0, -1)">▲</button>
+            <div></div>
+            <button class="btn rcrop-nudge-btn" onclick="nudgeRemoteCrop(-1, 0)">◄</button>
+            <div style="display:flex; align-items:center; justify-content:center; font-size:10px; color:#777;">MOVE</div>
+            <button class="btn rcrop-nudge-btn" onclick="nudgeRemoteCrop(1, 0)">►</button>
+            <div></div>
+            <button class="btn rcrop-nudge-btn" onclick="nudgeRemoteCrop(0, 1)">▼</button>
+            <div></div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px;">
+            <div style="display:flex; gap:3px;">
+              <button class="btn rcrop-nudge-btn" style="flex:1; font-size:10px;" onclick="resizeRemoteCrop(-1, 0)">W−</button>
+              <button class="btn rcrop-nudge-btn" style="flex:1; font-size:10px;" onclick="resizeRemoteCrop(1, 0)">W+</button>
+            </div>
+            <div style="display:flex; gap:3px;">
+              <button class="btn rcrop-nudge-btn" style="flex:1; font-size:10px;" onclick="resizeRemoteCrop(0, -1)">H−</button>
+              <button class="btn rcrop-nudge-btn" style="flex:1; font-size:10px;" onclick="resizeRemoteCrop(0, 1)">H+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter & Presets -->
+        <div style="background:#060403; border:1px solid #221810; border-radius:8px; padding:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label style="font-size:11px; display:inline-flex; align-items:center; gap:4px; color:var(--grey); cursor:pointer;">
+              <input type="checkbox" id="rcropInvertCb" onchange="toggleRemoteInvert(this.checked)" style="accent-color:var(--orange);"> Invert Black/White
+            </label>
+            <span style="font-size:11px; color:#888;">Threshold: <b id="rcropThresholdVal" style="color:#ff6b1a;">120</b></span>
+          </div>
+          <input type="range" id="rcropThresholdSlider" min="50" max="220" value="120" style="width:100%; accent-color:var(--orange2);" oninput="updateRemoteThreshold(this.value)">
+
+          <div style="font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#666; margin:8px 0 4px;">Quick Scoreboard Presets:</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+            <button class="btn" style="font-size:10px; padding:4px;" onclick="applyCropPreset('standard')">🏛 Standard Gym</button>
+            <button class="btn" style="font-size:10px; padding:4px;" onclick="applyCropPreset('split')">↔ Split Scores</button>
+            <button class="btn" style="font-size:10px; padding:4px;" onclick="applyCropPreset('shot')">⏱ Shot Clock</button>
+            <button class="btn" style="font-size:10px; padding:4px;" onclick="applyCropPreset('reset')">↺ Reset</button>
+          </div>
+        </div>
+
+        <!-- Done Button -->
+        <button class="btn" onclick="closeRemoteAlignModal()" style="padding:12px; background:linear-gradient(135deg, #e8430a, #ff6b1a); color:#fff; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:800; letter-spacing:1px; text-transform:uppercase; border:none; border-radius:6px; box-shadow:0 0 15px rgba(232,67,10,0.5); cursor:pointer;">
+          💾 Done & Save Alignment
+        </button>
+
+      </div>
     </div>
   </div>
 </div>
