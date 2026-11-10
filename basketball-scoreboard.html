@@ -2592,59 +2592,9 @@ function processOcrData(incoming) {
   // Update live camera stream crops inside each manual scoreboard card for visual reference
   updateFeedMonitorUI(incoming);
 
-  // If AI Scoreboard Sync is enabled by the operator, apply recognized scores and clocks
-  if (S.aiSyncEnabled) {
-    let stateChanged = false;
-    if (incoming.homeScore != null && incoming.homeScore !== '' && !isNaN(parseInt(incoming.homeScore, 10))) {
-      const hScore = parseInt(incoming.homeScore, 10);
-      if (hScore !== S.homeScore) {
-        S.homeScore = hScore;
-        stateChanged = true;
-      }
-    }
-    if (incoming.awayScore != null && incoming.awayScore !== '' && !isNaN(parseInt(incoming.awayScore, 10))) {
-      const aScore = parseInt(incoming.awayScore, 10);
-      if (aScore !== S.awayScore) {
-        S.awayScore = aScore;
-        stateChanged = true;
-      }
-    }
-    if (incoming.shotClock != null && incoming.shotClock !== '' && !isNaN(parseInt(incoming.shotClock, 10))) {
-      const sSec = parseInt(incoming.shotClock, 10);
-      if (sSec !== S.shotSeconds && !S.shotRunning) {
-        S.shotSeconds = sSec;
-        stateChanged = true;
-      }
-    }
-    if (incoming.clock != null) {
-      const cStr = String(incoming.clock).trim();
-      if (cStr && !S.gameRunning) {
-        let secs = null;
-        if (cStr.includes(':')) {
-          const parts = cStr.split(':');
-          secs = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
-        } else {
-          const p = parseFloat(cStr);
-          if (!isNaN(p)) secs = Math.round(p);
-        }
-        if (secs !== null && secs !== S.gameSeconds) {
-          S.gameSeconds = secs;
-          stateChanged = true;
-        }
-      }
-    }
-    if (incoming.period != null && !isNaN(parseInt(incoming.period, 10))) {
-      const p = parseInt(incoming.period, 10);
-      if (p !== S.quarter) {
-        S.quarter = p;
-        stateChanged = true;
-      }
-    }
-    if (stateChanged) {
-      renderAll();
-      saveNow();
-    }
-  }
+  // NO OCR DIGIT GUESSING: We NEVER overwrite authoritative scoreboard scores, clocks,
+  // or periods with unstable camera OCR recognition guesses. The optical stream crops are
+  // forwarded to overlays to render directly as broadcast video feeds.
 }
 
 // SSE — server pushes state every second while clocks run, instantly on any action

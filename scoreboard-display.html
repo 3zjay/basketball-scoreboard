@@ -423,34 +423,15 @@ function applyStreamData(data) {
   if (!data) return;
   if (data.streamActive === false) {
     aiSyncActive = false;
+    S.gameClockStream = null;
+    S.homeScoreStream = null;
+    S.awayScoreStream = null;
+    S.periodStream = null;
+    S.shotClockStream = null;
     render();
     return;
   }
-  if (data.streamActive === true) {
-    aiSyncActive = true;
-  } else if (data.clock != null || data.homeScore != null || data.awayScore != null || data.period != null || data.shotClock != null) {
-    aiSyncActive = true;
-  }
-
-  if (data.clock != null) {
-    const clockStr = String(data.clock).trim();
-    aiState.clockStr = clockStr;
-    if (clockStr.includes(':')) {
-      const parts = clockStr.split(':');
-      aiState.gameSeconds = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
-    } else if (clockStr.length === 3) {
-      aiState.gameSeconds = (parseInt(clockStr.substring(0, 1), 10) || 0) * 60 + (parseInt(clockStr.substring(1), 10) || 0);
-    } else if (clockStr.length === 4) {
-      aiState.gameSeconds = (parseInt(clockStr.substring(0, 2), 10) || 0) * 60 + (parseInt(clockStr.substring(2), 10) || 0);
-    } else {
-      const p = parseFloat(clockStr);
-      if (!isNaN(p)) aiState.gameSeconds = Math.round(p);
-    }
-  }
-  if (data.homeScore != null && !isNaN(parseInt(data.homeScore, 10))) aiState.homeScore = parseInt(data.homeScore, 10);
-  if (data.awayScore != null && !isNaN(parseInt(data.awayScore, 10))) aiState.awayScore = parseInt(data.awayScore, 10);
-  if (data.period != null && !isNaN(parseInt(data.period, 10))) aiState.quarter = parseInt(data.period, 10);
-  if (data.shotClock != null && !isNaN(parseInt(data.shotClock, 10))) aiState.shotSeconds = parseInt(data.shotClock, 10);
+  aiSyncActive = true;
 
   if (data.gameClockStream) S.gameClockStream = data.gameClockStream;
   if (data.homeScoreStream) S.homeScoreStream = data.homeScoreStream;
@@ -462,17 +443,6 @@ function applyStreamData(data) {
 }
 
 function getEffState() {
-  if (aiSyncActive) {
-    return {
-      ...S,
-      gameSeconds: aiState.gameSeconds !== null ? aiState.gameSeconds : S.gameSeconds,
-      clockStr: aiState.clockStr !== null ? aiState.clockStr : null,
-      homeScore: aiState.homeScore !== null ? aiState.homeScore : S.homeScore,
-      awayScore: aiState.awayScore !== null ? aiState.awayScore : S.awayScore,
-      quarter: aiState.quarter !== null ? aiState.quarter : S.quarter,
-      shotSeconds: aiState.shotSeconds !== null ? aiState.shotSeconds : S.shotSeconds,
-    };
-  }
   return S;
 }
 
@@ -563,15 +533,34 @@ function renderStreamOrText(elId, streamImgUrl, fallbackText, maxHeightCss) {
       img.style.objectFit = 'contain';
       img.style.flexShrink = '0';
       img.style.verticalAlign = 'middle';
-      img.style.filter = 'brightness(1.25) contrast(1.25)';
-      img.style.borderRadius = '4px';
-      img.style.border = '1px solid rgba(255, 255, 255, 0.55)';
-      img.style.outline = '1px solid rgba(0, 0, 0, 0.9)';
-      img.style.background = '#080c14';
-      img.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.8), inset 0 0 3px rgba(255, 255, 255, 0.2)';
-      img.style.padding = '2px 4px';
+      img.style.filter = 'contrast(1.35) brightness(1.25)';
+      img.style.borderRadius = '0';
+      img.style.border = 'none';
+      img.style.outline = 'none';
+      img.style.background = 'transparent';
+      img.style.boxShadow = 'none';
+      img.style.padding = '0';
+      img.style.margin = '0';
+      img.style.mixBlendMode = 'screen';
       img.style.boxSizing = 'border-box';
       img.style.display = 'inline-block';
+      img.style.pointerEvents = 'none';
+      img.onload = function() {
+        try {
+          const c = document.createElement('canvas');
+          c.width = 4;
+          c.height = 4;
+          const ctx = c.getContext('2d');
+          ctx.drawImage(img, 0, 0, 4, 4);
+          const p = ctx.getImageData(0, 0, 1, 1).data;
+          const isLightBg = (p[0] * 0.299 + p[1] * 0.587 + p[2] * 0.114) > 140;
+          if (isLightBg) {
+            img.style.filter = 'invert(1) contrast(1.35) brightness(1.25)';
+          } else {
+            img.style.filter = 'contrast(1.35) brightness(1.25)';
+          }
+        } catch(e) {}
+      };
       el.appendChild(img);
     } else {
       img.style.maxHeight = maxHeightCss || '100%';
