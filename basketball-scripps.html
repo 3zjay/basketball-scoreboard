@@ -742,10 +742,11 @@
     <div class="seg-venue" id="segVenue">
       <div class="broadcast-line">
         <span class="venue-pulse-dot"></span>
-        <span class="broadcast-brand-val" id="broadcastName">HOOP CULTURE</span>
+        <span class="venue-tag-label" id="broadcastTag">BROADCAST</span>
+        <span class="broadcast-brand-val" id="broadcastName">FACEBOOK</span>
       </div>
       <div class="venue-line">
-        <span class="venue-tag-label">VENUE</span>
+        <span class="venue-tag-label" id="venueTag">VENUE</span>
         <span class="venue-name-val" id="venueName">AUDLEY</span>
       </div>
     </div>
@@ -956,7 +957,9 @@ const DEFAULT_STATE = {
   quarter: 1,
   possession: null,
   venue: 'AUDLEY',
+  rp1Title: 'BROADCAST',
   rp1Value: 'Facebook',
+  rp2Title: 'VENUE',
   rp2Value: 'Audley',
   aiSyncEnabled: true
 };
@@ -973,7 +976,7 @@ try {
   if (localRaw) {
     const local = JSON.parse(localRaw);
     if (local && typeof local === 'object') {
-      if (local.awayAbbr || local.homeAbbr || (local.awayScore !== undefined && local.awayScore > 0)) {
+      if (local.awayAbbr || local.homeAbbr || local.rp1Value || local.rp2Value || (local.awayScore !== undefined && local.awayScore > 0)) {
         if (local.homeAbbr) local.homeName = local.homeAbbr;
         if (local.awayAbbr) local.awayName = local.awayAbbr;
         S = { ...DEFAULT_STATE, ...local };
@@ -1042,35 +1045,47 @@ function renderAll() {
   applyClockTheme();
 }
 
-/* 1. Broadcast & Venue */
+/* 1. Broadcast & Venue (Live Bar Settings) */
 function renderVenue() {
   const vEl = $('venueName');
+  const vTag = $('venueTag');
   const bEl = $('broadcastName');
+  const bTag = $('broadcastTag');
 
   // Venue Name
   let venueText = 'AUDLEY';
   if (customVenueParam) {
     venueText = customVenueParam.toUpperCase();
+  } else if (S.rp2Value && S.rp2Value.trim() && S.rp2Value.trim() !== '—' && S.rp2Value.trim() !== '-') {
+    venueText = S.rp2Value.trim().toUpperCase();
   } else if (S.venue && S.venue.trim() && S.venue.trim().toUpperCase() !== 'HOOP CULTURE ARENA') {
     venueText = S.venue.trim().toUpperCase();
-  } else if (S.rp2Value && S.rp2Value !== '—') {
-    venueText = S.rp2Value.trim().toUpperCase();
   } else if (S.venue && S.venue.trim()) {
     venueText = S.venue.trim().toUpperCase();
   }
   if (vEl && vEl.textContent !== venueText) vEl.textContent = venueText;
 
+  // Venue Tag
+  let venueTagText = (S.rp2Title && S.rp2Title.trim() && S.rp2Title.trim() !== '—') ? S.rp2Title.trim().toUpperCase() : 'VENUE';
+  if (vTag && vTag.textContent !== venueTagText) vTag.textContent = venueTagText;
+
   // Broadcast Name
-  let broadcastText = 'HOOP CULTURE';
+  let broadcastText = 'FACEBOOK';
   const customBroadcastParam = gP('broadcast') || gP('network');
   if (customBroadcastParam) {
     broadcastText = customBroadcastParam.toUpperCase();
+  } else if (S.rp1Value && S.rp1Value.trim() && S.rp1Value.trim() !== '—' && S.rp1Value.trim() !== '-') {
+    broadcastText = S.rp1Value.trim().toUpperCase();
   } else if (S.broadcast && S.broadcast.trim()) {
     broadcastText = S.broadcast.trim().toUpperCase();
-  } else if (S.rp1Value && S.rp1Value !== '—' && S.rp1Value.toLowerCase() !== 'facebook') {
-    broadcastText = S.rp1Value.trim().toUpperCase();
+  } else {
+    broadcastText = 'HOOP CULTURE';
   }
   if (bEl && bEl.textContent !== broadcastText) bEl.textContent = broadcastText;
+
+  // Broadcast Tag
+  let broadcastTagText = (S.rp1Title && S.rp1Title.trim() && S.rp1Title.trim() !== '—') ? S.rp1Title.trim().toUpperCase() : 'BROADCAST';
+  if (bTag && bTag.textContent !== broadcastTagText) bTag.textContent = broadcastTagText;
 }
 
 /* Perceived Luminance Contrast (ITU-R BT.709) */
@@ -1538,8 +1553,8 @@ function setupBroadcastChannels() {
         if (e.data.type === 'state') applyStateMessage(e.data.data);
         else if (e.data.type === 'stream' || e.data.type === 'ocr') applyStreamData(e.data.data || e.data);
         else if (e.data.gameClockStream || e.data.shotClockStream) applyStreamData(e.data);
-        else if (e.data.data && typeof e.data.data === 'object' && (e.data.data.homeScore !== undefined || e.data.data.homeAbbr !== undefined || e.data.data.awayAbbr !== undefined)) applyStateMessage(e.data.data);
-        else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined || e.data.homeAbbr !== undefined || e.data.awayAbbr !== undefined || e.data.awayName !== undefined || e.data.homeName !== undefined) applyStateMessage(e.data);
+        else if (e.data.data && typeof e.data.data === 'object' && (e.data.data.homeScore !== undefined || e.data.data.homeAbbr !== undefined || e.data.data.awayAbbr !== undefined || e.data.data.rp1Value !== undefined || e.data.data.rp2Value !== undefined)) applyStateMessage(e.data.data);
+        else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined || e.data.homeAbbr !== undefined || e.data.awayAbbr !== undefined || e.data.awayName !== undefined || e.data.homeName !== undefined || e.data.rp1Value !== undefined || e.data.rp2Value !== undefined) applyStateMessage(e.data);
       };
     } catch(err) {}
   });
@@ -1552,8 +1567,8 @@ window.addEventListener('message', (e) => {
   if (e.data.type === 'state') applyStateMessage(e.data.data);
   else if (e.data.type === 'stream' || e.data.type === 'ocr') applyStreamData(e.data.data || e.data);
   else if (e.data.gameClockStream || e.data.shotClockStream) applyStreamData(e.data);
-  else if (e.data.data && typeof e.data.data === 'object' && (e.data.data.homeScore !== undefined || e.data.data.homeAbbr !== undefined || e.data.data.awayAbbr !== undefined)) applyStateMessage(e.data.data);
-  else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined || e.data.homeAbbr !== undefined || e.data.awayAbbr !== undefined || e.data.awayName !== undefined || e.data.homeName !== undefined) applyStateMessage(e.data);
+  else if (e.data.data && typeof e.data.data === 'object' && (e.data.data.homeScore !== undefined || e.data.data.homeAbbr !== undefined || e.data.data.awayAbbr !== undefined || e.data.data.rp1Value !== undefined || e.data.data.rp2Value !== undefined)) applyStateMessage(e.data.data);
+  else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined || e.data.homeAbbr !== undefined || e.data.awayAbbr !== undefined || e.data.awayName !== undefined || e.data.homeName !== undefined || e.data.rp1Value !== undefined || e.data.rp2Value !== undefined) applyStateMessage(e.data);
 });
 
 // 3. Firebase Realtime Sync
