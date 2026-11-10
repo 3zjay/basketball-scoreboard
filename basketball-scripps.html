@@ -196,9 +196,9 @@
 
     /* ════ 2 & 4. TEAM BANNERS (AWAY ON LEFT, HOME ON RIGHT) ════ */
     .seg-team {
-      flex: 1 1 0;
-      min-width: 14vw;
-      max-width: 20vw;
+      flex: 1.15 1 0;
+      min-width: 15.5vw;
+      max-width: 22vw;
       height: 100%;
       display: flex;
       align-items: center;
@@ -210,8 +210,8 @@
     .seg-team.away {
       margin-left: -1.4vw;
       border-radius: 9999px 0 0 9999px;
-      padding: 0 1vw 0 1.8vw;
-      gap: 0.75vw;
+      padding: 0 0.6vw 0 1.4vw;
+      gap: 0.5vw;
       z-index: 10;
       box-shadow: -0.25vw 0 0.8vw rgba(0, 0, 0, 0.55);
       border-left: 1.5px solid rgba(255, 255, 255, 0.38);
@@ -223,8 +223,8 @@
     .seg-team.home {
       margin-right: -1.4vw;
       border-radius: 0 9999px 9999px 0;
-      padding: 0 1.8vw 0 1vw;
-      gap: 0.75vw;
+      padding: 0 1.4vw 0 0.6vw;
+      gap: 0.5vw;
       z-index: 10;
       box-shadow: 0.25vw 0 0.8vw rgba(0, 0, 0, 0.55);
       border-right: 1.5px solid rgba(255, 255, 255, 0.38);
@@ -283,7 +283,7 @@
       justify-content: center;
       position: relative;
       z-index: 2;
-      overflow: hidden;
+      overflow: visible;
     }
 
     .seg-team.away .team-name-wrap {
@@ -300,18 +300,17 @@
       font-family: 'Barlow Condensed', sans-serif;
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 0.02vw;
-      line-height: 0.95;
+      letter-spacing: 0.01vw;
+      line-height: 0.92;
       color: #ffffff;
       text-shadow: 0 0.15vw 0.5vw rgba(0, 0, 0, 0.95), 0 0.05vw 0.1vw rgba(0, 0, 0, 0.95);
       white-space: nowrap;
       word-break: keep-all;
       overflow-wrap: normal;
-      overflow: hidden;
-      text-overflow: clip;
+      overflow: visible;
       max-width: 100%;
       display: block;
-      transition: font-size 0.2s ease, color 0.2s ease;
+      transition: color 0.2s ease;
     }
 
     /* Multi-word team names allowed to break cleanly between words (e.g., LOS / ANGELES) */
@@ -478,45 +477,47 @@
       flex: 0 0 14.8vw;
       display: flex;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: space-evenly;
       background: linear-gradient(180deg, #101524 0%, #060910 100%);
       border-radius: 0 9999px 9999px 0;
-      padding: 0 1.8vw 0 2.2vw;
-      gap: 0.75vw;
+      padding: 0 1.6vw 0 1.8vw;
+      gap: 0.6vw;
       flex-shrink: 0;
       position: relative;
       z-index: 5;
       transition: background 0.4s ease;
     }
 
-    /* Authentic Scripps Sports White Card for Period */
+    /* Period Segment (Pure White Athletic Font directly on Dark Capsule - No Box) */
     .clock-period-card {
-      background: #ffffff;
-      border-radius: 0.32vw;
-      padding: 0.16vw 0.55vw;
-      box-shadow: 0 0.15vw 0.4vw rgba(0, 0, 0, 0.45);
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 0;
+      box-shadow: none;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      height: 2.35vw;
+      height: auto;
       flex-shrink: 0;
     }
 
     .period-val {
       font-family: 'Barlow Condensed', sans-serif;
-      font-size: 1.25vw;
+      font-size: 1.45vw;
       font-weight: 900;
-      color: #0a0d14;
+      color: #ffffff;
       text-transform: uppercase;
       line-height: 1;
       white-space: nowrap;
       display: flex;
       align-items: center;
       justify-content: center;
+      text-shadow: 0 0.15vw 0.5vw rgba(0, 0, 0, 0.95), 0 0.05vw 0.1vw rgba(0, 0, 0, 0.95);
     }
     .period-val sup {
       font-size: 0.68em;
-      color: #0a0d14;
+      color: #ffffff;
       margin-left: 0.05vw;
     }
 
@@ -547,30 +548,33 @@
       100% { opacity: 1; }
     }
 
-    /* Shot Clock Card (Frosted Grey Translucent Card matching Scripps [ 15 ]) */
+    /* Shot Clock (Bold Tabular Digits blending directly into Dark Capsule - No Box) */
     .shot-clock-pill {
-      background: rgba(255, 255, 255, 0.28);
-      border: 1px solid rgba(255, 255, 255, 0.38);
-      border-radius: 0.32vw;
-      padding: 0.1vw 0.45vw;
-      min-width: 2.35vw;
-      height: 2.35vw;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 0;
+      min-width: 2.2vw;
+      height: auto;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      box-shadow: 0 0.15vw 0.4vw rgba(0, 0, 0, 0.35);
+      box-shadow: none;
     }
 
     .shot-clock-val {
       font-family: 'Teko', sans-serif;
-      font-size: 1.95vw;
+      font-size: 2.35vw;
       font-weight: 700;
       color: #ffffff;
       line-height: 0.85;
       font-variant-numeric: tabular-nums;
       text-align: center;
-      text-shadow: 0 0.1vw 0.3vw rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-shadow: 0 0.15vw 0.5vw rgba(0, 0, 0, 0.95), 0 0.05vw 0.1vw rgba(0, 0, 0, 0.95);
     }
     .shot-clock-val.urgent {
       color: #ff3b30;
@@ -588,16 +592,14 @@
     }
 
     /* Dark Clock Theme Overrides */
-    .seg-clock.dark-clock .clock-period-card {
-      background: rgba(0, 0, 0, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+    .seg-clock.dark-clock .clock-period-card,
+    .seg-clock.dark-clock .shot-clock-pill {
+      background: transparent;
+      border: none;
+      box-shadow: none;
     }
     .seg-clock.dark-clock .clock-period-card .period-val {
       color: #ffffff;
-    }
-    .seg-clock.dark-clock .shot-clock-pill {
-      background: rgba(0, 0, 0, 0.7);
-      border-color: rgba(255, 255, 255, 0.2);
     }
 
     /* ════ OPTICAL SCANNER LIVE FEED STREAM CROPS ════ */
@@ -1126,30 +1128,57 @@ function renderTeams() {
   }
 }
 
+let _lastTeam1 = '', _lastTeam2 = '', _lastUniformSize = null;
+
 function setUniformTeamFontSize(el1, text1, el2, text2) {
   if (!el1 || !el2) return;
   const raw1 = (text1 || '').trim();
   const raw2 = (text2 || '').trim();
   const maxLen = Math.max(raw1.length, raw2.length);
 
-  [el1, el2].forEach(el => {
-    el.classList.remove('two-lines');
-    el.style.whiteSpace = 'nowrap';
-    el.style.wordBreak = 'keep-all';
-    el.style.overflowWrap = 'normal';
-  });
+  // If team names haven't changed and size was previously calculated, preserve without reflow
+  if (raw1 === _lastTeam1 && raw2 === _lastTeam2 && _lastUniformSize !== null) {
+    el1.style.fontSize = _lastUniformSize + 'vw';
+    el2.style.fontSize = _lastUniformSize + 'vw';
+    return;
+  }
+  _lastTeam1 = raw1;
+  _lastTeam2 = raw2;
 
-  // Calculate target font size based on the longer team name so both fit evenly
+  // Check if either name contains spaces and is long (> 7 chars) for clean 2-line display
+  const canSplit1 = raw1.includes(' ') && raw1.length > 7;
+  const canSplit2 = raw2.includes(' ') && raw2.length > 7;
+
+  // Calculate target font size based on character count so both fit evenly
   let targetSize = 1.45;
   if (maxLen <= 4) {
     targetSize = 1.85; // e.g. LAL, DET, PIN, FRE
   } else if (maxLen <= 7) {
-    targetSize = 1.45; // e.g. PINTURA, FREEDOM — clean athletic size matching freedom
-  } else if (maxLen <= 10) {
-    targetSize = 1.25; // e.g. BARBERCUTZ, WARRIORS
+    targetSize = 1.45; // e.g. HARINA, FREEDOM, PINTURA
+  } else if (maxLen <= 9) {
+    targetSize = 1.25; // e.g. WARRIORS
+  } else if (maxLen <= 11) {
+    targetSize = 1.02; // e.g. BARBERCUTZ (10 letters fits completely without clipping)
   } else {
-    targetSize = 1.05;
+    targetSize = 0.88; // e.g. TIMBERWOLVES
   }
+
+  // Handle multi-line wrapping for names with spaces
+  [ { el: el1, raw: raw1, split: canSplit1 }, { el: el2, raw: raw2, split: canSplit2 } ].forEach(({ el, raw, split }) => {
+    if (split) {
+      el.classList.add('two-lines');
+      el.style.whiteSpace = 'normal';
+      el.style.wordBreak = 'break-word';
+      el.style.lineHeight = '0.88';
+      el.innerHTML = raw.replace(/\s+/, '<br>');
+    } else {
+      el.classList.remove('two-lines');
+      el.style.whiteSpace = 'nowrap';
+      el.style.wordBreak = 'keep-all';
+      el.style.lineHeight = '0.92';
+      if (el.textContent !== raw) el.textContent = raw;
+    }
+  });
 
   el1.style.fontSize = targetSize + 'vw';
   el2.style.fontSize = targetSize + 'vw';
@@ -1159,15 +1188,16 @@ function setUniformTeamFontSize(el1, text1, el2, text2) {
   const parent2 = el2.parentElement;
   let currentVw = targetSize;
   let guard = 0;
-  while (guard < 15 && currentVw > 0.85) {
-    const ov1 = parent1 && parent1.clientWidth > 0 && el1.scrollWidth > parent1.clientWidth;
-    const ov2 = parent2 && parent2.clientWidth > 0 && el2.scrollWidth > parent2.clientWidth;
+  while (guard < 20 && currentVw > 0.65) {
+    const ov1 = parent1 && parent1.clientWidth > 0 && el1.scrollWidth > (parent1.clientWidth + 2);
+    const ov2 = parent2 && parent2.clientWidth > 0 && el2.scrollWidth > (parent2.clientWidth + 2);
     if (!ov1 && !ov2) break;
-    currentVw -= 0.04;
+    currentVw -= 0.03;
     el1.style.fontSize = currentVw.toFixed(2) + 'vw';
     el2.style.fontSize = currentVw.toFixed(2) + 'vw';
     guard++;
   }
+  _lastUniformSize = currentVw.toFixed(2);
 }
 
 function setLogoBadge(circleId, fallbackId, logoUrl, fallbackAbbr) {
@@ -1370,6 +1400,22 @@ function applyClockTheme() {
 /* ══ REALTIME DATA SYNCHRONIZATION ══ */
 let _lastStateMsgTime = 0;
 
+function hasStateNonClockChanged(oldS, newD) {
+  if (!oldS || !newD) return true;
+  const nonClockKeys = [
+    'homeScore', 'awayScore', 'homeAbbr', 'awayAbbr', 'homeName', 'awayName', 'homeTeam', 'awayTeam',
+    'homeColor', 'awayColor', 'homeLogo', 'awayLogo', 'homeLogoThumb', 'awayLogoThumb',
+    'quarter', 'period', 'possession', 'homeFouls', 'awayFouls', 'homeBonus', 'awayBonus',
+    'rp1Title', 'rp1Value', 'rp2Title', 'rp2Value', 'venue', 'broadcast', 'aiSyncActive', 'aiSyncEnabled',
+    'homeScoreStream', 'awayScoreStream', 'periodStream'
+  ];
+  for (let i = 0; i < nonClockKeys.length; i++) {
+    const k = nonClockKeys[i];
+    if (newD[k] !== undefined && newD[k] !== oldS[k]) return true;
+  }
+  return false;
+}
+
 function applyStateMessage(msgData) {
   if (!msgData) return;
   _lastStateMsgTime = Date.now();
@@ -1390,8 +1436,16 @@ function applyStateMessage(msgData) {
     msgData.awayAbbr = msgData.awayTeam;
     msgData.awayName = msgData.awayTeam;
   }
+
+  const nonClockChanged = hasStateNonClockChanged(S, msgData);
   S = { ...S, ...msgData };
-  renderAll();
+
+  if (nonClockChanged) {
+    renderAll();
+  } else {
+    renderClock();
+    renderShotClock();
+  }
   syncLocalTick();
 }
 
@@ -1417,11 +1471,22 @@ function applyStreamData(streamData) {
   }
   aiSyncActive = true;
 
+  let nonClockChanged = false;
+
   if (streamData.gameClockStream) S.gameClockStream = streamData.gameClockStream;
   if (streamData.shotClockStream) S.shotClockStream = streamData.shotClockStream;
-  if (streamData.homeScoreStream) S.homeScoreStream = streamData.homeScoreStream;
-  if (streamData.awayScoreStream) S.awayScoreStream = streamData.awayScoreStream;
-  if (streamData.periodStream) S.periodStream = streamData.periodStream;
+  if (streamData.homeScoreStream && S.homeScoreStream !== streamData.homeScoreStream) {
+    S.homeScoreStream = streamData.homeScoreStream;
+    nonClockChanged = true;
+  }
+  if (streamData.awayScoreStream && S.awayScoreStream !== streamData.awayScoreStream) {
+    S.awayScoreStream = streamData.awayScoreStream;
+    nonClockChanged = true;
+  }
+  if (streamData.periodStream && S.periodStream !== streamData.periodStream) {
+    S.periodStream = streamData.periodStream;
+    nonClockChanged = true;
+  }
 
   if (streamData.clock != null && String(streamData.clock).trim()) {
     const cStr = String(streamData.clock).trim();
@@ -1435,13 +1500,25 @@ function applyStreamData(streamData) {
     }
   }
   if (streamData.homeScore != null && streamData.homeScore !== '' && !isNaN(parseInt(streamData.homeScore, 10))) {
-    aiState.homeScore = parseInt(streamData.homeScore, 10);
+    const hs = parseInt(streamData.homeScore, 10);
+    if (aiState.homeScore !== hs) {
+      aiState.homeScore = hs;
+      nonClockChanged = true;
+    }
   }
   if (streamData.awayScore != null && streamData.awayScore !== '' && !isNaN(parseInt(streamData.awayScore, 10))) {
-    aiState.awayScore = parseInt(streamData.awayScore, 10);
+    const as = parseInt(streamData.awayScore, 10);
+    if (aiState.awayScore !== as) {
+      aiState.awayScore = as;
+      nonClockChanged = true;
+    }
   }
   if (streamData.period != null && streamData.period !== '' && !isNaN(parseInt(streamData.period, 10))) {
-    aiState.quarter = parseInt(streamData.period, 10);
+    const q = parseInt(streamData.period, 10);
+    if (aiState.quarter !== q) {
+      aiState.quarter = q;
+      nonClockChanged = true;
+    }
   }
   if (streamData.shotClock != null && streamData.shotClock !== '' && !isNaN(parseInt(streamData.shotClock, 10))) {
     const parsedShot = parseInt(streamData.shotClock, 10);
@@ -1453,7 +1530,13 @@ function applyStreamData(streamData) {
     }
   }
 
-  renderAll();
+  if (nonClockChanged) {
+    renderScores();
+    renderClock();
+  } else {
+    renderClock();
+    renderShotClock();
+  }
   syncLocalTick();
 }
 
