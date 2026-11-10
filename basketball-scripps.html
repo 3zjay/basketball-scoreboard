@@ -59,8 +59,8 @@
       --bg-dark: #080605;
       --orange-fire: #e8430a;
       --gold-accent: #ffaa00;
-      --away-color: #fdb927;
-      --home-color: #1d42ba;
+      --away-color: #5a5858;
+      --home-color: #14283c;
       --pill-height: 4.8vw;
       --capsule-bg: radial-gradient(ellipse at center, #1e2029 0%, #0c0d12 60%, #040507 100%);
     }
@@ -525,10 +525,10 @@
     <!-- ② AWAY TEAM (Left Team - Vibrant Team Color Banner) -->
     <div class="seg-team away" id="awayTeamSeg">
       <div class="team-logo-circle" id="awayLogoCircle">
-        <div class="team-logo-fallback" id="awayLogoFallback">LAL</div>
+        <div class="team-logo-fallback" id="awayLogoFallback">AWAY</div>
       </div>
       <div class="team-name-wrap">
-        <div class="team-name-text" id="awayTeamName">LAKERS</div>
+        <div class="team-name-text" id="awayTeamName">AWAY</div>
       </div>
       <div class="poss-arrow" id="awayPossArrow">
         <svg viewBox="0 0 24 24"><polygon points="6,4 18,12 6,20" fill="#ffffff"/></svg>
@@ -565,10 +565,10 @@
         <svg viewBox="0 0 24 24"><polygon points="18,4 6,12 18,20" fill="#ffffff"/></svg>
       </div>
       <div class="team-name-wrap">
-        <div class="team-name-text" id="homeTeamName">PISTONS</div>
+        <div class="team-name-text" id="homeTeamName">HOME</div>
       </div>
       <div class="team-logo-circle" id="homeLogoCircle">
-        <div class="team-logo-fallback" id="homeLogoFallback">DET</div>
+        <div class="team-logo-fallback" id="homeLogoFallback">HOME</div>
       </div>
     </div>
 
@@ -652,14 +652,16 @@ const scaleParam = parseFloat(gP('scale') || '1.0');
 const DEFAULT_STATE = {
   homeScore: 0,
   awayScore: 0,
-  homeAbbr: 'PISTONS',
-  awayAbbr: 'LAKERS',
-  homeName: 'PISTONS',
-  awayName: 'LAKERS',
-  homeColor: '#1d42ba',
-  awayColor: '#fdb927',
+  homeAbbr: 'HOME',
+  awayAbbr: 'AWAY',
+  homeName: 'HOME',
+  awayName: 'AWAY',
+  homeColor: '#14283c',
+  awayColor: '#5a5858',
   homeLogo: '',
   awayLogo: '',
+  homeLogoThumb: '',
+  awayLogoThumb: '',
   homeFouls: 0,
   awayFouls: 0,
   homeBonus: false,
@@ -734,14 +736,14 @@ function renderTeams() {
   const leftTeamKey  = isSwapped ? 'home' : 'away';
   const rightTeamKey = isSwapped ? 'away' : 'home';
 
-  const leftColor  = S[leftTeamKey + 'Color'] || (isSwapped ? '#1d42ba' : '#fdb927');
-  const rightColor = S[rightTeamKey + 'Color'] || (isSwapped ? '#fdb927' : '#1d42ba');
+  const leftColor  = S[leftTeamKey + 'Color'] || (isSwapped ? '#14283c' : '#5a5858');
+  const rightColor = S[rightTeamKey + 'Color'] || (isSwapped ? '#5a5858' : '#14283c');
 
-  const leftName  = (S[leftTeamKey + 'Name'] || S[leftTeamKey + 'Abbr'] || (isSwapped ? 'PISTONS' : 'LAKERS')).toUpperCase();
-  const rightName = (S[rightTeamKey + 'Name'] || S[rightTeamKey + 'Abbr'] || (isSwapped ? 'LAKERS' : 'PISTONS')).toUpperCase();
+  const leftName  = (S[leftTeamKey + 'Name'] || S[leftTeamKey + 'Abbr'] || (isSwapped ? 'HOME' : 'AWAY')).toUpperCase();
+  const rightName = (S[rightTeamKey + 'Name'] || S[rightTeamKey + 'Abbr'] || (isSwapped ? 'AWAY' : 'HOME')).toUpperCase();
 
-  const leftLogo  = S[leftTeamKey + 'Logo'];
-  const rightLogo = S[rightTeamKey + 'Logo'];
+  const leftLogo  = S[leftTeamKey + 'Logo'] || S[leftTeamKey + 'LogoThumb'] || '';
+  const rightLogo = S[rightTeamKey + 'Logo'] || S[rightTeamKey + 'LogoThumb'] || '';
 
   // Apply Colors to CSS Variables
   document.documentElement.style.setProperty('--away-color', leftColor);
@@ -999,27 +1001,51 @@ window.addEventListener('message', (e) => {
 
 // 3. Firebase Realtime Sync
 if (useFirebase && db) {
-  // Initial state fetch from authoritative scoreboard path
-  db.ref(`states/${fbUser}`).once('value').then(snap => {
-    const val = snap.val();
-    if (val) {
-      S = { ...DEFAULT_STATE, ...val };
-      renderAll();
-      syncLocalTimers();
-    }
-  }).catch(e => console.error("Firebase fetch error:", e));
+  function listenToRoom(roomKey) {
+    fbUser = roomKey;
+    // Initial state fetch from authoritative scoreboard path
+    db.ref(`states/${roomKey}`).once('value').then(snap => {
+      const val = snap.val();
+      if (val) {
+        S = { ...DEFAULT_STATE, ...val };
+        renderAll();
+        syncLocalTimers();
+      }
+    }).catch(e => console.error("Firebase fetch error:", e));
 
-  // Live state listener
-  db.ref(`states/${fbUser}`).on('value', snap => {
-    const val = snap.val();
-    if (val) applyStateMessage(val);
-  });
+    // Live state listener
+    db.ref(`states/${roomKey}`).on('value', snap => {
+      const val = snap.val();
+      if (val) applyStateMessage(val);
+    });
 
-  // Live optical scanner stream
-  db.ref(`ocr/${fbUser}`).on('value', snap => {
-    const d = snap.val();
-    if (d) applyStreamData(d);
-  });
+    // Live optical scanner stream
+    db.ref(`ocr/${roomKey}`).on('value', snap => {
+      const d = snap.val();
+      if (d) applyStreamData(d);
+    });
+  }
+
+  const explicitUser = gP('user') || localStorage.getItem('hc_session_user');
+  if (explicitUser && fbUser && fbUser !== 'default') {
+    listenToRoom(fbUser);
+  } else {
+    // Auto-discover the active scoreboard room in Firebase RTDB
+    db.ref('states').limitToLast(5).once('value').then(snap => {
+      const all = snap.val();
+      if (all) {
+        const keys = Object.keys(all);
+        const activeRoom = keys.find(k => k.includes('admin')) || keys[keys.length - 1];
+        if (activeRoom) {
+          listenToRoom(activeRoom);
+        } else {
+          listenToRoom('default');
+        }
+      } else {
+        listenToRoom('default');
+      }
+    }).catch(() => listenToRoom('default'));
+  }
 }
 
 // 4. SSE Server Fallback
