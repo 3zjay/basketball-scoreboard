@@ -2852,6 +2852,16 @@ function toggleCropInvertDirect(key, checked) {
   syncCropInvertCheckboxes();
   broadcastRemoteCrops();
   saveRemoteCropsLocally();
+
+  // Instant broadcast & Firebase sync of per-crop invert polarity
+  if (useFirebase && db) {
+    db.ref(`ocr/${fbUser}/invertStates/${key}`).set(!!checked).catch(() => {});
+    db.ref(`states/${fbUser}/invertStates/${key}`).set(!!checked).catch(() => {});
+  }
+  bc.postMessage({
+    type: 'state',
+    data: { invertStates: { [key]: !!checked } }
+  });
 }
 
 function syncCropInvertCheckboxes() {

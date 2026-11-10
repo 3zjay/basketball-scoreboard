@@ -891,24 +891,31 @@ function applyStreamImgStyles(img, cropKey) {
     cropKey = img.dataset.cropKey;
   }
 
-  // 100% True Native Alpha Transparency (Zero Box, Zero Borders):
-  // Stream crop PNGs are generated with 100% pure transparent alpha (rgba(0,0,0,0)).
-  // - Digits are 100% solid crisp white (rgba(255,255,255,255)) on all broadcast backgrounds.
-  // - Background is completely transparent with zero boxes, zero borders, and zero background shade.
-  img.style.background = 'transparent';
-  img.style.border = 'none';
-  img.style.outline = 'none';
-  img.style.boxShadow = 'none';
+  // Polarity determination:
+  // - Invert CHECKED (true): Black background from camera -> 'screen' makes black 100% transparent, white digits show!
+  // - Invert UNCHECKED (false): White background from camera -> 'multiply' makes white 100% transparent, black digits show!
+  let isChecked = true;
 
-  const isScrippsWhiteClock = (cropKey === 'clock' && typeof clockTheme !== 'undefined' && clockTheme === 'white');
-  const forceBlackDigits = (feedInvertMode === 'black' || isScrippsWhiteClock);
+  if (feedInvertMode === 'black') {
+    isChecked = false; // Force multiply (black digits, white transparent)
+  } else if (feedInvertMode === 'white') {
+    isChecked = true;  // Force screen (white digits, black transparent)
+  } else if (cropKey && cropInvertStates[cropKey] !== undefined) {
+    isChecked = !!cropInvertStates[cropKey];
+  }
 
-  if (forceBlackDigits) {
-    img.style.mixBlendMode = 'normal';
-    img.style.filter = 'invert(1)'; // Inverts white digits to black while transparent background stays 100% transparent
+  // Handle Scripps white clock pod:
+  if (cropKey === 'clock' && typeof clockTheme !== 'undefined' && clockTheme === 'white') {
+    img.style.mixBlendMode = 'multiply';
+    img.style.filter = 'contrast(2.5) brightness(1.1)';
+  } else if (isChecked) {
+    // Screen blend mode: Black background is 100% transparent, white digits show
+    img.style.mixBlendMode = 'screen';
+    img.style.filter = 'contrast(2.5) brightness(1.3)';
   } else {
-    img.style.mixBlendMode = 'normal';
-    img.style.filter = 'none';
+    // Multiply blend mode: White background is 100% transparent, black digits show!
+    img.style.mixBlendMode = 'multiply';
+    img.style.filter = 'contrast(2.5) brightness(1.1)';
   }
 }
 
