@@ -295,34 +295,53 @@ window.addEventListener('keydown', (e) => {
 
 function applyStreamData(data) {
   if (!data) return;
+  const role = data.role || 'all';
+
   if (data.invertStates) {
     cropInvertStates = Object.assign(cropInvertStates, data.invertStates);
     updateAllStreamImagesStyle();
   }
   if (data.streamActive === false) {
-    aiSyncActive = false;
-    S.gameClockStream = null;
-    S.homeScoreStream = null;
-    S.awayScoreStream = null;
-    S.periodStream = null;
-    S.shotClockStream = null;
+    if (role === 'shot') {
+      S.shotClockStream = null;
+    } else if (role === 'main') {
+      S.gameClockStream = null;
+      S.homeScoreStream = null;
+      S.awayScoreStream = null;
+      S.periodStream = null;
+    } else {
+      aiSyncActive = false;
+      S.gameClockStream = null;
+      S.homeScoreStream = null;
+      S.awayScoreStream = null;
+      S.periodStream = null;
+      S.shotClockStream = null;
+    }
     render();
     return;
   }
   aiSyncActive = true;
 
-  if (data.gameClockStream !== undefined) S.gameClockStream = data.gameClockStream;
-  if (data.homeScoreStream !== undefined) S.homeScoreStream = data.homeScoreStream;
-  if (data.awayScoreStream !== undefined) S.awayScoreStream = data.awayScoreStream;
-  if (data.periodStream !== undefined) S.periodStream = data.periodStream;
-  if (data.shotClockStream !== undefined) S.shotClockStream = data.shotClockStream;
+  if (role === 'all' || role === 'main') {
+    if (data.gameClockStream !== undefined) S.gameClockStream = data.gameClockStream;
+    if (data.homeScoreStream !== undefined) S.homeScoreStream = data.homeScoreStream;
+    if (data.awayScoreStream !== undefined) S.awayScoreStream = data.awayScoreStream;
+    if (data.periodStream !== undefined) S.periodStream = data.periodStream;
+  }
+  if (role === 'all' || role === 'shot') {
+    if (data.shotClockStream !== undefined) S.shotClockStream = data.shotClockStream;
+  }
 
   if (data.enabledCrops) {
-    if (data.enabledCrops.clock === false) S.gameClockStream = null;
-    if (data.enabledCrops.home === false) S.homeScoreStream = null;
-    if (data.enabledCrops.away === false) S.awayScoreStream = null;
-    if (data.enabledCrops.period === false) S.periodStream = null;
-    if (data.enabledCrops.shot === false) S.shotClockStream = null;
+    if (role === 'all' || role === 'main') {
+      if (data.enabledCrops.clock === false) S.gameClockStream = null;
+      if (data.enabledCrops.home === false) S.homeScoreStream = null;
+      if (data.enabledCrops.away === false) S.awayScoreStream = null;
+      if (data.enabledCrops.period === false) S.periodStream = null;
+    }
+    if (role === 'all' || role === 'shot') {
+      if (data.enabledCrops.shot === false) S.shotClockStream = null;
+    }
   }
 
   render();

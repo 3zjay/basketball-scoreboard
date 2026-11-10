@@ -1519,13 +1519,24 @@ function applyStateMessage(msgData) {
 function applyStreamData(streamData) {
   if (!streamData) return;
   _lastStateMsgTime = Date.now();
+  const role = streamData.role || 'all';
+
   if (streamData.streamActive === false) {
-    aiSyncActive = false;
-    S.gameClockStream = null;
-    S.shotClockStream = null;
-    S.homeScoreStream = null;
-    S.awayScoreStream = null;
-    S.periodStream = null;
+    if (role === 'shot') {
+      S.shotClockStream = null;
+    } else if (role === 'main') {
+      S.gameClockStream = null;
+      S.homeScoreStream = null;
+      S.awayScoreStream = null;
+      S.periodStream = null;
+    } else {
+      aiSyncActive = false;
+      S.gameClockStream = null;
+      S.shotClockStream = null;
+      S.homeScoreStream = null;
+      S.awayScoreStream = null;
+      S.periodStream = null;
+    }
     renderAll();
     syncLocalTick();
     return;
@@ -1534,30 +1545,40 @@ function applyStreamData(streamData) {
 
   let streamImagesChanged = false;
 
-  if (streamData.gameClockStream !== undefined && S.gameClockStream !== streamData.gameClockStream) {
-    S.gameClockStream = streamData.gameClockStream;
+  if (role === 'all' || role === 'main') {
+    if (streamData.gameClockStream !== undefined && S.gameClockStream !== streamData.gameClockStream) {
+      S.gameClockStream = streamData.gameClockStream;
+    }
+    if (streamData.homeScoreStream !== undefined && S.homeScoreStream !== streamData.homeScoreStream) {
+      S.homeScoreStream = streamData.homeScoreStream;
+      streamImagesChanged = true;
+    }
+    if (streamData.awayScoreStream !== undefined && S.awayScoreStream !== streamData.awayScoreStream) {
+      S.awayScoreStream = streamData.awayScoreStream;
+      streamImagesChanged = true;
+    }
+    if (streamData.periodStream !== undefined && S.periodStream !== streamData.periodStream) {
+      S.periodStream = streamData.periodStream;
+      streamImagesChanged = true;
+    }
   }
-  if (streamData.shotClockStream !== undefined && S.shotClockStream !== streamData.shotClockStream) {
-    S.shotClockStream = streamData.shotClockStream;
+
+  if (role === 'all' || role === 'shot') {
+    if (streamData.shotClockStream !== undefined && S.shotClockStream !== streamData.shotClockStream) {
+      S.shotClockStream = streamData.shotClockStream;
+    }
   }
-  if (streamData.homeScoreStream !== undefined && S.homeScoreStream !== streamData.homeScoreStream) {
-    S.homeScoreStream = streamData.homeScoreStream;
-    streamImagesChanged = true;
-  }
-  if (streamData.awayScoreStream !== undefined && S.awayScoreStream !== streamData.awayScoreStream) {
-    S.awayScoreStream = streamData.awayScoreStream;
-    streamImagesChanged = true;
-  }
-  if (streamData.periodStream !== undefined && S.periodStream !== streamData.periodStream) {
-    S.periodStream = streamData.periodStream;
-    streamImagesChanged = true;
-  }
+
   if (streamData.enabledCrops) {
-    if (streamData.enabledCrops.clock === false && S.gameClockStream !== null) { S.gameClockStream = null; streamImagesChanged = true; }
-    if (streamData.enabledCrops.shot === false && S.shotClockStream !== null) { S.shotClockStream = null; streamImagesChanged = true; }
-    if (streamData.enabledCrops.home === false && S.homeScoreStream !== null) { S.homeScoreStream = null; streamImagesChanged = true; }
-    if (streamData.enabledCrops.away === false && S.awayScoreStream !== null) { S.awayScoreStream = null; streamImagesChanged = true; }
-    if (streamData.enabledCrops.period === false && S.periodStream !== null) { S.periodStream = null; streamImagesChanged = true; }
+    if (role === 'all' || role === 'main') {
+      if (streamData.enabledCrops.clock === false && S.gameClockStream !== null) { S.gameClockStream = null; streamImagesChanged = true; }
+      if (streamData.enabledCrops.home === false && S.homeScoreStream !== null) { S.homeScoreStream = null; streamImagesChanged = true; }
+      if (streamData.enabledCrops.away === false && S.awayScoreStream !== null) { S.awayScoreStream = null; streamImagesChanged = true; }
+      if (streamData.enabledCrops.period === false && S.periodStream !== null) { S.periodStream = null; streamImagesChanged = true; }
+    }
+    if (role === 'all' || role === 'shot') {
+      if (streamData.enabledCrops.shot === false && S.shotClockStream !== null) { S.shotClockStream = null; streamImagesChanged = true; }
+    }
   }
   if (streamData.invertStates) {
     cropInvertStates = Object.assign(cropInvertStates, streamData.invertStates);

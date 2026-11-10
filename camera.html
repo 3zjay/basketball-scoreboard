@@ -679,11 +679,22 @@
 
     function applyRemoteCropPositions(data) {
       if (!data || !data.crops) return;
+      if (data.sender === myClientId) return;
+      if (data.targetRole && data.targetRole !== 'all' && data.targetRole !== deviceRole) return;
+      if (data.role && data.role !== 'all' && data.role !== deviceRole && !data.targetRole) return;
+
+      const roleCrops = {
+        all: ['clock', 'home', 'away', 'period', 'shot'],
+        main: ['clock', 'home', 'away', 'period'],
+        shot: ['shot']
+      };
+      const myOwned = roleCrops[deviceRole] || roleCrops.all;
+
       const crops = data.crops;
       const video = document.getElementById('camera-view');
       if (!video || !video.videoWidth) return;
 
-      Object.keys(crops).forEach(k => {
+      myOwned.forEach(k => {
         const norm = crops[k];
         const frame = frames[k];
         if (norm && frame) {
@@ -698,24 +709,30 @@
       });
 
       if (data.enabledCrops) {
-        enabledCrops = Object.assign(enabledCrops, data.enabledCrops);
-        Object.keys(enabledCrops).forEach(k => {
-          const cb = document.getElementById(`crop-toggle-${k}`);
-          if (cb) cb.checked = !!enabledCrops[k];
-          const frame = frames[k];
-          if (frame) frame.style.opacity = enabledCrops[k] ? '1' : '0.2';
+        myOwned.forEach(k => {
+          if (data.enabledCrops[k] !== undefined) {
+            enabledCrops[k] = !!data.enabledCrops[k];
+            const cb = document.getElementById(`crop-toggle-${k}`);
+            if (cb) cb.checked = !!enabledCrops[k];
+            const frame = frames[k];
+            if (frame) frame.style.opacity = enabledCrops[k] ? '1' : '0.2';
+          }
         });
         localStorage.setItem('hc_ocr_enabled_crops', JSON.stringify(enabledCrops));
       }
 
       if (data.thresholds) {
-        thresholds = Object.assign(thresholds, data.thresholds);
+        myOwned.forEach(k => {
+          if (data.thresholds[k] != null) thresholds[k] = data.thresholds[k];
+        });
         localStorage.setItem('hc_ocr_thresholds', JSON.stringify(thresholds));
         updateThreshold(thresholds[activeCrop] || 120);
       }
 
       if (data.invertStates) {
-        invertStates = Object.assign(invertStates, data.invertStates);
+        myOwned.forEach(k => {
+          if (data.invertStates[k] != null) invertStates[k] = data.invertStates[k];
+        });
         localStorage.setItem('hc_ocr_invert_states', JSON.stringify(invertStates));
         const checkbox = document.getElementById('invert-toggle');
         if (checkbox) checkbox.checked = !!invertStates[activeCrop];
@@ -1014,19 +1031,39 @@
       if (broadcast) {
         const user = (document.getElementById('session-input') && document.getElementById('session-input').value) || 'default';
         const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
+
+        const roleCrops = {
+          all: ['clock', 'home', 'away', 'period', 'shot'],
+          main: ['clock', 'home', 'away', 'period'],
+          shot: ['shot']
+        };
+        const myOwned = roleCrops[deviceRole] || roleCrops.all;
+
+        const roleNormCrops = {};
+        const roleThresholds = {};
+        const roleInvertStates = {};
+        const roleEnabledCrops = {};
+        myOwned.forEach(k => {
+          if (normCrops[k]) roleNormCrops[k] = normCrops[k];
+          if (thresholds[k] != null) roleThresholds[k] = thresholds[k];
+          if (invertStates[k] != null) roleInvertStates[k] = invertStates[k];
+          roleEnabledCrops[k] = enabledCrops[k] !== false;
+        });
+
         if (db) {
           const cropPayload = {
             sender: myClientId,
             role: deviceRole,
+            targetRole: deviceRole,
             timestamp: Date.now(),
-            crops: normCrops,
-            thresholds: thresholds,
-            invertStates: invertStates,
-            enabledCrops: enabledCrops
+            crops: roleNormCrops,
+            thresholds: roleThresholds,
+            invertStates: roleInvertStates,
+            enabledCrops: roleEnabledCrops
           };
           db.ref(`camera_crops/${fbUser}/${deviceRole}`).set(cropPayload).catch(() => {});
           db.ref(`camera_crops/${fbUser}/${myClientId}`).set(cropPayload).catch(() => {});
-          if (deviceRole === 'all' || deviceRole === 'main') {
+          if (deviceRole === 'all') {
             db.ref(`camera_crops/${fbUser}`).set(cropPayload).catch(() => {});
           }
         }
@@ -1037,10 +1074,11 @@
             user: fbUser,
             sender: myClientId,
             role: deviceRole,
-            crops: normCrops,
-            thresholds: thresholds,
-            invertStates: invertStates,
-            enabledCrops: enabledCrops
+            targetRole: deviceRole,
+            crops: roleNormCrops,
+            thresholds: roleThresholds,
+            invertStates: roleInvertStates,
+            enabledCrops: roleEnabledCrops
           });
         }
       }
@@ -1464,15 +1502,29 @@
         period: 'periodStream'
       };
 
+      // Multi-Device Role Ownership:
+      // Cam 2 ('shot') ONLY processes and streams 'shot'!
+      // Cam 1 ('main') ONLY processes and streams 'clock', 'home', 'away', 'period'!
+      // All-In-One ('all') processes all 5.
+      let ownedKeys = keys;
+      if (deviceRole === 'shot') {
+        ownedKeys = ['shot'];
+      } else if (deviceRole === 'main') {
+        ownedKeys = ['clock', 'home', 'away', 'period'];
+      }
+
+      const roleEnabledCrops = {};
+      ownedKeys.forEach(k => { roleEnabledCrops[k] = enabledCrops[k] !== false; });
+
       const payload = { 
         streamActive: syncActive, 
         sender: myClientId,
         role: deviceRole,
-        enabledCrops: enabledCrops,
+        enabledCrops: roleEnabledCrops,
         timestamp: Date.now()
       };
 
-      for (const key of keys) {
+      for (const key of ownedKeys) {
         if (enabledCrops[key] === false) {
           payload[fieldMap[key]] = null;
           continue;
@@ -1592,6 +1644,7 @@
         const fctx = fc.getContext('2d');
         fctx.drawImage(video, 0, 0, targetW, targetH);
         payload.fullFrame = fc.toDataURL('image/jpeg', 0.55);
+        payload[`frames/${deviceRole}`] = payload.fullFrame;
         payload.crops = getNormalizedCrops();
         payload.aspectRatio = +(videoW / videoH).toFixed(3);
 
@@ -1599,6 +1652,7 @@
           const user = (document.getElementById('session-input') && document.getElementById('session-input').value) || 'default';
           const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
           db.ref(`ocr_devices/${fbUser}/${myClientId}/fullFrame`).set(payload.fullFrame).catch(() => {});
+          db.ref(`ocr_devices/${fbUser}/${myClientId}/role`).set(deviceRole).catch(() => {});
         }
       }
 
@@ -1641,7 +1695,21 @@
 
       if (target === 'firebase' && db) {
         const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
-        db.ref(`ocr/${fbUser}`).update(payload)
+        const fbPayload = { ...payload };
+        // Flatten enabledCrops so multi-devices don't wipe each other's crop enabled states
+        if (fbPayload.enabledCrops && typeof fbPayload.enabledCrops === 'object') {
+          Object.keys(fbPayload.enabledCrops).forEach(k => {
+            fbPayload[`enabledCrops/${k}`] = fbPayload.enabledCrops[k];
+          });
+          delete fbPayload.enabledCrops;
+        }
+        // Cam 2 (shot clock) only writes to frames/shot, preserving main board view for default remote aligner
+        if (deviceRole === 'shot') {
+          delete fbPayload.fullFrame;
+          delete fbPayload.crops;
+          delete fbPayload.aspectRatio;
+        }
+        db.ref(`ocr/${fbUser}`).update(fbPayload)
           .then(() => {
             const statusEl = document.getElementById('status-text');
             if (statusEl && syncActive) {

@@ -1314,14 +1314,51 @@ bc.onmessage = (e) => {
   } else if (e.data.type === 'crop_update') {
     if (e.data.user && e.data.user !== fbUser) return;
     if (e.data.sender !== myClientId && !isDraggingRemote && !isResizingRemote) {
-      if (e.data.crops) remoteNormCrops = Object.assign(remoteNormCrops, e.data.crops);
-      if (e.data.thresholds) remoteThresholds = Object.assign(remoteThresholds, e.data.thresholds);
+      const senderRole = e.data.role || 'all';
+      if (e.data.crops) {
+        if (senderRole === 'shot') {
+          if (e.data.crops.shot) remoteNormCrops.shot = e.data.crops.shot;
+        } else if (senderRole === 'main') {
+          ['clock', 'home', 'away', 'period'].forEach(k => {
+            if (e.data.crops[k]) remoteNormCrops[k] = e.data.crops[k];
+          });
+        } else {
+          remoteNormCrops = Object.assign(remoteNormCrops, e.data.crops);
+        }
+      }
+      if (e.data.thresholds) {
+        if (senderRole === 'shot') {
+          if (e.data.thresholds.shot != null) remoteThresholds.shot = e.data.thresholds.shot;
+        } else if (senderRole === 'main') {
+          ['clock', 'home', 'away', 'period'].forEach(k => {
+            if (e.data.thresholds[k] != null) remoteThresholds[k] = e.data.thresholds[k];
+          });
+        } else {
+          remoteThresholds = Object.assign(remoteThresholds, e.data.thresholds);
+        }
+      }
       if (e.data.invertStates && (Date.now() - lastInvertChangeTime > 2000)) {
-        remoteInvertStates = Object.assign(remoteInvertStates, e.data.invertStates);
+        if (senderRole === 'shot') {
+          if (e.data.invertStates.shot != null) remoteInvertStates.shot = e.data.invertStates.shot;
+        } else if (senderRole === 'main') {
+          ['clock', 'home', 'away', 'period'].forEach(k => {
+            if (e.data.invertStates[k] != null) remoteInvertStates[k] = e.data.invertStates[k];
+          });
+        } else {
+          remoteInvertStates = Object.assign(remoteInvertStates, e.data.invertStates);
+        }
         syncCropInvertCheckboxes();
       }
       if (e.data.enabledCrops) {
-        remoteEnabledCrops = Object.assign(remoteEnabledCrops, e.data.enabledCrops);
+        if (senderRole === 'shot') {
+          if (e.data.enabledCrops.shot !== undefined) remoteEnabledCrops.shot = e.data.enabledCrops.shot;
+        } else if (senderRole === 'main') {
+          ['clock', 'home', 'away', 'period'].forEach(k => {
+            if (e.data.enabledCrops[k] !== undefined) remoteEnabledCrops[k] = e.data.enabledCrops[k];
+          });
+        } else {
+          remoteEnabledCrops = Object.assign(remoteEnabledCrops, e.data.enabledCrops);
+        }
         syncCropEnableCheckboxes();
       }
       applyRemoteBoxStyles();
@@ -2573,11 +2610,23 @@ function updateFeedMonitorUI(incoming) {
   });
 
   // Multi-Device Stream Merging: Cache latest frames so streams from separate cameras never clear each other
-  if (incoming.homeScoreStream) cachedFeeds.Home = incoming.homeScoreStream;
-  if (incoming.awayScoreStream) cachedFeeds.Away = incoming.awayScoreStream;
-  if (incoming.gameClockStream) cachedFeeds.Clock = incoming.gameClockStream;
-  if (incoming.shotClockStream) cachedFeeds.Shot = incoming.shotClockStream;
-  if (incoming.periodStream) cachedFeeds.Period = incoming.periodStream;
+  const incomingRole = incoming.role || 'all';
+  if (incomingRole === 'all' || incomingRole === 'main') {
+    if (incoming.homeScoreStream !== undefined) cachedFeeds.Home = incoming.homeScoreStream;
+    if (incoming.awayScoreStream !== undefined) cachedFeeds.Away = incoming.awayScoreStream;
+    if (incoming.gameClockStream !== undefined) cachedFeeds.Clock = incoming.gameClockStream;
+    if (incoming.periodStream !== undefined) cachedFeeds.Period = incoming.periodStream;
+    if (incoming.enabledCrops) {
+      if (incoming.enabledCrops.home === false) cachedFeeds.Home = null;
+      if (incoming.enabledCrops.away === false) cachedFeeds.Away = null;
+      if (incoming.enabledCrops.clock === false) cachedFeeds.Clock = null;
+      if (incoming.enabledCrops.period === false) cachedFeeds.Period = null;
+    }
+  }
+  if (incomingRole === 'all' || incomingRole === 'shot') {
+    if (incoming.shotClockStream !== undefined) cachedFeeds.Shot = incoming.shotClockStream;
+    if (incoming.enabledCrops && incoming.enabledCrops.shot === false) cachedFeeds.Shot = null;
+  }
 
   const badge = document.getElementById('aiFeedStatusBadge');
   if (badge) {
@@ -2616,10 +2665,17 @@ function updateFeedMonitorUI(incoming) {
 
   // Update Remote Alignment Aligner if active and feed matches active camera role
   if (incoming.fullFrame) {
-    const incomingRole = incoming.role || 'all';
-    const shouldDisplay = (activeRemoteCameraRole === 'all') || 
-                          (activeRemoteCameraRole === incomingRole) ||
-                          (!activeRemoteDeviceId || incoming.sender === activeRemoteDeviceId);
+    let shouldDisplay = false;
+    if (activeRemoteDeviceId) {
+      shouldDisplay = (incoming.sender === activeRemoteDeviceId);
+    } else if (activeRemoteCameraRole === 'shot') {
+      shouldDisplay = (incomingRole === 'shot');
+    } else if (activeRemoteCameraRole === 'main') {
+      shouldDisplay = (incomingRole === 'main' || incomingRole === 'all');
+    } else {
+      // 'all' role: show main board or all, unless Cam 2 is the only camera connected
+      shouldDisplay = (incomingRole !== 'shot') || (!connectedDevices || Object.keys(connectedDevices).length <= 1);
+    }
 
     if (shouldDisplay) {
       const feedImg = document.getElementById('remoteCameraFeed');
@@ -2751,14 +2807,51 @@ function connectSSE(){
     db.ref(`camera_crops/${fbUser}`).on('value', snapshot => {
       const val = snapshot.val();
       if (val && val.sender !== myClientId && !isDraggingRemote && !isResizingRemote) {
-        if (val.crops) remoteNormCrops = Object.assign(remoteNormCrops, val.crops);
-        if (val.thresholds) remoteThresholds = Object.assign(remoteThresholds, val.thresholds);
+        const senderRole = val.role || 'all';
+        if (val.crops) {
+          if (senderRole === 'shot') {
+            if (val.crops.shot) remoteNormCrops.shot = val.crops.shot;
+          } else if (senderRole === 'main') {
+            ['clock', 'home', 'away', 'period'].forEach(k => {
+              if (val.crops[k]) remoteNormCrops[k] = val.crops[k];
+            });
+          } else {
+            remoteNormCrops = Object.assign(remoteNormCrops, val.crops);
+          }
+        }
+        if (val.thresholds) {
+          if (senderRole === 'shot') {
+            if (val.thresholds.shot != null) remoteThresholds.shot = val.thresholds.shot;
+          } else if (senderRole === 'main') {
+            ['clock', 'home', 'away', 'period'].forEach(k => {
+              if (val.thresholds[k] != null) remoteThresholds[k] = val.thresholds[k];
+            });
+          } else {
+            remoteThresholds = Object.assign(remoteThresholds, val.thresholds);
+          }
+        }
         if (val.invertStates && (Date.now() - lastInvertChangeTime > 2000)) {
-          remoteInvertStates = Object.assign(remoteInvertStates, val.invertStates);
+          if (senderRole === 'shot') {
+            if (val.invertStates.shot != null) remoteInvertStates.shot = val.invertStates.shot;
+          } else if (senderRole === 'main') {
+            ['clock', 'home', 'away', 'period'].forEach(k => {
+              if (val.invertStates[k] != null) remoteInvertStates[k] = val.invertStates[k];
+            });
+          } else {
+            remoteInvertStates = Object.assign(remoteInvertStates, val.invertStates);
+          }
           syncCropInvertCheckboxes();
         }
         if (val.enabledCrops) {
-          remoteEnabledCrops = Object.assign(remoteEnabledCrops, val.enabledCrops);
+          if (senderRole === 'shot') {
+            if (val.enabledCrops.shot !== undefined) remoteEnabledCrops.shot = val.enabledCrops.shot;
+          } else if (senderRole === 'main') {
+            ['clock', 'home', 'away', 'period'].forEach(k => {
+              if (val.enabledCrops[k] !== undefined) remoteEnabledCrops[k] = val.enabledCrops[k];
+            });
+          } else {
+            remoteEnabledCrops = Object.assign(remoteEnabledCrops, val.enabledCrops);
+          }
           syncCropEnableCheckboxes();
         }
         applyRemoteBoxStyles();
@@ -2887,6 +2980,17 @@ function toggleCropEnableDirect(key, checked) {
   const streamKey = fieldMap[key];
 
   if (!checked && streamKey) {
+    if (key === 'home') cachedFeeds.Home = null;
+    if (key === 'away') cachedFeeds.Away = null;
+    if (key === 'clock') cachedFeeds.Clock = null;
+    if (key === 'shot') cachedFeeds.Shot = null;
+    if (key === 'period') cachedFeeds.Period = null;
+    const capitalize = key.charAt(0).toUpperCase() + key.slice(1);
+    const img = document.getElementById(`feed${capitalize}Img`);
+    const ph = document.getElementById(`feed${capitalize}Placeholder`);
+    if (img) img.style.display = 'none';
+    if (ph) ph.style.display = 'inline';
+
     if (useFirebase && db) {
       db.ref(`ocr/${fbUser}/${streamKey}`).set(null).catch(() => {});
     }
@@ -3198,7 +3302,11 @@ function switchRemoteCamera(role) {
     }
   });
 
-  const dev = Object.values(connectedDevices || {}).find(d => d.role === role);
+  const dev = Object.values(connectedDevices || {}).find(d => {
+    if (role === 'all') return d.role === 'all' || d.role === 'main';
+    return d.role === role;
+  });
+
   if (dev) {
     activeRemoteDeviceId = dev.id;
     if (dev.fullFrame) {
@@ -3217,6 +3325,8 @@ function switchRemoteCamera(role) {
     if (dev.crops) {
       remoteNormCrops = Object.assign(remoteNormCrops, dev.crops);
     }
+  } else {
+    activeRemoteDeviceId = null;
   }
 
   if (role === 'shot') {
@@ -3224,6 +3334,9 @@ function switchRemoteCamera(role) {
   } else if (role === 'main') {
     if (activeRemoteCrop === 'shot') selectRemoteCrop('clock');
   }
+
+  applyRemoteBoxStyles();
+}
 
   applyRemoteBoxStyles();
 }
@@ -3358,12 +3471,7 @@ function selectRemoteCrop(key) {
 
   // If user selects a non-shot crop while role is 'shot', automatically switch to 'all' so box is visible
   if (key !== 'shot' && activeRemoteCameraRole === 'shot') {
-    activeRemoteCameraRole = 'all';
-    const pills = document.querySelectorAll('.remote-cam-pill');
-    pills.forEach(p => {
-      const onclickAttr = p.getAttribute('onclick') || '';
-      p.classList.toggle('active', onclickAttr.includes("'all'"));
-    });
+    switchRemoteCamera('all');
   }
 
   const keys = ['clock', 'home', 'away', 'period', 'shot'];
@@ -3446,6 +3554,17 @@ function toggleRemoteCropEnabled(enabled) {
 
   // If crop is disabled, immediately clear it from Firebase and broadcast channel
   if (!enabled && streamKey) {
+    if (activeRemoteCrop === 'home') cachedFeeds.Home = null;
+    if (activeRemoteCrop === 'away') cachedFeeds.Away = null;
+    if (activeRemoteCrop === 'clock') cachedFeeds.Clock = null;
+    if (activeRemoteCrop === 'shot') cachedFeeds.Shot = null;
+    if (activeRemoteCrop === 'period') cachedFeeds.Period = null;
+    const capitalize = activeRemoteCrop.charAt(0).toUpperCase() + activeRemoteCrop.slice(1);
+    const img = document.getElementById(`feed${capitalize}Img`);
+    const ph = document.getElementById(`feed${capitalize}Placeholder`);
+    if (img) img.style.display = 'none';
+    if (ph) ph.style.display = 'inline';
+
     if (useFirebase && db) {
       db.ref(`ocr/${fbUser}/${streamKey}`).set(null).catch(() => {});
     }
@@ -3544,7 +3663,7 @@ function applyCropPreset(type) {
     remoteEnabledCrops = { clock: true, home: true, away: true, period: true, shot: true };
   } else if (type === 'shot') {
     remoteNormCrops.shot = { x: 0.28, y: 0.22, w: 0.44, h: 0.48 };
-    remoteEnabledCrops = { clock: false, home: false, away: false, period: false, shot: true };
+    remoteEnabledCrops.shot = true;
   } else if (type === 'reset') {
     remoteNormCrops = { ...DEFAULT_NORM_CROPS };
     remoteEnabledCrops = { clock: true, home: true, away: true, period: true, shot: true };
