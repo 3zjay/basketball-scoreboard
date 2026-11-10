@@ -633,52 +633,6 @@
       max-width: 5.2vw;
     }
 
-    /* ════ FLOATING OPTICAL QUICK-TOGGLE BADGE ════ */
-    #optical-quick-badge {
-      position: fixed;
-      top: 14px;
-      left: 14px;
-      background: rgba(13, 17, 23, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 9999px;
-      padding: 5px 12px;
-      color: #94a3b8;
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.08vw;
-      text-transform: uppercase;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      z-index: 999;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    }
-    #optical-quick-badge:hover {
-      background: rgba(22, 27, 34, 0.95);
-      border-color: rgba(255, 255, 255, 0.4);
-      color: #ffffff;
-      transform: scale(1.03);
-    }
-    #optical-quick-badge.active {
-      background: rgba(20, 56, 32, 0.9);
-      border-color: #10b981;
-      color: #10b981;
-      box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
-    }
-    #optical-quick-badge .opt-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: #64748b;
-      transition: background 0.2s ease;
-    }
-    #optical-quick-badge.active .opt-dot {
-      background: #10b981;
-      box-shadow: 0 0 6px #10b981;
-    }
 
     /* ════ FLOATING TOAST NOTIFICATION ════ */
     #toast-alert {
@@ -822,27 +776,13 @@
   </div><!-- /#scorebug -->
 </div><!-- /#scorebug-wrapper -->
 
-<!-- Floating Optical Quick Toggle Badge (Clickable or press 'O') -->
-<div id="optical-quick-badge" onclick="toggleOpticalMode()" title="Click or Press 'O' to toggle Optical Scanner Live Feed">
-  <span class="opt-dot"></span>
-  <span id="optBadgeText">OPTICAL FEED: OFF</span>
-</div>
-
 <!-- Floating Toast Message -->
 <div id="toast-alert"></div>
 
 <!-- Operator Test HUD Panel (Toggle with 'H' key) -->
 <div id="hud-panel">
   <h4>⚙ Scorebug Controls</h4>
-  <p style="font-size:11px;color:#8a95a8;margin-bottom:8px;">Press <strong>H</strong> to toggle this panel • Press <strong>O</strong> to toggle Optical Feed</p>
-  
-  <div style="margin-bottom:10px; padding:8px 10px; background:#161c27; border-radius:6px; border:1px solid #2d3748;">
-    <label style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin:0;">
-      <span style="font-weight:700; color:#ffaa00; font-size:12px;">📷 Optical Scanner Feed:</span>
-      <input type="checkbox" id="hudOpticalToggle" onchange="setOpticalMode(this.checked)" style="width:16px; height:16px; accent-color:#e8430a; cursor:pointer;">
-    </label>
-    <div id="hudOpticalStatus" style="font-size:10px; color:#10b981; margin-top:4px;">Feed: Active (Phone Connected)</div>
-  </div>
+  <p style="font-size:11px;color:#8a95a8;margin-bottom:8px;">Press <strong>H</strong> to toggle this panel</p>
 
   <label>Clock Pod Style:</label>
   <select id="hudClockTheme" onchange="setClockTheme(this.value)">
@@ -863,7 +803,6 @@
   <input type="range" min="0.6" max="1.5" step="0.05" value="1.0" oninput="overrideScale(this.value)">
   <div class="btn-row">
     <button onclick="toggleSwap()">⇄ Swap Home/Away</button>
-    <button onclick="toggleOpticalMode()" style="background:#e8430a;">📷 Toggle Optical</button>
   </div>
 </div>
 
@@ -915,14 +854,7 @@ const customVenueParam = gP('venue');
 const posParam = gP('pos') || 'bottom';
 const scaleParam = parseFloat(gP('scale') || '1.0');
 
-// Optical Scanner Live Feed Option
-let opticalMode = gP('optical') === '1' || gP('optical') === 'true' || gP('feed') === '1' || gP('scanner') === '1';
-if (!opticalMode) {
-  try {
-    const savedOpt = localStorage.getItem('hc_scripps_optical');
-    if (savedOpt !== null) opticalMode = savedOpt === '1';
-  } catch(e) {}
-}
+
 
 // Clock Pod Styling Option ('white' = authentic Scripps Sports white pod; 'dark' = dark blended pod)
 let clockTheme = gP('clock') || 'white';
@@ -1260,17 +1192,21 @@ function setLogoBadge(circleId, fallbackId, logoUrl, fallbackAbbr) {
   }
 }
 
-/* Helper to render optical stream images or digital text */
+/* Helper to render optical stream images or digital text automatically when AI sync is enabled */
 function renderStreamOrText(el, streamImgUrl, fallbackText, maxHeightCss) {
   if (typeof el === 'string') el = $(el);
   if (!el) return;
-  if (opticalMode && streamImgUrl) {
+  if (aiSyncActive && streamImgUrl) {
     let img = el.querySelector('img.stream-bin-img');
     if (!img) {
       el.innerHTML = '';
       img = document.createElement('img');
       img.className = 'stream-bin-img';
       if (maxHeightCss) img.style.maxHeight = maxHeightCss;
+      img.style.maxWidth = '100%';
+      img.style.objectFit = 'contain';
+      img.style.flexShrink = '0';
+      img.style.verticalAlign = 'middle';
       el.appendChild(img);
     } else if (maxHeightCss) {
       img.style.maxHeight = maxHeightCss;
@@ -1308,7 +1244,7 @@ function renderScores() {
 
   const leftScoreEl = $('awayScore');
   if (leftScoreEl) {
-    if (opticalMode && leftStream) {
+    if (aiSyncActive && leftStream) {
       renderStreamOrText(leftScoreEl, leftStream, String(leftScore), '3.2vw');
     } else {
       const img = leftScoreEl.querySelector('img.stream-bin-img');
@@ -1323,7 +1259,7 @@ function renderScores() {
 
   const rightScoreEl = $('homeScore');
   if (rightScoreEl) {
-    if (opticalMode && rightStream) {
+    if (aiSyncActive && rightStream) {
       renderStreamOrText(rightScoreEl, rightStream, String(rightScore), '3.2vw');
     } else {
       const img = rightScoreEl.querySelector('img.stream-bin-img');
@@ -1363,7 +1299,7 @@ function renderClock() {
   else if (q === 5) pText = 'OT';
   else if (q > 5) pText = `${q - 4}OT`;
 
-  if (opticalMode && S.periodStream) {
+  if (aiSyncActive && S.periodStream) {
     renderStreamOrText(perEl, S.periodStream, pText, '1.8vw');
   } else {
     const perImg = perEl.querySelector('img');
@@ -1386,7 +1322,7 @@ function renderClock() {
     }
   }
 
-  if (opticalMode && S.gameClockStream) {
+  if (aiSyncActive && S.gameClockStream) {
     renderStreamOrText(clkEl, S.gameClockStream, cStr, '2.3vw');
     clkEl.classList.remove('warn');
   } else {
@@ -1405,7 +1341,7 @@ function renderShotClock() {
   const s = (aiSyncActive && aiState.shotSeconds !== null) ? aiState.shotSeconds : (S.shotSeconds !== undefined ? S.shotSeconds : 24);
   const sStr = String(s);
 
-  if (opticalMode && S.shotClockStream) {
+  if (aiSyncActive && S.shotClockStream) {
     renderStreamOrText(scEl, S.shotClockStream, sStr, '2.2vw');
     scEl.classList.remove('urgent');
     scEl.classList.remove('zero');
@@ -1432,10 +1368,6 @@ function applyStateMessage(msgData) {
   _lastStateMsgTime = Date.now();
   if (msgData.aiSyncActive !== undefined) aiSyncActive = !!msgData.aiSyncActive;
   if (msgData.aiSyncEnabled !== undefined) aiSyncActive = !!msgData.aiSyncEnabled;
-  if (msgData.opticalFeed !== undefined) {
-    opticalMode = !!msgData.opticalFeed;
-    updateOpticalHudUI();
-  }
   // Ensure team names update if scoreboard transmits homeAbbr / awayAbbr / homeTeam / awayTeam
   if (msgData.homeAbbr) {
     msgData.homeName = msgData.homeAbbr;
@@ -1472,7 +1404,6 @@ function applyStreamData(streamData) {
     aiState.quarter = null;
     aiState.shotSeconds = null;
     renderAll();
-    updateOpticalHudUI();
     return;
   }
   aiSyncActive = true;
@@ -1508,7 +1439,6 @@ function applyStreamData(streamData) {
   }
 
   renderAll();
-  updateOpticalHudUI();
 }
 
 /* Local clock tickers for smooth continuous decrement between network pulses */
@@ -1697,8 +1627,6 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'h' || e.key === 'H') {
     const hud = $('hud-panel');
     if (hud) hud.classList.toggle('show');
-  } else if (e.key === 'o' || e.key === 'O') {
-    toggleOpticalMode();
   }
 });
 
@@ -1714,20 +1642,6 @@ function showToast(msg) {
   }, 2200);
 }
 
-function setOpticalMode(enabled) {
-  opticalMode = !!enabled;
-  try {
-    localStorage.setItem('hc_scripps_optical', opticalMode ? '1' : '0');
-  } catch(e) {}
-  updateOpticalHudUI();
-  renderAll();
-  showToast(opticalMode ? '📷 Optical Scanner Live Feed: ON' : '🔢 Digital Broadcast Numbers: ON');
-}
-
-function toggleOpticalMode() {
-  setOpticalMode(!opticalMode);
-}
-
 function setClockTheme(theme) {
   clockTheme = theme;
   const segClock = $('segClock');
@@ -1738,35 +1652,6 @@ function setClockTheme(theme) {
   if (sel) sel.value = clockTheme;
   renderClock();
   showToast(clockTheme === 'dark' ? '⏱ Dark Clock Pod Active' : '⏱ Scripps White Clock Pod Active');
-}
-
-function updateOpticalHudUI() {
-  const toggle = $('hudOpticalToggle');
-  if (toggle) toggle.checked = opticalMode;
-
-  const badgeText = $('optBadgeText');
-  const badge = $('optical-quick-badge');
-  if (badgeText && badge) {
-    if (opticalMode) {
-      badgeText.textContent = 'OPTICAL FEED: ON';
-      badge.classList.add('active');
-    } else {
-      badgeText.textContent = 'OPTICAL FEED: OFF';
-      badge.classList.remove('active');
-    }
-  }
-
-  const statusHint = $('hudOpticalStatus');
-  if (statusHint) {
-    const hasStreams = !!(S.gameClockStream || S.shotClockStream || S.homeScoreStream || S.awayScoreStream);
-    if (hasStreams) {
-      statusHint.textContent = 'Scanner: Connected & Streaming Live';
-      statusHint.style.color = '#10b981';
-    } else {
-      statusHint.textContent = 'Scanner: Standby (Waiting for camera)';
-      statusHint.style.color = '#f59e0b';
-    }
-  }
 }
 
 function overrideBroadcast(val) {
@@ -1805,7 +1690,6 @@ function toggleSwap() {
 
 // Initial draw & setup
 applyClockTheme();
-updateOpticalHudUI();
 renderAll();
 </script>
 </body>
