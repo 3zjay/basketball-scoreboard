@@ -769,7 +769,7 @@
 
       <!-- Adjacent Shot Clock Stadium Box (Frosted Glass Card) -->
       <div class="shot-clock-pill" id="shotClockPill">
-        <div class="shot-clock-val" id="shotClockVal">14</div>
+        <div class="shot-clock-val" id="shotClockVal">24</div>
       </div>
     </div>
 
@@ -884,7 +884,7 @@ const DEFAULT_STATE = {
   awayBonus: false,
   gameSeconds: 600,
   gameRunning: false,
-  shotSeconds: 14,
+  shotSeconds: 24,
   shotRunning: false,
   quarter: 1,
   possession: null,
@@ -1338,7 +1338,14 @@ function renderClock() {
 function renderShotClock() {
   const scEl = $('shotClockVal');
   if (!scEl) return;
-  const s = (aiSyncActive && aiState.shotSeconds !== null) ? aiState.shotSeconds : (S.shotSeconds !== undefined ? S.shotSeconds : 24);
+  // If shot clock is running, prioritize authoritative S.shotSeconds to prevent OCR jitter / rapid counting.
+  // When stopped or reset, allow optical OCR calibration or S.shotSeconds.
+  let s;
+  if (S.shotRunning) {
+    s = (S.shotSeconds !== undefined && S.shotSeconds !== null) ? S.shotSeconds : 24;
+  } else {
+    s = (aiSyncActive && aiState.shotSeconds !== null) ? aiState.shotSeconds : (S.shotSeconds !== undefined ? S.shotSeconds : 24);
+  }
   const sStr = String(s);
 
   if (aiSyncActive && S.shotClockStream) {
@@ -1385,11 +1392,12 @@ function applyStateMessage(msgData) {
   }
   S = { ...S, ...msgData };
   renderAll();
-  syncLocalTimers();
+  syncLocalTick();
 }
 
 function applyStreamData(streamData) {
   if (!streamData) return;
+  _lastStateMsgTime = Date.now();
   if (streamData.streamActive === false) {
     aiSyncActive = false;
     S.gameClockStream = null;
@@ -1404,6 +1412,7 @@ function applyStreamData(streamData) {
     aiState.quarter = null;
     aiState.shotSeconds = null;
     renderAll();
+    syncLocalTick();
     return;
   }
   aiSyncActive = true;
@@ -1435,40 +1444,47 @@ function applyStreamData(streamData) {
     aiState.quarter = parseInt(streamData.period, 10);
   }
   if (streamData.shotClock != null && streamData.shotClock !== '' && !isNaN(parseInt(streamData.shotClock, 10))) {
-    aiState.shotSeconds = parseInt(streamData.shotClock, 10);
+    const parsedShot = parseInt(streamData.shotClock, 10);
+    if (parsedShot >= 0 && parsedShot <= 35) {
+      if (!S.shotRunning) {
+        aiState.shotSeconds = parsedShot;
+        S.shotSeconds = parsedShot;
+      }
+    }
   }
 
   renderAll();
+  syncLocalTick();
 }
 
 /* Local clock tickers for smooth continuous decrement between network pulses */
-let gameTimer = null, shotTimer = null;
-function syncLocalTimers() {
-  clearInterval(gameTimer);
-  clearInterval(shotTimer);
-
-  if (S.gameRunning) {
-    gameTimer = setInterval(() => {
-      if (Date.now() - _lastStateMsgTime < 2500) return;
-      if (S.gameSeconds > 0) {
-        S.gameSeconds--;
-        renderClock();
-      } else {
-        clearInterval(gameTimer);
-      }
-    }, 1000);
+let localTick = null;
+function startLocalTick() {
+  if (localTick) return;
+  localTick = setInterval(() => {
+    // Only tick locally as fallback if network state updates have ceased for > 3000ms
+    if (Date.now() - _lastStateMsgTime < 3000) return;
+    if (S.gameRunning && S.gameSeconds > 0) {
+      S.gameSeconds--;
+      renderClock();
+    }
+    if (S.shotRunning && S.shotSeconds > 0) {
+      S.shotSeconds--;
+      renderShotClock();
+    }
+  }, 1000);
+}
+function stopLocalTick() {
+  if (localTick) {
+    clearInterval(localTick);
+    localTick = null;
   }
-
-  if (S.shotRunning) {
-    shotTimer = setInterval(() => {
-      if (Date.now() - _lastStateMsgTime < 2500) return;
-      if (S.shotSeconds > 0) {
-        S.shotSeconds--;
-        renderShotClock();
-      } else {
-        clearInterval(shotTimer);
-      }
-    }, 1000);
+}
+function syncLocalTick() {
+  if (S.gameRunning || S.shotRunning) {
+    startLocalTick();
+  } else {
+    stopLocalTick();
   }
 }
 
@@ -1597,7 +1613,7 @@ function connectSSE() {
       if (d && Object.keys(d).length) {
         S = { ...DEFAULT_STATE, ...d };
         renderAll();
-        syncLocalTimers();
+        syncLocalTick();
       }
     }).catch(() => {});
 
@@ -1613,14 +1629,6 @@ function connectSSE() {
   } catch(err) {}
 }
 if (!useFirebase) connectSSE();
-
-// Local tick timer for smooth clock updates
-setInterval(() => {
-  if (S.clockRunning && S.gameSeconds > 0) {
-    // Ticker handled by master scoreboard, but render updates smoothly
-    renderClock();
-  }
-}, 250);
 
 /* ══ OPERATOR HUD & SHORTCUTS ══ */
 window.addEventListener('keydown', (e) => {
