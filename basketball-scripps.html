@@ -878,33 +878,29 @@ let feedInvertMode = (explicitInvert === 'black' || explicitInvert === '1' || gP
   ? 'black'
   : (explicitInvert === 'white' || explicitInvert === '0' || gP('white') === '1' ? 'white' : 'auto');
 
-function applyStreamImgStyles(img) {
+let cropInvertStates = { home: false, away: false, clock: false, shot: false, period: false };
+
+function applyStreamImgStyles(img, cropKey) {
   if (!img) return;
   img.style.border = 'none';
   img.style.outline = 'none';
   img.style.background = 'transparent';
   img.style.boxShadow = 'none';
 
-  let isLightBg = false;
-  try {
-    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-      const c = document.createElement('canvas');
-      c.width = 4; c.height = 4;
-      const ctx = c.getContext('2d');
-      ctx.drawImage(img, 0, 0, 4, 4);
-      const p00 = ctx.getImageData(0, 0, 1, 1).data;
-      const p30 = ctx.getImageData(3, 0, 1, 1).data;
-      const p03 = ctx.getImageData(0, 3, 1, 1).data;
-      const p33 = ctx.getImageData(3, 3, 1, 1).data;
-      const lum00 = p00[0] * 0.299 + p00[1] * 0.587 + p00[2] * 0.114;
-      const lum30 = p30[0] * 0.299 + p30[1] * 0.587 + p30[2] * 0.114;
-      const lum03 = p03[0] * 0.299 + p03[1] * 0.587 + p03[2] * 0.114;
-      const lum33 = p33[0] * 0.299 + p33[1] * 0.587 + p33[2] * 0.114;
-      isLightBg = ((lum00 + lum30 + lum03 + lum33) / 4) > 120;
-    }
-  } catch(e) {}
+  if (!cropKey && img.dataset && img.dataset.cropKey) {
+    cropKey = img.dataset.cropKey;
+  }
 
-  if (feedInvertMode === 'black' || (feedInvertMode === 'auto' && isLightBg)) {
+  let isInverted = false;
+  if (feedInvertMode === 'black') {
+    isInverted = true;
+  } else if (feedInvertMode === 'white') {
+    isInverted = false;
+  } else if (cropKey && cropInvertStates[cropKey] !== undefined) {
+    isInverted = !!cropInvertStates[cropKey];
+  }
+
+  if (isInverted) {
     // Inverted crop (white background from scanner): Multiply blend renders pure black digits, eliminating white background with 0% shade
     img.style.mixBlendMode = 'multiply';
     img.style.filter = 'contrast(2.5) brightness(1.3)';
@@ -916,7 +912,9 @@ function applyStreamImgStyles(img) {
 }
 
 function updateAllStreamImagesStyle() {
-  document.querySelectorAll('img.stream-bin-img').forEach(applyStreamImgStyles);
+  document.querySelectorAll('img.stream-bin-img').forEach(img => {
+    applyStreamImgStyles(img, img.dataset ? img.dataset.cropKey : null);
+  });
 }
 
 function setFeedInvertMode(mode) {
@@ -1298,7 +1296,7 @@ function setLogoBadge(circleId, fallbackId, logoUrl, fallbackAbbr) {
 }
 
 /* Helper to render optical stream images or digital text automatically when AI sync is enabled */
-function renderStreamOrText(el, streamImgUrl, fallbackText, maxHeightCss) {
+function renderStreamOrText(el, streamImgUrl, fallbackText, maxHeightCss, cropKey) {
   if (typeof el === 'string') el = $(el);
   if (!el) return;
   if (aiSyncActive && streamImgUrl) {
@@ -1307,23 +1305,22 @@ function renderStreamOrText(el, streamImgUrl, fallbackText, maxHeightCss) {
       el.innerHTML = '';
       img = document.createElement('img');
       img.className = 'stream-bin-img';
+      if (cropKey) img.dataset.cropKey = cropKey;
       if (maxHeightCss) img.style.maxHeight = maxHeightCss;
       img.style.maxWidth = '100%';
       img.style.objectFit = 'contain';
       img.style.flexShrink = '0';
       img.style.verticalAlign = 'middle';
-      img.onload = function() {
-        applyStreamImgStyles(img);
-      };
-      applyStreamImgStyles(img);
+      applyStreamImgStyles(img, cropKey);
       el.appendChild(img);
-    } else if (maxHeightCss) {
-      img.style.maxHeight = maxHeightCss;
+    } else {
+      if (cropKey) img.dataset.cropKey = cropKey;
+      if (maxHeightCss) img.style.maxHeight = maxHeightCss;
     }
     if (img.getAttribute('src') !== streamImgUrl) {
       img.src = streamImgUrl;
     }
-    applyStreamImgStyles(img);
+    applyStreamImgStyles(img, cropKey);
   } else {
     const img = el.querySelector('img.stream-bin-img');
     if (img) el.innerHTML = '';
@@ -1348,7 +1345,7 @@ function renderScores() {
   const leftScoreEl = $('awayScore');
   if (leftScoreEl) {
     if (aiSyncActive && leftStream) {
-      renderStreamOrText(leftScoreEl, leftStream, String(leftScore), '2.35vw');
+      renderStreamOrText(leftScoreEl, leftStream, String(leftScore), '2.35vw', leftTeamKey);
     } else {
       const img = leftScoreEl.querySelector('img.stream-bin-img');
       if (img) leftScoreEl.innerHTML = '';
@@ -1363,7 +1360,7 @@ function renderScores() {
   const rightScoreEl = $('homeScore');
   if (rightScoreEl) {
     if (aiSyncActive && rightStream) {
-      renderStreamOrText(rightScoreEl, rightStream, String(rightScore), '2.35vw');
+      renderStreamOrText(rightScoreEl, rightStream, String(rightScore), '2.35vw', rightTeamKey);
     } else {
       const img = rightScoreEl.querySelector('img.stream-bin-img');
       if (img) rightScoreEl.innerHTML = '';
@@ -1403,7 +1400,7 @@ function renderClock() {
   else if (q > 5) pText = `${q - 4}OT`;
 
   if (aiSyncActive && S.periodStream) {
-    renderStreamOrText(perEl, S.periodStream, pText, '1.5vw');
+    renderStreamOrText(perEl, S.periodStream, pText, '1.5vw', 'period');
   } else {
     const perImg = perEl.querySelector('img');
     if (perImg) perEl.innerHTML = '';
@@ -1424,7 +1421,7 @@ function renderClock() {
   }
 
   if (aiSyncActive && S.gameClockStream) {
-    renderStreamOrText(clkEl, S.gameClockStream, cStr, '2.1vw');
+    renderStreamOrText(clkEl, S.gameClockStream, cStr, '2.1vw', 'clock');
     clkEl.classList.remove('warn');
   } else {
     const strayImg = clkEl.querySelector('img');
@@ -1443,7 +1440,7 @@ function renderShotClock() {
   const sStr = String(s);
 
   if (aiSyncActive && S.shotClockStream) {
-    renderStreamOrText(scEl, S.shotClockStream, sStr, '2.1vw');
+    renderStreamOrText(scEl, S.shotClockStream, sStr, '2.1vw', 'shot');
     scEl.classList.remove('urgent');
     scEl.classList.remove('zero');
   } else {
@@ -1483,6 +1480,10 @@ function hasStateNonClockChanged(oldS, newD) {
 function applyStateMessage(msgData) {
   if (!msgData) return;
   _lastStateMsgTime = Date.now();
+  if (msgData.invertStates) {
+    cropInvertStates = Object.assign(cropInvertStates, msgData.invertStates);
+    updateAllStreamImagesStyle();
+  }
   if (msgData.aiSyncActive !== undefined) aiSyncActive = !!msgData.aiSyncActive;
   if (msgData.aiSyncEnabled !== undefined) aiSyncActive = !!msgData.aiSyncEnabled;
   // Ensure team names update if scoreboard transmits homeAbbr / awayAbbr / homeTeam / awayTeam
@@ -1548,6 +1549,10 @@ function applyStreamData(streamData) {
   if (streamData.periodStream !== undefined && S.periodStream !== streamData.periodStream) {
     S.periodStream = streamData.periodStream;
     streamImagesChanged = true;
+  }
+  if (streamData.invertStates) {
+    cropInvertStates = Object.assign(cropInvertStates, streamData.invertStates);
+    updateAllStreamImagesStyle();
   }
 
   // NO OCR DIGIT GUESSING: We NEVER read or guess streamData.clock, streamData.homeScore, etc.

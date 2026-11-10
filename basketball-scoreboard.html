@@ -1296,7 +1296,7 @@ bc.onmessage = (e) => {
     if (e.data.sender !== myClientId && !isDraggingRemote && !isResizingRemote) {
       if (e.data.crops) remoteNormCrops = Object.assign(remoteNormCrops, e.data.crops);
       if (e.data.thresholds) remoteThresholds = Object.assign(remoteThresholds, e.data.thresholds);
-      if (e.data.invertStates) {
+      if (e.data.invertStates && (Date.now() - lastInvertChangeTime > 2000)) {
         remoteInvertStates = Object.assign(remoteInvertStates, e.data.invertStates);
         syncCropInvertCheckboxes();
       }
@@ -2705,7 +2705,7 @@ function connectSSE(){
       if (val && val.sender !== myClientId && !isDraggingRemote && !isResizingRemote) {
         if (val.crops) remoteNormCrops = Object.assign(remoteNormCrops, val.crops);
         if (val.thresholds) remoteThresholds = Object.assign(remoteThresholds, val.thresholds);
-        if (val.invertStates) {
+        if (val.invertStates && (Date.now() - lastInvertChangeTime > 2000)) {
           remoteInvertStates = Object.assign(remoteInvertStates, val.invertStates);
           syncCropInvertCheckboxes();
         }
@@ -2813,6 +2813,7 @@ function toggleAiSync(enabled) {
 }
 
 function toggleCropInvertDirect(key, checked) {
+  lastInvertChangeTime = Date.now();
   remoteInvertStates[key] = !!checked;
   if (activeRemoteCrop === key) {
     const cb = document.getElementById('rcropInvertCb');
@@ -3001,6 +3002,7 @@ let remoteNormCrops = { ...DEFAULT_NORM_CROPS };
 let remoteEnabledCrops = { clock: true, home: true, away: true, period: true, shot: true };
 let remoteThresholds = { clock: 120, home: 120, away: 120, period: 120, shot: 120 };
 let remoteInvertStates = { clock: false, home: false, away: false, period: false, shot: false };
+let lastInvertChangeTime = 0;
 
 let isDraggingRemote = false;
 let isResizingRemote = false;
@@ -3151,6 +3153,7 @@ function toggleRemoteCropEnabled(enabled) {
 }
 
 function toggleRemoteInvert(inverted) {
+  lastInvertChangeTime = Date.now();
   remoteInvertStates[activeRemoteCrop] = !!inverted;
   syncCropInvertCheckboxes();
   broadcastRemoteCrops();

@@ -385,33 +385,29 @@ let feedInvertMode = (explicitInvert === 'black' || explicitInvert === '1' || ur
   ? 'black'
   : (explicitInvert === 'white' || explicitInvert === '0' || urlParams.get('white') === '1' ? 'white' : 'auto');
 
-function applyStreamImgStyles(img) {
+let cropInvertStates = { home: false, away: false, clock: false, shot: false, period: false };
+
+function applyStreamImgStyles(img, cropKey) {
   if (!img) return;
   img.style.border = 'none';
   img.style.outline = 'none';
   img.style.background = 'transparent';
   img.style.boxShadow = 'none';
 
-  let isLightBg = false;
-  try {
-    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-      const c = document.createElement('canvas');
-      c.width = 4; c.height = 4;
-      const ctx = c.getContext('2d');
-      ctx.drawImage(img, 0, 0, 4, 4);
-      const p00 = ctx.getImageData(0, 0, 1, 1).data;
-      const p30 = ctx.getImageData(3, 0, 1, 1).data;
-      const p03 = ctx.getImageData(0, 3, 1, 1).data;
-      const p33 = ctx.getImageData(3, 3, 1, 1).data;
-      const lum00 = p00[0] * 0.299 + p00[1] * 0.587 + p00[2] * 0.114;
-      const lum30 = p30[0] * 0.299 + p30[1] * 0.587 + p30[2] * 0.114;
-      const lum03 = p03[0] * 0.299 + p03[1] * 0.587 + p03[2] * 0.114;
-      const lum33 = p33[0] * 0.299 + p33[1] * 0.587 + p33[2] * 0.114;
-      isLightBg = ((lum00 + lum30 + lum03 + lum33) / 4) > 120;
-    }
-  } catch(e) {}
+  if (!cropKey && img.dataset && img.dataset.cropKey) {
+    cropKey = img.dataset.cropKey;
+  }
 
-  if (feedInvertMode === 'black' || (feedInvertMode === 'auto' && isLightBg)) {
+  let isInverted = false;
+  if (feedInvertMode === 'black') {
+    isInverted = true;
+  } else if (feedInvertMode === 'white') {
+    isInverted = false;
+  } else if (cropKey && cropInvertStates[cropKey] !== undefined) {
+    isInverted = !!cropInvertStates[cropKey];
+  }
+
+  if (isInverted) {
     // Inverted crop (white background from scanner): Multiply blend renders pure black digits, eliminating white background with 0% shade
     img.style.mixBlendMode = 'multiply';
     img.style.filter = 'contrast(2.5) brightness(1.3)';
@@ -423,7 +419,9 @@ function applyStreamImgStyles(img) {
 }
 
 function updateAllStreamImagesStyle() {
-  document.querySelectorAll('img.stream-bin-img').forEach(applyStreamImgStyles);
+  document.querySelectorAll('img.stream-bin-img').forEach(img => {
+    applyStreamImgStyles(img, img.dataset ? img.dataset.cropKey : null);
+  });
 }
 
 function setFeedInvertMode(mode) {
@@ -449,6 +447,10 @@ window.addEventListener('keydown', (e) => {
 
 function applyStreamData(data) {
   if (!data) return;
+  if (data.invertStates) {
+    cropInvertStates = Object.assign(cropInvertStates, data.invertStates);
+    updateAllStreamImagesStyle();
+  }
   if (data.streamActive === false) {
     aiSyncActive = false;
     S.gameClockStream = null;
@@ -492,6 +494,10 @@ function hasStateNonClockChanged(oldS, newD) {
 function applyStateMessage(msgData) {
   _lastStateMsgTime = Date.now();
   if (!msgData) return;
+  if (msgData.invertStates) {
+    cropInvertStates = Object.assign(cropInvertStates, msgData.invertStates);
+    updateAllStreamImagesStyle();
+  }
   if (msgData.aiSyncActive !== undefined) aiSyncActive = !!msgData.aiSyncActive;
   if (msgData.aiSyncEnabled !== undefined) aiSyncActive = !!msgData.aiSyncEnabled;
   const nonClockChanged = hasStateNonClockChanged(S, msgData);
@@ -547,7 +553,7 @@ function startLocalTick(){
 function stopLocalTick(){ clearInterval(localTick); localTick = null; }
 function syncLocalTick(){ if(S.gameRunning || S.shotRunning){ startLocalTick(); } else { stopLocalTick(); } }
 
-function renderStreamOrText(elId, streamImgUrl, fallbackText, maxHeightCss) {
+function renderStreamOrText(elId, streamImgUrl, fallbackText, maxHeightCss, cropKey) {
   const el = typeof elId === 'string' ? document.getElementById(elId) : elId;
   if (!el) return;
   if (aiSyncActive && streamImgUrl) {
@@ -556,6 +562,7 @@ function renderStreamOrText(elId, streamImgUrl, fallbackText, maxHeightCss) {
       el.innerHTML = '';
       img = document.createElement('img');
       img.className = 'stream-bin-img';
+      if (cropKey) img.dataset.cropKey = cropKey;
       img.style.height = maxHeightCss || '100%';
       img.style.maxHeight = maxHeightCss || '100%';
       img.style.maxWidth = '100%';
@@ -572,18 +579,16 @@ function renderStreamOrText(elId, streamImgUrl, fallbackText, maxHeightCss) {
       img.style.boxSizing = 'border-box';
       img.style.display = 'inline-block';
       img.style.pointerEvents = 'none';
-      img.onload = function() {
-        applyStreamImgStyles(img);
-      };
-      applyStreamImgStyles(img);
+      applyStreamImgStyles(img, cropKey);
       el.appendChild(img);
     } else {
+      if (cropKey) img.dataset.cropKey = cropKey;
       img.style.maxHeight = maxHeightCss || '100%';
     }
     if (img.src !== streamImgUrl) {
       img.src = streamImgUrl;
     }
-    applyStreamImgStyles(img);
+    applyStreamImgStyles(img, cropKey);
   } else {
     const img = el.querySelector('img.stream-bin-img');
     if (img) {
@@ -601,7 +606,7 @@ function renderClocks(){
   const clkContainer = document.querySelector('.clock-digits');
   if (clkContainer) {
     if (aiSyncActive && S.gameClockStream) {
-      renderStreamOrText(clkContainer, S.gameClockStream, null, '10vw');
+      renderStreamOrText(clkContainer, S.gameClockStream, null, '10vw', 'clock');
     } else {
       const img = clkContainer.querySelector('img.stream-bin-img');
       if (img || !document.getElementById('clkM1')) {
@@ -637,7 +642,7 @@ function renderClocks(){
   }
 
   const shotText = eff.shotSeconds != null ? eff.shotSeconds : '--';
-  renderStreamOrText('shotEl', S.shotClockStream, shotText, '8vw');
+  renderStreamOrText('shotEl', S.shotClockStream, shotText, '8vw', 'shot');
   const shotEl = document.getElementById('shotEl');
   if(shotEl){
     const targetUrgent = (eff.shotSeconds !== null && eff.shotSeconds<=5 && eff.shotSeconds > 0);
@@ -679,8 +684,8 @@ function render(){
 
   const hEl = document.getElementById('homeScoreEl');
   const aEl = document.getElementById('awayScoreEl');
-  renderStreamOrText('homeScoreEl', S.homeScoreStream, eff.homeScore, '14vw');
-  renderStreamOrText('awayScoreEl', S.awayScoreStream, eff.awayScore, '14vw');
+  renderStreamOrText('homeScoreEl', S.homeScoreStream, eff.homeScore, '14vw', 'home');
+  renderStreamOrText('awayScoreEl', S.awayScoreStream, eff.awayScore, '14vw', 'away');
   if(hEl && lastHome>=0 && lastHome!==eff.homeScore){ bump('homeScoreEl'); }
   if(aEl && lastAway>=0 && lastAway!==eff.awayScore){ bump('awayScoreEl'); }
   if((eff.homeScore!==lastHome||eff.awayScore!==lastAway)&&lastHome>=0) flashScreen();
@@ -691,7 +696,7 @@ function render(){
   if(hf) hf.textContent = S.homeFouls || 0;
   if(af) af.textContent = S.awayFouls || 0;
 
-  renderStreamOrText('periodEl', S.periodStream, eff.quarter, '6vw');
+  renderStreamOrText('periodEl', S.periodStream, eff.quarter, '6vw', 'period');
 
   const hn = document.getElementById('homeNameEl');
   const gn = document.getElementById('guestNameEl');

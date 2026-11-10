@@ -1059,8 +1059,9 @@
     }
 
     function toggleInvert(enabled) {
-      invertStates[activeCrop] = enabled;
+      invertStates[activeCrop] = !!enabled;
       localStorage.setItem('hc_ocr_invert_states', JSON.stringify(invertStates));
+      saveCropPositions(true);
     }
 
     function dilate(data, w, h) {
@@ -1109,11 +1110,10 @@
       }
 
       if (invertStates[key] === undefined || invertStates[key] === null) {
-        const initialBlackRatio = blackCount / totalPixels;
-        invertStates[key] = initialBlackRatio > 0.5;
+        invertStates[key] = false;
         if (key === activeCrop) {
           const invCheckbox = document.getElementById('invert-toggle');
-          if (invCheckbox) invCheckbox.checked = invertStates[key];
+          if (invCheckbox) invCheckbox.checked = false;
         }
         localStorage.setItem('hc_ocr_invert_states', JSON.stringify(invertStates));
       }
@@ -1324,7 +1324,6 @@
 
       for (const key of keys) {
         if (enabledCrops[key] === false) {
-          payload[fieldMap[key]] = null;
           continue;
         }
 
