@@ -18,6 +18,10 @@
     { "source": "/nbaoverlay", "destination": "/basketball-nbaoverlay.html" },
     { "source": "/nbaoverlay2", "destination": "/basketball-nbaoverlay2.html" },
     { "source": "/nbc", "destination": "/basketball-nba-nbc.html" },
+    { "source": "/scripps", "destination": "/basketball-scripps.html" },
+    { "source": "/scripps-overlay", "destination": "/basketball-scripps.html" },
+    { "source": "/overlay3", "destination": "/basketball-scripps.html" },
+    { "source": "/pill", "destination": "/basketball-scripps.html" },
     { "source": "/camera", "destination": "/camera.html" }
   ]
 }

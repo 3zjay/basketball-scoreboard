@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    // Global Storage Shield — prevents WebKit SecurityError exceptions on blocked localStorage/sessionStorage
+    (function() {
+      try {
+        localStorage.setItem('__test_ls__', '1');
+        localStorage.removeItem('__test_ls__');
+      } catch (e) {
+        var store = {};
+        Object.defineProperty(window, 'localStorage', {
+          value: {
+            getItem: function(k) { return store[k] === undefined ? null : store[k]; },
+            setItem: function(k, v) { store[k] = String(v); },
+            removeItem: function(k) { delete store[k]; },
+            clear: function() { store = {}; },
+            key: function(i) { return Object.keys(store)[i] || null; },
+            get length() { return Object.keys(store).length; }
+          },
+          configurable: true, writable: true
+        });
+      }
+      try {
+        sessionStorage.setItem('__test_ss__', '1');
+        sessionStorage.removeItem('__test_ss__');
+      } catch (e) {
+        var store = {};
+        Object.defineProperty(window, 'sessionStorage', {
+          value: {
+            getItem: function(k) { return store[k] === undefined ? null : store[k]; },
+            setItem: function(k, v) { store[k] = String(v); },
+            removeItem: function(k) { delete store[k]; },
+            clear: function() { store = {}; },
+            key: function(i) { return Object.keys(store)[i] || null; },
+            get length() { return Object.keys(store).length; }
+          },
+          configurable: true, writable: true
+        });
+      }
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Hoop Culture — Stadium Pill Broadcast Scorebug</title>
+  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,700;1,800;1,900&family=Barlow:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-dark: #080605;
+      --orange-fire: #e8430a;
+      --gold-accent: #ffaa00;
+      --away-color: #fdb927;
+      --home-color: #1d42ba;
+      --pill-height: 4.8vw;
+      --capsule-bg: radial-gradient(ellipse at center, #1e2029 0%, #0c0d12 60%, #040507 100%);
+    }
+
+    html, body {
+      background: transparent;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      font-family: 'Barlow Condensed', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* ════ MAIN CONTAINER: STADIUM PILL SCOREBUG ════ */
+    #scorebug-wrapper {
+      position: fixed;
+      bottom: 2vw;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      transition: transform 0.3s ease, bottom 0.3s ease, top 0.3s ease;
+    }
+
+    #scorebug {
+      display: inline-flex;
+      align-items: stretch;
+      height: var(--pill-height);
+      border-radius: 9999px;
+      overflow: hidden;
+      background: #08090d;
+      border: 2px solid rgba(255, 255, 255, 0.22);
+      box-shadow: 0 0.8vw 2.5vw rgba(0, 0, 0, 0.85), 0 0.2vw 0.5vw rgba(0, 0, 0, 0.7);
+      position: relative;
+    }
+
+    /* ════ 1. VENUE SEGMENT (FAR LEFT END) ════ */
+    .seg-venue {
+      min-width: 9.2vw;
+      max-width: 12.5vw;
+      background: linear-gradient(180deg, #181922 0%, #0d0e13 100%);
+      border-right: 1.5px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 0 1.2vw 0 1.6vw;
+      border-radius: 9999px 0 0 9999px;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .venue-tag {
+      display: flex;
+      align-items: center;
+      gap: 0.3vw;
+      font-size: 0.52vw;
+      font-weight: 800;
+      letter-spacing: 0.14vw;
+      text-transform: uppercase;
+      color: #ffaa00;
+      line-height: 1;
+      margin-bottom: 0.15vw;
+    }
+
+    .venue-pulse-dot {
+      width: 0.36vw;
+      height: 0.36vw;
+      border-radius: 50%;
+      background: #ff3b30;
+      box-shadow: 0 0 0.3vw #ff3b30;
+      animation: venuePulse 1.2s infinite alternate;
+    }
+    @keyframes venuePulse {
+      0% { opacity: 0.4; transform: scale(0.85); }
+      100% { opacity: 1; transform: scale(1.15); box-shadow: 0 0 0.5vw #ff3b30; }
+    }
+
+    .venue-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.95vw;
+      font-weight: 900;
+      color: #ffffff;
+      text-transform: uppercase;
+      letter-spacing: 0.05vw;
+      line-height: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 10vw;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    }
+
+    /* ════ 2 & 4. TEAM BANNERS (AWAY ON LEFT, HOME ON RIGHT) ════ */
+    .seg-team {
+      flex: 1 1 0;
+      min-width: 13.5vw;
+      max-width: 17.5vw;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      padding: 0 0.9vw;
+      gap: 0.6vw;
+      position: relative;
+      transition: background 0.4s ease;
+      overflow: hidden;
+    }
+
+    .seg-team.away {
+      background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.25) 100%), var(--away-color);
+      justify-content: flex-start;
+      flex-direction: row;
+    }
+
+    .seg-team.home {
+      background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.25) 100%), var(--home-color);
+      justify-content: flex-end;
+      flex-direction: row;
+    }
+
+    /* Team Circular Logo Badges */
+    .team-logo-circle {
+      width: 3.4vw;
+      height: 3.4vw;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 0.25vw 0.8vw rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+      padding: 0.2vw;
+      position: relative;
+      z-index: 2;
+    }
+
+    .team-logo-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      image-rendering: auto;
+    }
+
+    .team-logo-fallback {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.9vw;
+      font-weight: 900;
+      color: #111;
+      text-transform: uppercase;
+      letter-spacing: 0.05vw;
+      text-align: center;
+    }
+
+    /* Team Names (Dynamic scaling for 3-letters or full names) */
+    .team-name-wrap {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 2;
+    }
+
+    .seg-team.away .team-name-wrap {
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    .seg-team.home .team-name-wrap {
+      align-items: flex-end;
+      text-align: right;
+    }
+
+    .team-name-text {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: clamp(1vw, 1.8vw, 2.2vw);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.04vw;
+      line-height: 0.92;
+      color: #ffffff;
+      text-shadow: 0 0.15vw 0.5vw rgba(0, 0, 0, 0.85), 0 0.05vw 0.1vw rgba(0,0,0,0.9);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      transition: font-size 0.2s ease;
+    }
+
+    /* Possession Indicators */
+    .poss-arrow {
+      width: 0.8vw;
+      height: 0.8vw;
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      filter: drop-shadow(0 0 0.3vw #ffaa00);
+      flex-shrink: 0;
+    }
+    .poss-arrow.active {
+      opacity: 1;
+      animation: possBounce 0.8s infinite alternate ease-in-out;
+    }
+    @keyframes possBounce {
+      0% { transform: scale(0.9); }
+      100% { transform: scale(1.15); filter: drop-shadow(0 0 0.6vw #ffea00); }
+    }
+
+    /* ════ 3. CENTER SCORE CAPSULE WITH HOOP CULTURE MEDALLION ════ */
+    .seg-score-capsule {
+      width: 18.2vw;
+      height: calc(100% - 0.4vw);
+      margin: 0.2vw 0;
+      background: var(--capsule-bg);
+      border-radius: 9999px;
+      border: 2px solid rgba(255, 255, 255, 0.26);
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.95), 0 0 1.2vw rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1vw;
+      position: relative;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    .score-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 4.8vw;
+    }
+
+    .score-num {
+      font-family: 'Teko', sans-serif;
+      font-size: 3.5vw;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 0.82;
+      letter-spacing: 0.05vw;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 0.1vw 0.4vw rgba(0, 0, 0, 0.8);
+      transition: transform 0.15s ease-out, color 0.15s ease-out;
+    }
+
+    @keyframes scoreBump {
+      0% { transform: scale(1); color: #ffffff; }
+      40% { transform: scale(1.22); color: #ffaa00; text-shadow: 0 0 0.8vw #ffaa00; }
+      100% { transform: scale(1); color: #ffffff; }
+    }
+    .score-num.bump {
+      animation: scoreBump 0.4s ease-out;
+    }
+
+    .bonus-tag {
+      font-size: 0.46vw;
+      font-weight: 900;
+      letter-spacing: 0.14vw;
+      text-transform: uppercase;
+      color: #ffaa00;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      line-height: 1;
+      margin-top: 0.1vw;
+      text-shadow: 0 0 0.3vw rgba(255, 170, 0, 0.6);
+    }
+    .bonus-tag.active {
+      opacity: 1;
+    }
+
+    /* Official Hoop Culture Center Medallion */
+    .hc-medallion-anchor {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .hc-medallion-ring {
+      width: 3.7vw;
+      height: 3.7vw;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e2e8f0 0%, #64748b 50%, #1e293b 100%);
+      border: 1.5px solid rgba(255, 255, 255, 0.7);
+      box-shadow: 0 0.3vw 1vw rgba(0, 0, 0, 0.9), inset 0 1px 2px rgba(255, 255, 255, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 0.22vw;
+    }
+
+    .hc-medallion-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: #080605;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: inset 0 0 0.4vw rgba(0,0,0,0.9);
+      position: relative;
+    }
+
+    .hc-medallion-logo {
+      width: 88%;
+      height: 88%;
+      object-fit: contain;
+      filter: drop-shadow(0 0.1vw 0.2vw rgba(0, 0, 0, 0.9));
+    }
+
+    /* ════ 5. CLOCK & SHOT CLOCK SEGMENT (FAR RIGHT END) ════ */
+    /* Blends seamlessly with dark score capsule and left venue */
+    .seg-clock {
+      min-width: 13.5vw;
+      background: linear-gradient(180deg, #181922 0%, #0d0e13 100%);
+      border-left: 1.5px solid rgba(255, 255, 255, 0.12);
+      border-radius: 0 9999px 9999px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-evenly;
+      padding: 0 1.6vw 0 1.2vw;
+      flex-shrink: 0;
+      gap: 0.8vw;
+    }
+
+    .clock-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Period */
+    .period-val {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.25vw;
+      font-weight: 900;
+      letter-spacing: 0.04vw;
+      color: #ffffff;
+      text-transform: uppercase;
+      line-height: 1;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      white-space: nowrap;
+    }
+    .period-val sup {
+      font-size: 0.65em;
+      color: #ffaa00;
+      margin-left: 0.05vw;
+    }
+
+    /* Game Clock */
+    .game-clock-val {
+      font-family: 'Teko', sans-serif;
+      font-size: 2.35vw;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 0.9;
+      letter-spacing: 0.06vw;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 0.1vw 0.3vw rgba(0, 0, 0, 0.8);
+      min-width: 4.8vw;
+      text-align: center;
+      transition: color 0.3s ease;
+    }
+    .game-clock-val.warn {
+      color: #ff4d4d;
+      text-shadow: 0 0 0.6vw rgba(255, 77, 77, 0.8);
+      animation: clkWarnPulse 0.5s infinite alternate;
+    }
+    @keyframes clkWarnPulse {
+      0% { opacity: 0.8; }
+      100% { opacity: 1; }
+    }
+
+    /* Shot Clock Stadium Box */
+    .shot-clock-pill {
+      background: #000000;
+      border: 1.5px solid rgba(255, 255, 255, 0.2);
+      border-radius: 0.4vw;
+      padding: 0.1vw 0.55vw;
+      box-shadow: inset 0 0 0.3vw rgba(0, 0, 0, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2.4vw;
+      height: 2.1vw;
+    }
+
+    .shot-clock-val {
+      font-family: 'Teko', sans-serif;
+      font-size: 1.85vw;
+      font-weight: 700;
+      color: #ffaa00;
+      line-height: 0.85;
+      font-variant-numeric: tabular-nums;
+      text-align: center;
+    }
+    .shot-clock-val.urgent {
+      color: #ff3b30;
+      text-shadow: 0 0 0.6vw #ff0000;
+      animation: scPulse 0.45s ease infinite alternate;
+    }
+    .shot-clock-val.zero {
+      color: #ff0000;
+      text-shadow: 0 0 0.9vw #ff0000;
+      font-weight: 800;
+    }
+    @keyframes scPulse {
+      0% { opacity: 1; }
+      100% { opacity: 0.35; }
+    }
+
+    /* ════ FLOATING BROADCAST CONTROLS HUD (Press 'H' to toggle) ════ */
+    #hud-panel {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: rgba(13, 17, 23, 0.95);
+      border: 1.5px solid #2a3040;
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: #fff;
+      font-size: 13px;
+      z-index: 9999;
+      display: none;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.8);
+      font-family: sans-serif;
+      max-width: 320px;
+    }
+    #hud-panel.show { display: block; }
+    #hud-panel h4 { margin-bottom: 8px; color: #ffaa00; font-size: 14px; text-transform: uppercase; }
+    #hud-panel label { display: block; margin-top: 6px; font-size: 11px; color: #a0a5b5; }
+    #hud-panel input, #hud-panel select { width: 100%; background: #161b26; border: 1px solid #3b4252; color: #fff; padding: 4px 6px; border-radius: 4px; font-size: 12px; margin-top: 2px; }
+    #hud-panel .btn-row { display: flex; gap: 6px; margin-top: 10px; }
+    #hud-panel button { flex: 1; padding: 6px; border-radius: 6px; border: none; background: #3b82f6; color: #fff; cursor: pointer; font-weight: 700; font-size: 12px; }
+    #hud-panel button:hover { background: #2563eb; }
+  </style>
+</head>
+<body>
+
+<div id="scorebug-wrapper">
+  <div id="scorebug">
+
+    <!-- ① VENUE BLOCK (Far Left - Matches Scripps Sports placement) -->
+    <div class="seg-venue">
+      <div class="venue-tag">
+        <span class="venue-pulse-dot"></span>
+        <span id="venueTag">VENUE</span>
+      </div>
+      <div class="venue-name" id="venueName">HOOP CULTURE ARENA</div>
+    </div>
+
+    <!-- ② AWAY TEAM (Left Team - Vibrant Team Color Banner) -->
+    <div class="seg-team away" id="awayTeamSeg">
+      <div class="team-logo-circle" id="awayLogoCircle">
+        <div class="team-logo-fallback" id="awayLogoFallback">LAL</div>
+      </div>
+      <div class="team-name-wrap">
+        <div class="team-name-text" id="awayTeamName">LAKERS</div>
+      </div>
+      <div class="poss-arrow" id="awayPossArrow">
+        <svg viewBox="0 0 24 24"><polygon points="6,4 18,12 6,20" fill="#ffffff"/></svg>
+      </div>
+    </div>
+
+    <!-- ③ CENTER SCORE CAPSULE WITH HOOP CULTURE MEDALLION -->
+    <div class="seg-score-capsule">
+      <!-- Away Score -->
+      <div class="score-block">
+        <div class="score-num" id="awayScore">0</div>
+        <div class="bonus-tag" id="awayBonus">BONUS</div>
+      </div>
+
+      <!-- Center Hoop Culture Official Medallion -->
+      <div class="hc-medallion-anchor" title="Hoop Culture Basketball Network">
+        <div class="hc-medallion-ring">
+          <div class="hc-medallion-inner">
+            <img src="/hoop-culture-logo2.png" alt="Hoop Culture Logo" class="hc-medallion-logo" onerror="this.onerror=null;this.src='/hoop-culture-logo-256.png';">
+          </div>
+        </div>
+      </div>
+
+      <!-- Home Score -->
+      <div class="score-block">
+        <div class="score-num" id="homeScore">0</div>
+        <div class="bonus-tag" id="homeBonus">BONUS</div>
+      </div>
+    </div>
+
+    <!-- ④ HOME TEAM (Right Team - Symmetrical Vibrant Team Color Banner) -->
+    <div class="seg-team home" id="homeTeamSeg">
+      <div class="poss-arrow" id="homePossArrow">
+        <svg viewBox="0 0 24 24"><polygon points="18,4 6,12 18,20" fill="#ffffff"/></svg>
+      </div>
+      <div class="team-name-wrap">
+        <div class="team-name-text" id="homeTeamName">PISTONS</div>
+      </div>
+      <div class="team-logo-circle" id="homeLogoCircle">
+        <div class="team-logo-fallback" id="homeLogoFallback">DET</div>
+      </div>
+    </div>
+
+    <!-- ⑤ PERIOD · GAME CLOCK · SHOT CLOCK (Far Right - Blends seamlessly into dark theme) -->
+    <div class="seg-clock">
+      <!-- Period -->
+      <div class="clock-col">
+        <div class="period-val" id="periodVal">1<sup>ST</sup></div>
+      </div>
+
+      <!-- Game Time -->
+      <div class="clock-col">
+        <div class="game-clock-val" id="gameClockVal">10:00</div>
+      </div>
+
+      <!-- Shot Clock -->
+      <div class="clock-col">
+        <div class="shot-clock-pill">
+          <div class="shot-clock-val" id="shotClockVal">24</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /#scorebug -->
+</div><!-- /#scorebug-wrapper -->
+
+<!-- Operator Test HUD Panel (Toggle with 'H' key) -->
+<div id="hud-panel">
+  <h4>⚙ Scorebug Controls</h4>
+  <p style="font-size:11px;color:#8a95a8;margin-bottom:8px;">Press <strong>H</strong> anytime to show/hide this panel.</p>
+  <label>Venue Name:</label>
+  <input type="text" id="hudVenue" value="HOOP CULTURE ARENA" oninput="overrideVenue(this.value)">
+  <label>Scorebug Position:</label>
+  <select id="hudPos" onchange="overridePos(this.value)">
+    <option value="bottom">Bottom Center</option>
+    <option value="top">Top Center</option>
+  </select>
+  <label>Scale Factor:</label>
+  <input type="range" min="0.6" max="1.5" step="0.05" value="1.0" oninput="overrideScale(this.value)">
+  <div class="btn-row">
+    <button onclick="toggleSwap()">⇄ Swap Home/Away</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ══ CONFIGURATION & SERVER DISCOVERY ══ */
+const isLocalServer = window.location.hostname === 'localhost' ||
+                      window.location.hostname === '127.0.0.1' ||
+                      window.location.hostname.startsWith('192.168.') ||
+                      window.location.hostname.startsWith('10.');
+
+const useFirebase = (typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured) && !isLocalServer;
+
+const SERVER_URL = useFirebase
+  ? 'https://scoreboard.hoopculture.ca'
+  : (window.location.protocol === 'file:' ? 'http://localhost:3000' : '');
+
+let db = null;
+if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+  } catch (e) {
+    console.error("Firebase init failed:", e);
+  }
+}
+
+function gP(n) { return new URLSearchParams(window.location.search).get(n); }
+const currentUser = gP('user') || 'default';
+const firebaseUserKey = currentUser.replace(/[\.\#\$\[\]]/g, '_');
+
+// URL Customization flags
+let isSwapped = gP('swap') === '1' || gP('homeleft') === '1';
+const customVenueParam = gP('venue');
+const posParam = gP('pos') || 'bottom';
+const scaleParam = parseFloat(gP('scale') || '1.0');
+
+/* ══ STATE DEFINITION ══ */
+const DEFAULT_STATE = {
+  homeScore: 0,
+  awayScore: 0,
+  homeAbbr: 'PISTONS',
+  awayAbbr: 'LAKERS',
+  homeName: 'PISTONS',
+  awayName: 'LAKERS',
+  homeColor: '#1d42ba',
+  awayColor: '#fdb927',
+  homeLogo: '',
+  awayLogo: '',
+  homeFouls: 0,
+  awayFouls: 0,
+  homeBonus: false,
+  awayBonus: false,
+  gameSeconds: 600,
+  clockRunning: false,
+  shotSeconds: 24,
+  shotRunning: false,
+  quarter: 1,
+  possession: null,
+  venue: 'HOOP CULTURE ARENA',
+  rp1Value: '',
+  rp2Value: '',
+  aiSyncEnabled: true
+};
+
+let S = { ...DEFAULT_STATE };
+let aiSyncActive = false;
+let aiState = { gameSeconds: null, clockStr: null, homeScore: null, awayScore: null, quarter: null, shotSeconds: null };
+let lastHomeScore = -1;
+let lastAwayScore = -1;
+
+/* ══ DOM HELPER ══ */
+function $(id) { return document.getElementById(id); }
+
+/* Apply Positioning & Scale */
+function applyLayoutOptions() {
+  const wrap = $('scorebug-wrapper');
+  if (!wrap) return;
+  if (posParam === 'top') {
+    wrap.style.bottom = 'auto';
+    wrap.style.top = '2vw';
+  } else {
+    wrap.style.top = 'auto';
+    wrap.style.bottom = '2vw';
+  }
+  if (!isNaN(scaleParam) && scaleParam !== 1.0) {
+    wrap.style.transform = `translateX(-50%) scale(${scaleParam})`;
+  }
+}
+applyLayoutOptions();
+
+/* ══ RENDER SCOREBUG ══ */
+function renderAll() {
+  renderVenue();
+  renderTeams();
+  renderScores();
+  renderClock();
+  renderShotClock();
+}
+
+/* 1. Venue */
+function renderVenue() {
+  const el = $('venueName');
+  if (!el) return;
+  let text = 'HOOP CULTURE ARENA';
+  if (customVenueParam) {
+    text = customVenueParam.toUpperCase();
+  } else if (S.venue && S.venue.trim()) {
+    text = S.venue.trim().toUpperCase();
+  } else if (S.rp2Value && S.rp2Value !== '—') {
+    text = S.rp2Value.trim().toUpperCase();
+  } else if (S.rp1Value && S.rp1Value !== '—') {
+    text = S.rp1Value.trim().toUpperCase();
+  }
+  if (el.textContent !== text) el.textContent = text;
+}
+
+/* 2. Teams (Names, Colors, Logos, Possession) */
+function renderTeams() {
+  // Determine Left Team (Away by default) and Right Team (Home by default)
+  const leftTeamKey  = isSwapped ? 'home' : 'away';
+  const rightTeamKey = isSwapped ? 'away' : 'home';
+
+  const leftColor  = S[leftTeamKey + 'Color'] || (isSwapped ? '#1d42ba' : '#fdb927');
+  const rightColor = S[rightTeamKey + 'Color'] || (isSwapped ? '#fdb927' : '#1d42ba');
+
+  const leftName  = (S[leftTeamKey + 'Name'] || S[leftTeamKey + 'Abbr'] || (isSwapped ? 'PISTONS' : 'LAKERS')).toUpperCase();
+  const rightName = (S[rightTeamKey + 'Name'] || S[rightTeamKey + 'Abbr'] || (isSwapped ? 'LAKERS' : 'PISTONS')).toUpperCase();
+
+  const leftLogo  = S[leftTeamKey + 'Logo'];
+  const rightLogo = S[rightTeamKey + 'Logo'];
+
+  // Apply Colors to CSS Variables
+  document.documentElement.style.setProperty('--away-color', leftColor);
+  document.documentElement.style.setProperty('--home-color', rightColor);
+
+  // Team Names
+  const leftNameEl = $('awayTeamName');
+  if (leftNameEl && leftNameEl.textContent !== leftName) {
+    leftNameEl.textContent = leftName;
+    adjustTeamFontSize(leftNameEl, leftName);
+  }
+
+  const rightNameEl = $('homeTeamName');
+  if (rightNameEl && rightNameEl.textContent !== rightName) {
+    rightNameEl.textContent = rightName;
+    adjustTeamFontSize(rightNameEl, rightName);
+  }
+
+  // Logos
+  setLogoBadge('awayLogoCircle', 'awayLogoFallback', leftLogo, leftName.slice(0, 3));
+  setLogoBadge('homeLogoCircle', 'homeLogoFallback', rightLogo, rightName.slice(0, 3));
+
+  // Possession
+  const leftPossArrow = $('awayPossArrow');
+  const rightPossArrow = $('homePossArrow');
+  if (leftPossArrow && rightPossArrow) {
+    const isLeftPoss = S.possession === leftTeamKey;
+    const isRightPoss = S.possession === rightTeamKey;
+    leftPossArrow.classList.toggle('active', isLeftPoss);
+    rightPossArrow.classList.toggle('active', isRightPoss);
+  }
+
+  // Bonus Indicator (< 5 fouls = off, >= 5 fouls = on)
+  const leftBonusEl = $('awayBonus');
+  const rightBonusEl = $('homeBonus');
+  if (leftBonusEl && rightBonusEl) {
+    const leftFouls = S[leftTeamKey + 'Fouls'] || 0;
+    const rightFouls = S[rightTeamKey + 'Fouls'] || 0;
+    const leftBonus = S[leftTeamKey + 'Bonus'] || leftFouls >= 5;
+    const rightBonus = S[rightTeamKey + 'Bonus'] || rightFouls >= 5;
+    leftBonusEl.classList.toggle('active', leftBonus);
+    rightBonusEl.classList.toggle('active', rightBonus);
+  }
+}
+
+function adjustTeamFontSize(el, text) {
+  if (!el) return;
+  const len = text.length;
+  if (len <= 4) {
+    el.style.fontSize = '2.1vw';
+  } else if (len <= 7) {
+    el.style.fontSize = '1.8vw';
+  } else if (len <= 11) {
+    el.style.fontSize = '1.4vw';
+  } else {
+    el.style.fontSize = '1.1vw';
+  }
+}
+
+function setLogoBadge(circleId, fallbackId, logoUrl, fallbackAbbr) {
+  const circle = $(circleId);
+  if (!circle) return;
+  if (logoUrl) {
+    let img = circle.querySelector('img');
+    if (!img) {
+      circle.innerHTML = `<img src="${logoUrl}" alt="" onerror="this.style.display='none';">`;
+    } else if (img.getAttribute('src') !== logoUrl) {
+      img.src = logoUrl;
+      img.style.display = 'block';
+    }
+  } else {
+    if (!circle.querySelector('.team-logo-fallback')) {
+      circle.innerHTML = `<div class="team-logo-fallback">${fallbackAbbr || 'HC'}</div>`;
+    } else {
+      const fb = circle.querySelector('.team-logo-fallback');
+      if (fb && fb.textContent !== fallbackAbbr) fb.textContent = fallbackAbbr;
+    }
+  }
+}
+
+/* 3. Scores */
+function renderScores() {
+  const leftTeamKey  = isSwapped ? 'home' : 'away';
+  const rightTeamKey = isSwapped ? 'away' : 'home';
+
+  const leftScore  = aiSyncActive && aiState.homeScore !== null ? (isSwapped ? aiState.homeScore : aiState.awayScore) : (S[leftTeamKey + 'Score'] || 0);
+  const rightScore = aiSyncActive && aiState.awayScore !== null ? (isSwapped ? aiState.awayScore : aiState.homeScore) : (S[rightTeamKey + 'Score'] || 0);
+
+  const leftScoreEl = $('awayScore');
+  if (leftScoreEl) {
+    const sStr = String(leftScore);
+    if (leftScoreEl.textContent !== sStr) {
+      leftScoreEl.textContent = sStr;
+      if (lastHomeScore !== -1) triggerBump(leftScoreEl);
+    }
+  }
+
+  const rightScoreEl = $('homeScore');
+  if (rightScoreEl) {
+    const sStr = String(rightScore);
+    if (rightScoreEl.textContent !== sStr) {
+      rightScoreEl.textContent = sStr;
+      if (lastAwayScore !== -1) triggerBump(rightScoreEl);
+    }
+  }
+
+  lastHomeScore = leftScore;
+  lastAwayScore = rightScore;
+}
+
+function triggerBump(el) {
+  if (!el) return;
+  el.classList.remove('bump');
+  void el.offsetWidth; // Trigger reflow
+  el.classList.add('bump');
+}
+
+/* 4. Game Clock & Period */
+function renderClock() {
+  const clkEl = $('gameClockVal');
+  const perEl = $('periodVal');
+  if (!clkEl || !perEl) return;
+
+  // Period
+  const q = aiSyncActive && aiState.quarter !== null ? aiState.quarter : (S.quarter || 1);
+  let pText = '1<sup>ST</sup>';
+  if (q === 1) pText = '1<sup>ST</sup>';
+  else if (q === 2) pText = '2<sup>ND</sup>';
+  else if (q === 3) pText = '3<sup>RD</sup>';
+  else if (q === 4) pText = '4<sup>TH</sup>';
+  else if (q === 5) pText = 'OT';
+  else if (q > 5) pText = `${q - 4}OT`;
+  if (perEl.innerHTML !== pText) perEl.innerHTML = pText;
+
+  // Clock
+  let cStr = '10:00';
+  let secs = S.gameSeconds;
+  if (aiSyncActive && aiState.clockStr) {
+    cStr = aiState.clockStr;
+  } else if (secs !== undefined && secs !== null) {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    if (secs < 60) {
+      // Under 1 minute: display tenths if available, or .0
+      cStr = `${secs}.0`;
+    } else {
+      cStr = `${m}:${s.toString().padStart(2, '0')}`;
+    }
+  }
+  if (clkEl.textContent !== cStr) clkEl.textContent = cStr;
+
+  // Clock Warning state (< 60s)
+  const isWarn = secs !== undefined && secs !== null && secs < 60;
+  clkEl.classList.toggle('warn', isWarn);
+}
+
+/* 5. Shot Clock */
+function renderShotClock() {
+  const scEl = $('shotClockVal');
+  if (!scEl) return;
+  const s = aiSyncActive && aiState.shotSeconds !== null ? aiState.shotSeconds : (S.shotSeconds !== undefined ? S.shotSeconds : 24);
+  const sStr = String(s);
+  if (scEl.textContent !== sStr) scEl.textContent = sStr;
+
+  scEl.classList.toggle('urgent', s <= 5 && s > 0);
+  scEl.classList.toggle('zero', s === 0);
+}
+
+/* ══ REALTIME DATA SYNCHRONIZATION ══ */
+function applyStateMessage(msgData) {
+  if (!msgData) return;
+  if (msgData.aiSyncActive !== undefined) aiSyncActive = !!msgData.aiSyncActive;
+  if (msgData.aiSyncEnabled !== undefined) aiSyncActive = !!msgData.aiSyncEnabled;
+  S = { ...S, ...msgData };
+  renderAll();
+}
+
+function applyStreamData(streamData) {
+  if (!streamData) return;
+  if (streamData.streamActive === false) {
+    aiSyncActive = false;
+    renderAll();
+    return;
+  }
+  aiSyncActive = true;
+  if (streamData.clock != null) aiState.clockStr = String(streamData.clock).trim();
+  if (streamData.homeScore != null && !isNaN(parseInt(streamData.homeScore, 10))) aiState.homeScore = parseInt(streamData.homeScore, 10);
+  if (streamData.awayScore != null && !isNaN(parseInt(streamData.awayScore, 10))) aiState.awayScore = parseInt(streamData.awayScore, 10);
+  if (streamData.period != null && !isNaN(parseInt(streamData.period, 10))) aiState.quarter = parseInt(streamData.period, 10);
+  if (streamData.shotClock != null && !isNaN(parseInt(streamData.shotClock, 10))) aiState.shotSeconds = parseInt(streamData.shotClock, 10);
+  renderAll();
+}
+
+// 1. BroadcastChannels
+function setupBroadcastChannels() {
+  if (typeof BroadcastChannel === 'undefined') return;
+  ['hc_scoreboard_sync', 'basketball_scoreboard', 'ezlive_scoreboard_channel'].forEach(chName => {
+    try {
+      const bc = new BroadcastChannel(chName);
+      bc.onmessage = (e) => {
+        if (!e || !e.data) return;
+        if (e.data.type === 'state') applyStateMessage(e.data.data);
+        else if (e.data.type === 'stream') applyStreamData(e.data.data);
+        else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined) applyStateMessage(e.data);
+      };
+    } catch(err) {}
+  });
+}
+setupBroadcastChannels();
+
+// 2. Window PostMessage (for OBS Browser Source / iframe embedding)
+window.addEventListener('message', (e) => {
+  if (!e || !e.data) return;
+  if (e.data.type === 'state') applyStateMessage(e.data.data);
+  else if (e.data.type === 'stream') applyStreamData(e.data.data);
+  else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined) applyStateMessage(e.data);
+});
+
+// 3. Firebase Realtime Sync
+if (db) {
+  db.ref('scoreboard/' + firebaseUserKey).on('value', snap => {
+    const val = snap.val();
+    if (val) applyStateMessage(val);
+  });
+}
+
+// 4. SSE Server Fallback
+function connectSSE() {
+  if (!SERVER_URL) return;
+  try {
+    const es = new EventSource(`${SERVER_URL}/events?user=${encodeURIComponent(currentUser)}`);
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        applyStateMessage(data);
+      } catch(err) {}
+    };
+  } catch(err) {}
+}
+if (!useFirebase) connectSSE();
+
+// Local tick timer for smooth clock updates
+setInterval(() => {
+  if (S.clockRunning && S.gameSeconds > 0) {
+    // Ticker handled by master scoreboard, but render updates smoothly
+    renderClock();
+  }
+}, 250);
+
+/* ══ OPERATOR HUD & SHORTCUTS ══ */
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'h' || e.key === 'H') {
+    const hud = $('hud-panel');
+    if (hud) hud.classList.toggle('show');
+  }
+});
+
+function overrideVenue(val) {
+  S.venue = val;
+  renderVenue();
+}
+
+function overridePos(val) {
+  const wrap = $('scorebug-wrapper');
+  if (!wrap) return;
+  if (val === 'top') {
+    wrap.style.bottom = 'auto';
+    wrap.style.top = '2vw';
+  } else {
+    wrap.style.top = 'auto';
+    wrap.style.bottom = '2vw';
+  }
+}
+
+function overrideScale(val) {
+  const wrap = $('scorebug-wrapper');
+  if (!wrap) return;
+  wrap.style.transform = `translateX(-50%) scale(${val})`;
+}
+
+function toggleSwap() {
+  isSwapped = !isSwapped;
+  renderAll();
+}
+
+// Initial draw
+renderAll();
+</script>
+</body>
+</html>
