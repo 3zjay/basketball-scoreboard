@@ -43,7 +43,7 @@
     })();
   </script>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Hoop Culture — Optical Bridge Scanner</title>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;900&family=Barlow:wght@400;600&display=swap" rel="stylesheet"/>
   <!-- Firebase SDKs -->
@@ -167,21 +167,27 @@
     }
 
     .top-bar {
-      top: 10px;
-      left: 10px;
-      right: 10px;
+      top: max(10px, env(safe-area-inset-top));
+      left: max(10px, env(safe-area-inset-left));
+      right: max(10px, env(safe-area-inset-right));
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
     }
 
     .bottom-bar {
-      bottom: 10px;
-      left: 10px;
-      right: 10px;
+      bottom: max(10px, env(safe-area-inset-bottom));
+      left: max(10px, env(safe-area-inset-left));
+      right: max(10px, env(safe-area-inset-right));
       display: flex;
       flex-direction: column;
       gap: 6px;
+      max-height: calc(100vh - 75px);
+      max-height: calc(100dvh - 75px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     .title {
@@ -271,6 +277,58 @@
       color: #fff;
       border-color: var(--orange2);
       background: rgba(232, 67, 10, 0.1);
+    }
+
+    /* ── LANDSCAPE ADAPTATION (Mobile Phones, Tablets) ── */
+    @media (orientation: landscape) and (max-height: 520px) {
+      .top-bar {
+        padding: 5px 10px;
+        gap: 4px;
+      }
+      .title {
+        font-size: 13px;
+      }
+      .btn {
+        padding: 4px 8px;
+        font-size: 11px;
+      }
+      .bottom-bar {
+        padding: 6px 10px;
+        gap: 3px;
+        max-height: calc(100vh - 54px);
+        max-height: calc(100dvh - 54px);
+      }
+      .config-tabs {
+        margin-bottom: 1px;
+        gap: 4px;
+      }
+      .config-tab {
+        padding: 2px 7px;
+        font-size: 10px;
+      }
+      .status-panel {
+        font-size: 10px;
+        padding: 2px 6px;
+      }
+    }
+
+    /* ── PORTRAIT ADAPTATION (Phones) ── */
+    @media (orientation: portrait) {
+      .top-bar {
+        padding: 8px 10px;
+        gap: 6px;
+      }
+      .title {
+        font-size: 14px;
+      }
+      .top-bar .btn {
+        padding: 5px 8px;
+        font-size: 11px;
+      }
+      .bottom-bar {
+        max-height: 55vh;
+        max-height: 55dvh;
+      }
     }
 
     body.controls-hidden .top-bar {
@@ -681,6 +739,9 @@
         stream = await navigator.mediaDevices.getUserMedia(constraints);
         const video = document.getElementById('camera-view');
         video.srcObject = stream;
+        video.onloadedmetadata = () => {
+          restoreCropPositions();
+        };
         
         await enumerateCameras();
       } catch (err) {
@@ -691,6 +752,9 @@
             stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
             const video = document.getElementById('camera-view');
             video.srcObject = stream;
+            video.onloadedmetadata = () => {
+              restoreCropPositions();
+            };
             await enumerateCameras();
           } catch(e) {
             alert('Could not access camera. Please check your camera permissions.');
@@ -816,8 +880,12 @@
       });
       localStorage.setItem('hc_ocr_crop_positions', JSON.stringify(positions));
 
+      const normCrops = getNormalizedCrops();
+      if (normCrops && Object.keys(normCrops).length) {
+        localStorage.setItem('hc_ocr_crops_norm', JSON.stringify(normCrops));
+      }
+
       if (broadcast) {
-        const normCrops = getNormalizedCrops();
         const user = (document.getElementById('session-input') && document.getElementById('session-input').value) || 'default';
         const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
         if (db) {
@@ -845,6 +913,31 @@
     }
 
     function restoreCropPositions() {
+      // First attempt to restore using normalized coordinates mapped to current screen dimensions
+      const normSaved = localStorage.getItem('hc_ocr_crops_norm');
+      const video = document.getElementById('camera-view');
+      if (normSaved && video && video.videoWidth && video.offsetWidth) {
+        try {
+          const norm = JSON.parse(normSaved);
+          let applied = false;
+          Object.keys(norm).forEach(k => {
+            const frame = frames[k];
+            if (frame && norm[k]) {
+              const domPos = videoNormToScreen(norm[k]);
+              if (domPos) {
+                frame.style.left = domPos.left;
+                frame.style.top = domPos.top;
+                frame.style.width = domPos.width;
+                frame.style.height = domPos.height;
+                applied = true;
+              }
+            }
+          });
+          if (applied) return;
+        } catch(e) {}
+      }
+
+      // Fallback to literal saved screen pixels
       const saved = localStorage.getItem('hc_ocr_crop_positions');
       if (saved) {
         try {
@@ -861,6 +954,42 @@
           });
         } catch(e) {}
       }
+    }
+
+    // ── Realtime Dynamic Orientation & Resize Adaptor ──
+    let orientationResizeTimer = null;
+    function handleOrientationOrResize() {
+      clearTimeout(orientationResizeTimer);
+      orientationResizeTimer = setTimeout(() => {
+        let norm = null;
+        const normSaved = localStorage.getItem('hc_ocr_crops_norm');
+        if (normSaved) {
+          try { norm = JSON.parse(normSaved); } catch(e) {}
+        }
+        if (!norm) {
+          norm = getNormalizedCrops();
+        }
+        if (!norm) return;
+        const video = document.getElementById('camera-view');
+        if (!video || !video.videoWidth || !video.offsetWidth) return;
+        Object.keys(norm).forEach(k => {
+          const frame = frames[k];
+          if (frame && norm[k]) {
+            const domPos = videoNormToScreen(norm[k]);
+            if (domPos) {
+              frame.style.left = domPos.left;
+              frame.style.top = domPos.top;
+              frame.style.width = domPos.width;
+              frame.style.height = domPos.height;
+            }
+          }
+        });
+      }, 100);
+    }
+    window.addEventListener('resize', handleOrientationOrResize);
+    window.addEventListener('orientationchange', handleOrientationOrResize);
+    if (window.screen && window.screen.orientation) {
+      window.screen.orientation.addEventListener('change', handleOrientationOrResize);
     }
 
     function endDrag() {

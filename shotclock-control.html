@@ -110,7 +110,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script src="/firebase-config.js"></script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Shot Clock Operator</title>
 <link rel="manifest" href="/manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Teko:wght@700&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
@@ -403,6 +403,140 @@ html, body {
   border-right: 10px solid transparent;
   border-top: 10px solid #3b82f6;
 }
+
+/* ── RESPONSIVE ORIENTATION & LAYOUT ADAPTATION ── */
+.main-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+/* ── LANDSCAPE MODE (Phones, Tablets, Desktops) ── */
+@media (orientation: landscape) {
+  .page {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .header {
+    padding: clamp(6px, 1.2vh, 12px) 3vw;
+  }
+  .main-body {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .clock-display {
+    flex: 1 1 44%;
+    padding: 1vh 2vw;
+    justify-content: center;
+  }
+  .clock-number {
+    font-size: min(44vh, 22vw);
+    line-height: 0.85;
+  }
+  .btn-area {
+    flex: 1 1 56%;
+    padding: clamp(6px, 1.2vh, 14px) 3vw clamp(8px, 1.5vh, 16px);
+    justify-content: center;
+    gap: clamp(4px, 1vh, 10px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .btn-main {
+    height: clamp(42px, 13vh, 64px);
+    font-size: clamp(18px, 3.8vw, 28px);
+  }
+  .btn-reset {
+    height: clamp(40px, 11vh, 58px);
+    font-size: clamp(20px, 4.2vw, 36px);
+  }
+  .btn-adjust {
+    height: clamp(32px, 9vh, 46px);
+    font-size: clamp(13px, 2.4vw, 20px);
+  }
+  .btn-buzzer {
+    height: clamp(36px, 10vh, 50px);
+    font-size: clamp(14px, 2.5vw, 22px);
+  }
+  .keyboard-hints {
+    font-size: 11px;
+    margin-top: 1px;
+  }
+}
+
+/* Short height landscape mobile phones (e.g. iPhone horizontal height <= 440px) */
+@media (orientation: landscape) and (max-height: 440px) {
+  .header {
+    padding: 4px 16px;
+  }
+  .header-title {
+    font-size: 16px;
+  }
+  .btn-header {
+    padding: 2px 8px;
+    font-size: 11px;
+  }
+  .clock-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+  }
+  .clock-number {
+    font-size: 40vh;
+  }
+  .status-text {
+    font-size: 11px;
+  }
+  .btn-area {
+    gap: 5px;
+    padding: 4px 14px 6px;
+  }
+  .btn-main {
+    height: 40px;
+    font-size: 17px;
+  }
+  .btn-reset {
+    height: 38px;
+    font-size: 24px;
+  }
+  .btn-reset .sub {
+    font-size: 9px;
+  }
+  .btn-adjust {
+    height: 30px;
+    font-size: 13px;
+  }
+  .btn-buzzer {
+    height: 34px;
+    font-size: 14px;
+  }
+  .keyboard-hints {
+    display: none; /* Hide keyboard shortcut text on compact touch mobile screens */
+  }
+}
+
+/* ── PORTRAIT MODE (Phones & Tablets) ── */
+@media (orientation: portrait) {
+  .page {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .main-body {
+    flex-direction: column;
+  }
+  .clock-display {
+    flex: 1;
+    min-height: 0;
+  }
+  .clock-number {
+    font-size: min(44vh, 42vw);
+  }
+  .btn-area {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
 </style>
 </head>
 <body>
@@ -423,47 +557,51 @@ html, body {
     </div>
   </div>
 
-  <div class="clock-display">
-    <div class="clock-label">Shot Clock</div>
-    <div class="clock-number" id="clockNum">24</div>
-    <div class="status-row">
-      <div class="run-dot" id="runDot"></div>
-      <div class="status-text" id="statusText">Stopped</div>
-    </div>
-  </div>
+  <div class="main-body">
 
-  <div class="btn-area">
-
-    <button class="btn-main start" id="mainBtn" onclick="toggleShot(event)">▶ START</button>
-
-    <div class="btn-row">
-      <button class="btn-reset r24" onclick="resetShot(24, event)">
-        24<span class="sub">Reset</span>
-      </button>
-      <button class="btn-reset r14" onclick="resetShot(14, event)">
-        14<span class="sub">Reset</span>
-      </button>
-      <button class="btn-reset rcustom" onclick="resetShotCustom(event)">
-        <div class="custom-wrap">
-          <input id="shotCustomIn" class="custom-input" type="number"
-            min="1" max="60" value="10"
-            onclick="event.stopPropagation()"
-            ontouchstart="event.stopPropagation()">
-          <span class="sub">Set</span>
-        </div>
-      </button>
+    <div class="clock-display">
+      <div class="clock-label">Shot Clock</div>
+      <div class="clock-number" id="clockNum">24</div>
+      <div class="status-row">
+        <div class="run-dot" id="runDot"></div>
+        <div class="status-text" id="statusText">Stopped</div>
+      </div>
     </div>
 
-    <!-- Quick Adjust Row: -1s / +1s -->
-    <div class="btn-row" style="grid-template-columns: 1fr 1fr; margin-top: -2px;">
-      <button class="btn-adjust" onclick="adjustShot(-1, event)">−1 SEC</button>
-      <button class="btn-adjust" onclick="adjustShot(+1, event)">+1 SEC</button>
-    </div>
+    <div class="btn-area">
 
-    <button class="btn-buzzer" id="buzzerBtn" onclick="soundBuzzer(event)">🔔 SOUND BUZZER</button>
+      <button class="btn-main start" id="mainBtn" onclick="toggleShot(event)">▶ START</button>
 
-    <div class="keyboard-hints">
-      ⌨ <strong>Shortcuts:</strong> Space = Start/Pause • 2 = 24s • 1 = 14s • +/− = Adjust • B = Buzzer
+      <div class="btn-row">
+        <button class="btn-reset r24" onclick="resetShot(24, event)">
+          24<span class="sub">Reset</span>
+        </button>
+        <button class="btn-reset r14" onclick="resetShot(14, event)">
+          14<span class="sub">Reset</span>
+        </button>
+        <button class="btn-reset rcustom" onclick="resetShotCustom(event)">
+          <div class="custom-wrap">
+            <input id="shotCustomIn" class="custom-input" type="number"
+              min="1" max="60" value="10"
+              onclick="event.stopPropagation()"
+              ontouchstart="event.stopPropagation()">
+            <span class="sub">Set</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Quick Adjust Row: -1s / +1s -->
+      <div class="btn-row" style="grid-template-columns: 1fr 1fr; margin-top: -2px;">
+        <button class="btn-adjust" onclick="adjustShot(-1, event)">−1 SEC</button>
+        <button class="btn-adjust" onclick="adjustShot(+1, event)">+1 SEC</button>
+      </div>
+
+      <button class="btn-buzzer" id="buzzerBtn" onclick="soundBuzzer(event)">🔔 SOUND BUZZER</button>
+
+      <div class="keyboard-hints">
+        ⌨ <strong>Shortcuts:</strong> Space = Start/Pause • 2 = 24s • 1 = 14s • +/− = Adjust • B = Buzzer
+      </div>
+
     </div>
 
   </div>

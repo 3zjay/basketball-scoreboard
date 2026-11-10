@@ -110,7 +110,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script src="/firebase-config.js"></script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -533,9 +533,9 @@ body.light .reset-btn:hover { background:#fee2e2; }
 }
 .footer span { color:var(--accent);font-weight:700; }
 
-/* ── RESPONSIVE ── */
-@media (max-width: 768px) {
-  body { padding: 12px 10px 40px; }
+/* ── RESPONSIVE & ORIENTATION ADAPTATION ── */
+@media (max-width: 860px), (orientation: portrait) and (max-width: 1024px) {
+  body { padding: 12px 10px 40px; padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right)); }
 
   .page-header {
     padding: 12px 14px;
@@ -583,6 +583,13 @@ body.light .reset-btn:hover { background:#fee2e2; }
   .poss-none-btn { padding: 12px 10px; font-size: 12px; }
 
   .inp { font-size: 14px; padding: 8px 10px; }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  body { padding: 6px 12px 24px; }
+  .page-header { padding: 8px 12px; }
+  .page-title { font-size: 18px; }
+  .card-body { padding: 12px 14px; }
 }
 
 /* ── Remote Scanner Aligner Styles ── */
@@ -681,6 +688,58 @@ body.light .reset-btn:hover { background:#fee2e2; }
   background: #ff6b1a;
   color: #fff;
   border-color: #ff6b1a;
+}
+
+/* ── Remote Aligner Responsive Modal Layout ── */
+.remote-align-body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  min-height: 0;
+}
+.remote-align-viewport {
+  flex: 1 1 65%;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #050403;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
+.remote-align-sidebar {
+  flex: 0 0 340px;
+  border-left: 1px solid #2a1e14;
+  background: #0e0a07;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+@media (max-width: 900px), (orientation: portrait) {
+  .remote-align-body {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .remote-align-viewport {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    padding: 10px !important;
+  }
+  #remoteVideoContainer {
+    max-height: 45vh;
+  }
+  .remote-align-sidebar {
+    flex: 1 1 auto !important;
+    border-left: none !important;
+    border-top: 1px solid #2a1e14;
+    width: 100% !important;
+  }
 }
 
 </style>
@@ -3277,10 +3336,10 @@ function endRemotePointer() {
     </div>
 
     <!-- Main Content Grid -->
-    <div style="flex:1; display:flex; flex-direction:row; overflow:hidden; min-height:0;">
+    <div class="remote-align-body">
       
       <!-- Left Viewport (Live Camera + Drag Boxes) -->
-      <div style="flex:1 1 65%; padding:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#050403; position:relative; overflow:hidden; min-width:0;">
+      <div class="remote-align-viewport">
         <div id="remoteVideoContainer" style="position:relative; width:100%; max-width:800px; aspect-ratio:16/9; background:#000; border:2px solid #2a1e14; border-radius:8px; overflow:hidden; user-select:none; box-shadow:0 8px 30px rgba(0,0,0,0.7);">
           
           <!-- Live Camera Image Feed -->
@@ -3333,7 +3392,7 @@ function endRemotePointer() {
       </div>
 
       <!-- Right Sidebar Controls -->
-      <div style="flex:0 0 340px; border-left:1px solid #2a1e14; background:#0e0a07; padding:16px; display:flex; flex-direction:column; gap:12px; overflow-y:auto;">
+      <div class="remote-align-sidebar">
         
         <!-- Field Tabs -->
         <div>

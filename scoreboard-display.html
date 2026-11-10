@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Scoreboard Display</title>
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -216,6 +217,91 @@ html, body {
   backdrop-filter:blur(8px); transition:all 0.2s; opacity:0.5;
 }
 #fsBtn:hover { opacity:1; border-color:rgba(255,255,255,0.5); }
+
+/* ═══ PORTRAIT ORIENTATION (Vertical displays, Kiosks, Tablets, Phones) ═══ */
+@media (orientation: portrait) {
+  .row-clock {
+    height: 18vh;
+    padding: 0 4vw;
+  }
+  .clock-digit {
+    font-size: min(16vw, 15vh);
+  }
+  .clock-colon {
+    font-size: min(14vw, 13vh);
+  }
+  .poss-logo {
+    width: 6vh;
+    height: 6vh;
+  }
+  .row-scores {
+    top: 18vh;
+    height: 82vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .center-col {
+    order: 2;
+    height: 12vh;
+    width: 100%;
+    border-top: 1px solid #1c1c1c;
+    border-bottom: 1px solid #1c1c1c;
+    background: #060606;
+    justify-content: center;
+  }
+  .divider-line {
+    display: none;
+  }
+  .center-panel {
+    flex-direction: row;
+    gap: 10vw;
+    width: 100%;
+    justify-content: center;
+  }
+  .center-panel > div {
+    display: flex;
+    align-items: center;
+    gap: 2vw;
+  }
+  .period-lbl, .shot-lbl {
+    font-size: clamp(14px, 2.2vh, 22px);
+  }
+  .period-num {
+    font-size: clamp(28px, 6vh, 48px);
+  }
+  .shot-num {
+    font-size: clamp(32px, 7vh, 56px);
+  }
+  .team-block {
+    flex: 1;
+    justify-content: center;
+    padding: 1vh 4vw;
+  }
+  .team-block.away {
+    order: 1;
+    border-bottom: 1px solid #141414;
+  }
+  .team-block.home {
+    order: 3;
+  }
+  .team-name {
+    font-size: clamp(24px, 7vw, 48px);
+    margin-bottom: 0;
+  }
+  .score-val {
+    font-size: min(20vh, 36vw);
+    line-height: 0.85;
+  }
+  .fouls-row {
+    margin-top: 0;
+  }
+  .fouls-lbl {
+    font-size: clamp(14px, 2.5vh, 24px);
+  }
+  .fouls-val {
+    font-size: clamp(20px, 4.5vh, 36px);
+  }
+}
 </style>
 </head>
 <body>

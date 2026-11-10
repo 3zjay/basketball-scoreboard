@@ -43,7 +43,7 @@
     })();
   </script>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Hoop Culture Scoreboard — Live Stream & Venue System</title>
   <link rel="manifest" href="/manifest.json">
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
@@ -318,7 +318,7 @@
       position: relative;
     }
 
-    @media (max-width: 960px) {
+    @media (max-width: 960px), (orientation: portrait) and (max-width: 1024px) {
       .diagram-card {
         grid-template-columns: 1fr;
         gap: 3rem;
@@ -327,6 +327,59 @@
       .connector-arrow {
         transform: rotate(90deg);
         margin: 1rem auto;
+      }
+    }
+
+    @media (max-width: 768px), (orientation: portrait) and (max-width: 860px) {
+      .nav-container {
+        height: auto;
+        padding: 12px 18px;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .nav-links {
+        gap: 1.2rem;
+        flex-wrap: wrap;
+      }
+      .hero {
+        padding: 3.5rem 1.2rem 2.5rem;
+      }
+      .hero-title {
+        font-size: clamp(2.2rem, 9vw, 3.8rem);
+      }
+      .hero-desc {
+        font-size: 1rem;
+      }
+      .hero-actions {
+        flex-direction: column;
+        gap: 0.8rem;
+      }
+      .screens-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (orientation: landscape) and (max-height: 520px) {
+      .nav-container {
+        height: 60px;
+        padding: 0 16px;
+      }
+      .nav-logo img {
+        height: 42px;
+      }
+      .hero {
+        padding: 2rem 1rem 1.5rem;
+      }
+      .hero-title {
+        font-size: 2.2rem;
+        margin-bottom: 0.5rem;
+      }
+      .hero-desc {
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+      }
+      .section-header {
+        margin: 2.5rem 0 1.5rem;
       }
     }
 

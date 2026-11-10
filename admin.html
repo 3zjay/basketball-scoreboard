@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Hoop Culture — User Management Console</title>
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <!-- Firebase SDKs -->
@@ -267,6 +267,31 @@
       font-size: 14px;
       letter-spacing: 1.5px;
       text-transform: uppercase;
+    }
+
+    /* ── RESPONSIVE ORIENTATION ── */
+    @media (max-width: 640px) {
+      body {
+        padding: 1.5rem 1rem;
+      }
+      .admin-container {
+        padding: 1.5rem 1.25rem;
+      }
+      .add-user-form {
+        flex-direction: column;
+      }
+    }
+    @media (orientation: landscape) and (max-height: 520px) {
+      body {
+        padding: 1rem;
+      }
+      .admin-container {
+        padding: 1.25rem 1.5rem;
+      }
+      .header-section {
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+      }
     }
   </style>
 </head>
