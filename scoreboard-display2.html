@@ -385,7 +385,7 @@ let feedInvertMode = (explicitInvert === 'black' || explicitInvert === '1' || ur
   ? 'black'
   : (explicitInvert === 'white' || explicitInvert === '0' || urlParams.get('white') === '1' ? 'white' : 'auto');
 
-let cropInvertStates = { home: false, away: false, clock: false, shot: false, period: false };
+let cropInvertStates = { home: true, away: true, clock: true, shot: true, period: true };
 
 function applyStreamImgStyles(img, cropKey) {
   if (!img) return;
@@ -398,26 +398,29 @@ function applyStreamImgStyles(img, cropKey) {
     cropKey = img.dataset.cropKey;
   }
 
-  // Polarity determination:
-  // - Black background from camera (Invert CHECKED / true) -> needs 'screen' to make black 100% transparent
-  // - White background from camera (Invert UNCHECKED / false) -> needs 'multiply' to make white 100% transparent
-  let useScreenBlend = true; // default: scoreboard displays have black backgrounds
+  // Universal Broadcast Screen Blending:
+  // In sports broadcasts, scoreboard digits are always bright/white on the broadcast bug.
+  // - If the incoming feed has a BLACK background (Invert CHECKED / true):
+  //   Screen blend makes the black background 100% transparent with 0 box and 0 shade.
+  // - If the incoming feed has a WHITE background (Invert UNCHECKED / false):
+  //   Filter invert(1) converts white background to pure black and dark digits to bright white,
+  //   and Screen blend makes the converted black background 100% transparent!
+  //
+  // This guarantees 100% SEAMLESS TRANSPARENCY with ZERO BOXES and ZERO BORDERS in BOTH STATES!
+  let isWhiteBg = false;
 
   if (feedInvertMode === 'black') {
-    useScreenBlend = false; // Force multiply (black digits, white transparent background)
+    isWhiteBg = true;
   } else if (feedInvertMode === 'white') {
-    useScreenBlend = true; // Force screen (white/colored digits, black transparent background)
+    isWhiteBg = false;
   } else if (cropKey && cropInvertStates[cropKey] !== undefined) {
-    useScreenBlend = !!cropInvertStates[cropKey];
+    isWhiteBg = !cropInvertStates[cropKey];
   }
 
-  if (useScreenBlend) {
-    // Screen blend mode: Black background is 100% transparent, digits blend seamlessly onto card
-    img.style.mixBlendMode = 'screen';
-    img.style.filter = 'contrast(2.5) brightness(1.3)';
+  img.style.mixBlendMode = 'screen';
+  if (isWhiteBg) {
+    img.style.filter = 'invert(1) contrast(2.5) brightness(1.3)';
   } else {
-    // Multiply blend mode: White background is 100% transparent, dark digits blend seamlessly onto card
-    img.style.mixBlendMode = 'multiply';
     img.style.filter = 'contrast(2.5) brightness(1.3)';
   }
 }
