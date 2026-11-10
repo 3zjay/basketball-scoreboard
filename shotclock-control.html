@@ -479,7 +479,7 @@ const isLocalServer = window.location.hostname === 'localhost' ||
 const useFirebase = (typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured) && !isLocalServer;
 
 const SERVER_URL = useFirebase
-  ? 'https://basketball-scoreboard-o0c7.onrender.com'
+  ? 'https://scoreboard.hoopculture.ca'
   : (window.location.protocol === 'file:' ? 'http://localhost:3000' : '');
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -630,6 +630,22 @@ function startLocalTick() {
       shotSeconds--; 
       renderClock(); 
       broadcastShotclock();
+      if (shotSeconds === 0) {
+        shotRunning = false;
+        stopLocalTick();
+        renderClock();
+        soundBuzzer();
+        broadcastShotclock();
+        if (useFirebase && db) {
+          db.ref(`states/${fbUser}`).update({ 
+            shotSeconds: 0, 
+            shotRunning: false,
+            shotLeader: myClientId,
+            shotLeaderTime: Date.now()
+          }).catch(() => {});
+        }
+        return;
+      }
       if (useFirebase && db) {
         db.ref(`states/${fbUser}`).update({ 
           shotSeconds: shotSeconds,
@@ -689,8 +705,9 @@ function handleLocalCommand(command, seconds) {
   } else if (command === 'shot_reset') {
     stopLocalTick();
     shotSeconds = seconds || 24;
-    shotRunning = true;
-    startLocalTick();
+    if (shotRunning) {
+      startLocalTick();
+    }
   } else if (command === 'shot_adjust') {
     shotSeconds = Math.max(0, shotSeconds + (seconds || 0));
   }
@@ -757,21 +774,22 @@ function resetShot(n, e) {
 
   stopLocalTick();
   shotSeconds = n;
-  shotRunning = true;
+  if (shotRunning) {
+    startLocalTick();
+  }
   renderClock();
   broadcastShotclock();
 
   if (useFirebase && db) {
     isShotLeader = true;
-    startLocalTick();
     db.ref(`states/${fbUser}`).update({
       shotSeconds: shotSeconds,
-      shotRunning: true,
+      shotRunning: shotRunning,
       shotLeader: myClientId,
       shotLeaderTime: Date.now()
     }).catch(() => {});
   } else {
-    if (!_sseConnected) startLocalTick();
+    if (shotRunning && !_sseConnected) startLocalTick();
     cmd('shot_reset', n);
   }
 }
@@ -839,17 +857,27 @@ function ripple(e, btn) {
 // ── Audio ──
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
+const _buzzAudio = new Audio('/buzzer.mp3');
+_buzzAudio.preload = 'auto';
+_buzzAudio.load();
+
 function getAudio() {
   if (!audioCtx) audioCtx = new AudioCtx();
   if (audioCtx.state === 'suspended') audioCtx.resume();
+  _buzzAudio.volume = 0;
+  _buzzAudio.play().then(() => {
+    _buzzAudio.pause();
+    _buzzAudio.currentTime = 0;
+    _buzzAudio.volume = 1.0;
+  }).catch(() => {});
   return audioCtx;
 }
-document.addEventListener('touchstart', () => getAudio(), { passive: true });
-document.addEventListener('click',      () => getAudio(), { passive: true });
+document.addEventListener('touchstart', () => getAudio(), { once: true, passive: true });
+document.addEventListener('click',      () => getAudio(), { once: true, passive: true });
 function playBuzz() { 
-  const a = new Audio('/buzzer.mp3'); 
-  a.volume = 1; 
-  a.play().catch(() => {}); 
+  _buzzAudio.currentTime = 0; 
+  _buzzAudio.volume = 1.0; 
+  _buzzAudio.play().catch(() => {}); 
 }
 
 // ── Keyboard Shortcuts ──

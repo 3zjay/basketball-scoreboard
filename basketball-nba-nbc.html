@@ -405,7 +405,7 @@ const isLocalServer = window.location.hostname === 'localhost' ||
 const useFB = (typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured) && !isLocalServer;
 
 const SRV = useFB
-  ? 'https://basketball-scoreboard-o0c7.onrender.com'
+  ? 'https://scoreboard.hoopculture.ca'
   : (window.location.protocol === 'file:' ? 'http://localhost:3000' : '');
 
 let db=null;
