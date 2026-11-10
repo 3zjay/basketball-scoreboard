@@ -1259,20 +1259,35 @@
         dilate(data, w, h);
       }
 
-      // Render crisp 1-bit monochrome binarization filter output:
-      // When Invert is checked: pure white digits (255) on pure black background (0).
-      // When Invert is unchecked: pure black digits (0) on pure white background (255).
+      // Render 100% True Native Alpha Transparent Output (Zero Box, Zero Borders, Zero Shade in BOTH states!)
+      // - When Invert is CHECKED: Solid pure white digits (rgba(255, 255, 255, 255)), background is 100% true alpha transparent (rgba(0, 0, 0, 0)).
+      // - When Invert is UNCHECKED: Solid pure black digits (rgba(0, 0, 0, 255)), background is 100% true alpha transparent (rgba(0, 0, 0, 0)).
+      const isInverted = !!invertStates[key];
       for (let i = 0; i < data.length; i += 4) {
-        if (data[i] === 255 && data[i+1] === 255 && data[i+2] === 255) {
-          data[i] = 255;
-          data[i+1] = 255;
-          data[i+2] = 255;
-          data[i+3] = 255;
+        if (isInverted) {
+          if (data[i] === 255) {
+            data[i] = 255;
+            data[i+1] = 255;
+            data[i+2] = 255;
+            data[i+3] = 255; // Solid opaque white digit
+          } else {
+            data[i] = 0;
+            data[i+1] = 0;
+            data[i+2] = 0;
+            data[i+3] = 0;   // 100% True Alpha Transparent (Zero black box, zero shade!)
+          }
         } else {
-          data[i] = 0;
-          data[i+1] = 0;
-          data[i+2] = 0;
-          data[i+3] = 255;
+          if (data[i] === 0) {
+            data[i] = 0;
+            data[i+1] = 0;
+            data[i+2] = 0;
+            data[i+3] = 255; // Solid opaque black digit
+          } else {
+            data[i] = 0;
+            data[i+1] = 0;
+            data[i+2] = 0;
+            data[i+3] = 0;   // 100% True Alpha Transparent (Zero white box, zero shade!)
+          }
         }
       }
 
@@ -1453,11 +1468,13 @@
         streamActive: syncActive, 
         sender: myClientId,
         role: deviceRole,
+        enabledCrops: enabledCrops,
         timestamp: Date.now()
       };
 
       for (const key of keys) {
         if (enabledCrops[key] === false) {
+          payload[fieldMap[key]] = null;
           continue;
         }
 
