@@ -869,15 +869,8 @@ body.light .reset-btn:hover { background:#fee2e2; }
             <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
           </div>
         </div>
-        <div style="display:flex; align-items:center; gap:6px;">
-          <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#16c784; cursor:pointer; background:#0a0604; border:1px solid #165534; padding:5px 8px; border-radius:4px;" title="Stream Home Score to Broadcast Overlay">
-            <input type="checkbox" id="cropEnableHomeCb" onchange="toggleCropEnableDirect('home', this.checked)" checked style="accent-color:#16c784; cursor:pointer;">
-            <span>Active</span>
-          </label>
-          <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#d6dbe6; cursor:pointer; background:#0a0604; border:1px solid #332318; padding:5px 8px; border-radius:4px;" title="Invert Home Score crop (White background, Black digits on overlay)">
-            <input type="checkbox" id="cropInvertHomeCb" onchange="toggleCropInvertDirect('home', this.checked)" style="accent-color:var(--orange); cursor:pointer;">
-            <span>🌓 Invert (Black)</span>
-          </label>
+        <div>
+          <button class="btn" onclick="openRemoteAlignModal(event); selectRemoteCrop('home');" style="font-size:10px; padding:4px 8px; background:#0a0604; border-color:#332318; color:var(--orange);">⚙ Settings</button>
         </div>
       </div>
       <!-- FOULS -->
@@ -951,15 +944,8 @@ body.light .reset-btn:hover { background:#fee2e2; }
             <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
           </div>
         </div>
-        <div style="display:flex; align-items:center; gap:6px;">
-          <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#16c784; cursor:pointer; background:#0a0604; border:1px solid #165534; padding:5px 8px; border-radius:4px;" title="Stream Away Score to Broadcast Overlay">
-            <input type="checkbox" id="cropEnableAwayCb" onchange="toggleCropEnableDirect('away', this.checked)" checked style="accent-color:#16c784; cursor:pointer;">
-            <span>Active</span>
-          </label>
-          <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#d6dbe6; cursor:pointer; background:#0a0604; border:1px solid #332318; padding:5px 8px; border-radius:4px;" title="Invert Away Score crop (White background, Black digits on overlay)">
-            <input type="checkbox" id="cropInvertAwayCb" onchange="toggleCropInvertDirect('away', this.checked)" style="accent-color:var(--orange); cursor:pointer;">
-            <span>🌓 Invert (Black)</span>
-          </label>
+        <div>
+          <button class="btn" onclick="openRemoteAlignModal(event); selectRemoteCrop('away');" style="font-size:10px; padding:4px 8px; background:#0a0604; border-color:#332318; color:var(--orange);">⚙ Settings</button>
         </div>
       </div>
       <!-- FOULS -->
@@ -1008,15 +994,8 @@ body.light .reset-btn:hover { background:#fee2e2; }
                 <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
               </div>
             </div>
-            <div style="display:flex; align-items:center; gap:6px;">
-              <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#16c784; cursor:pointer; background:#0a0604; border:1px solid #165534; padding:5px 8px; border-radius:4px;" title="Stream Game Clock to Broadcast Overlay">
-                <input type="checkbox" id="cropEnableClockCb" onchange="toggleCropEnableDirect('clock', this.checked)" checked style="accent-color:#16c784; cursor:pointer;">
-                <span>Active</span>
-              </label>
-              <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#d6dbe6; cursor:pointer; background:#0a0604; border:1px solid #332318; padding:5px 8px; border-radius:4px;" title="Invert Game Clock crop (White background, Black digits on overlay)">
-                <input type="checkbox" id="cropInvertClockCb" onchange="toggleCropInvertDirect('clock', this.checked)" style="accent-color:var(--orange); cursor:pointer;">
-                <span>🌓 Invert (Black)</span>
-              </label>
+            <div>
+              <button class="btn" onclick="openRemoteAlignModal(event); selectRemoteCrop('clock');" style="font-size:10px; padding:4px 8px; background:#0a0604; border-color:#332318; color:var(--orange);">⚙ Settings</button>
             </div>
           </div>
         </div>
@@ -1058,15 +1037,8 @@ body.light .reset-btn:hover { background:#fee2e2; }
                 <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical shot clock</div>
               </div>
             </div>
-            <div style="display:flex; align-items:center; gap:6px;">
-              <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#16c784; cursor:pointer; background:#0a0604; border:1px solid #165534; padding:5px 8px; border-radius:4px;" title="Stream Shot Clock to Broadcast Overlay">
-                <input type="checkbox" id="cropEnableShotCb" onchange="toggleCropEnableDirect('shot', this.checked)" checked style="accent-color:#16c784; cursor:pointer;">
-                <span>Active</span>
-              </label>
-              <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#d6dbe6; cursor:pointer; background:#0a0604; border:1px solid #332318; padding:5px 8px; border-radius:4px;" title="Invert Shot Clock crop (White background, Black digits on overlay)">
-                <input type="checkbox" id="cropInvertShotCb" onchange="toggleCropInvertDirect('shot', this.checked)" style="accent-color:var(--orange); cursor:pointer;">
-                <span>🌓 Invert (Black)</span>
-              </label>
+            <div>
+              <button class="btn" onclick="openRemoteAlignModal(event); selectRemoteCrop('shot');" style="font-size:10px; padding:4px 8px; background:#0a0604; border-color:#332318; color:var(--orange);">⚙ Settings</button>
             </div>
           </div>
         </div>
@@ -1105,15 +1077,8 @@ body.light .reset-btn:hover { background:#fee2e2; }
                 <div style="font-size:11px; color:var(--text2); margin-top:2px;">Camera preview from physical scoreboard</div>
               </div>
             </div>
-            <div style="display:flex; align-items:center; gap:6px;">
-              <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#16c784; cursor:pointer; background:#0a0604; border:1px solid #165534; padding:5px 8px; border-radius:4px;" title="Stream Period Crop to Broadcast Overlay">
-                <input type="checkbox" id="cropEnablePeriodCb" onchange="toggleCropEnableDirect('period', this.checked)" checked style="accent-color:#16c784; cursor:pointer;">
-                <span>Active</span>
-              </label>
-              <label style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#d6dbe6; cursor:pointer; background:#0a0604; border:1px solid #332318; padding:5px 8px; border-radius:4px;" title="Invert Period crop (White background, Black digits on overlay)">
-                <input type="checkbox" id="cropInvertPeriodCb" onchange="toggleCropInvertDirect('period', this.checked)" style="accent-color:var(--orange); cursor:pointer;">
-                <span>🌓 Invert (Black)</span>
-              </label>
+            <div>
+              <button class="btn" onclick="openRemoteAlignModal(event); selectRemoteCrop('period');" style="font-size:10px; padding:4px 8px; background:#0a0604; border-color:#332318; color:var(--orange);">⚙ Settings</button>
             </div>
           </div>
         </div>
@@ -1385,7 +1350,9 @@ function broadcastState() {
   const payload = {
     ...S,
     shotLeader: isShotLeader ? myClientId : (S.shotLeader || null),
-    shotLeaderTime: isShotLeader ? Date.now() : (S.shotLeaderTime || null)
+    shotLeaderTime: isShotLeader ? Date.now() : (S.shotLeaderTime || null),
+    enabledCrops: { ...remoteEnabledCrops },
+    invertStates: { ...remoteInvertStates }
   };
   bc.postMessage({ type: 'state', user: fbUser, data: payload });
 }
@@ -1489,7 +1456,11 @@ function saveNow(){
 // Push non-clock state to server. Clock state is server-owned — never sent here.
 function pushState(){
   // Send full high-quality 200x200 PNG logos to overlays via database/SSE sync
-  const toSend = {...S};
+  const toSend = {
+    ...S,
+    enabledCrops: { ...remoteEnabledCrops },
+    invertStates: { ...remoteInvertStates }
+  };
   // homeLogoThumb / awayLogoThumb remain in toSend — they flow to all devices via SSE
   delete toSend.gameRunning; delete toSend.shotRunning;
   delete toSend.gameSeconds; delete toSend.shotSeconds;
@@ -2961,102 +2932,12 @@ function toggleAiSync(enabled) {
   saveNow();
 }
 
-function toggleCropEnableDirect(key, checked) {
-  remoteEnabledCrops[key] = !!checked;
-  if (activeRemoteCrop === key) {
-    const cb = document.getElementById('rcropEnableCb');
-    if (cb) cb.checked = !!checked;
-  }
-  const box = document.getElementById(`rcrop-${key}`);
-  if (box) box.style.opacity = checked ? '1' : '0.25';
-
-  const fieldMap = {
-    clock: 'gameClockStream',
-    shot: 'shotClockStream',
-    home: 'homeScoreStream',
-    away: 'awayScoreStream',
-    period: 'periodStream'
-  };
-  const streamKey = fieldMap[key];
-
-  if (!checked && streamKey) {
-    if (key === 'home') cachedFeeds.Home = null;
-    if (key === 'away') cachedFeeds.Away = null;
-    if (key === 'clock') cachedFeeds.Clock = null;
-    if (key === 'shot') cachedFeeds.Shot = null;
-    if (key === 'period') cachedFeeds.Period = null;
-    const capitalize = key.charAt(0).toUpperCase() + key.slice(1);
-    const img = document.getElementById(`feed${capitalize}Img`);
-    const ph = document.getElementById(`feed${capitalize}Placeholder`);
-    if (img) img.style.display = 'none';
-    if (ph) ph.style.display = 'inline';
-
-    if (useFirebase && db) {
-      db.ref(`ocr/${fbUser}/${streamKey}`).set(null).catch(() => {});
-    }
-    bc.postMessage({
-      type: 'stream',
-      user: fbUser,
-      data: {
-        [streamKey]: null,
-        enabledCrops: remoteEnabledCrops
-      }
-    });
-  }
-
-  broadcastRemoteCrops();
-  syncCropEnableCheckboxes();
-  saveRemoteCropsLocally();
-}
-
 function syncCropEnableCheckboxes() {
-  const map = {
-    home: document.getElementById('cropEnableHomeCb'),
-    away: document.getElementById('cropEnableAwayCb'),
-    clock: document.getElementById('cropEnableClockCb'),
-    shot: document.getElementById('cropEnableShotCb'),
-    period: document.getElementById('cropEnablePeriodCb')
-  };
-  for (const k in map) {
-    if (map[k]) map[k].checked = remoteEnabledCrops[k] !== false;
-  }
   const modalCb = document.getElementById('rcropEnableCb');
   if (modalCb) modalCb.checked = remoteEnabledCrops[activeRemoteCrop] !== false;
 }
 
-function toggleCropInvertDirect(key, checked) {
-  lastInvertChangeTime = Date.now();
-  remoteInvertStates[key] = !!checked;
-  if (activeRemoteCrop === key) {
-    const cb = document.getElementById('rcropInvertCb');
-    if (cb) cb.checked = !!checked;
-  }
-  syncCropInvertCheckboxes();
-  broadcastRemoteCrops();
-  saveRemoteCropsLocally();
-
-  // Instant broadcast & Firebase sync of per-crop invert polarity
-  if (useFirebase && db) {
-    db.ref(`ocr/${fbUser}/invertStates/${key}`).set(!!checked).catch(() => {});
-    db.ref(`states/${fbUser}/invertStates/${key}`).set(!!checked).catch(() => {});
-  }
-  bc.postMessage({
-    type: 'state',
-    data: { invertStates: { [key]: !!checked } }
-  });
-}
-
 function syncCropInvertCheckboxes() {
-  const map = {
-    home: document.getElementById('cropInvertHomeCb'),
-    away: document.getElementById('cropInvertAwayCb'),
-    clock: document.getElementById('cropInvertClockCb'),
-    shot: document.getElementById('cropInvertShotCb'),
-    period: document.getElementById('cropInvertPeriodCb')
-  };
-  for (const k in map) {
-    if (map[k]) map[k].checked = !!remoteInvertStates[k];
-  }
   const modalCb = document.getElementById('rcropInvertCb');
   if (modalCb) modalCb.checked = !!remoteInvertStates[activeRemoteCrop];
 
@@ -3338,9 +3219,6 @@ function switchRemoteCamera(role) {
   applyRemoteBoxStyles();
 }
 
-  applyRemoteBoxStyles();
-}
-
 function openScannerModal(e) {
   if (e) e.preventDefault();
   switchScannerQrTab(currentQrRole);
@@ -3539,7 +3417,7 @@ function selectRemoteCrop(key) {
 }
 
 function toggleRemoteCropEnabled(enabled) {
-  remoteEnabledCrops[activeRemoteCrop] = enabled;
+  remoteEnabledCrops[activeRemoteCrop] = !!enabled;
   const box = document.getElementById(`rcrop-${activeRemoteCrop}`);
   if (box) box.style.opacity = enabled ? '1' : '0.25';
 
@@ -3567,13 +3445,40 @@ function toggleRemoteCropEnabled(enabled) {
 
     if (useFirebase && db) {
       db.ref(`ocr/${fbUser}/${streamKey}`).set(null).catch(() => {});
+      db.ref(`ocr/${fbUser}/enabledCrops/${activeRemoteCrop}`).set(false).catch(() => {});
+      db.ref(`camera_crops/${fbUser}/enabledCrops/${activeRemoteCrop}`).set(false).catch(() => {});
+      db.ref(`states/${fbUser}/enabledCrops/${activeRemoteCrop}`).set(false).catch(() => {});
     }
     bc.postMessage({
       type: 'stream',
       user: fbUser,
       data: {
+        role: 'all',
+        streamActive: true,
         [streamKey]: null,
-        enabledCrops: remoteEnabledCrops
+        enabledCrops: { ...remoteEnabledCrops }
+      }
+    });
+    bc.postMessage({
+      type: 'state',
+      user: fbUser,
+      data: {
+        ...S,
+        enabledCrops: { ...remoteEnabledCrops }
+      }
+    });
+  } else if (enabled) {
+    if (useFirebase && db) {
+      db.ref(`ocr/${fbUser}/enabledCrops/${activeRemoteCrop}`).set(true).catch(() => {});
+      db.ref(`camera_crops/${fbUser}/enabledCrops/${activeRemoteCrop}`).set(true).catch(() => {});
+      db.ref(`states/${fbUser}/enabledCrops/${activeRemoteCrop}`).set(true).catch(() => {});
+    }
+    bc.postMessage({
+      type: 'state',
+      user: fbUser,
+      data: {
+        ...S,
+        enabledCrops: { ...remoteEnabledCrops }
       }
     });
   }
@@ -3594,10 +3499,15 @@ function toggleRemoteInvert(inverted) {
   if (useFirebase && db) {
     db.ref(`ocr/${fbUser}/invertStates/${activeRemoteCrop}`).set(!!inverted).catch(() => {});
     db.ref(`states/${fbUser}/invertStates/${activeRemoteCrop}`).set(!!inverted).catch(() => {});
+    db.ref(`camera_crops/${fbUser}/invertStates/${activeRemoteCrop}`).set(!!inverted).catch(() => {});
   }
   bc.postMessage({
     type: 'state',
-    data: { invertStates: { [activeRemoteCrop]: !!inverted } }
+    data: { invertStates: { ...remoteInvertStates } }
+  });
+  bc.postMessage({
+    type: 'stream',
+    data: { invertStates: { ...remoteInvertStates } }
   });
 }
 
@@ -3687,9 +3597,8 @@ function broadcastRemoteCrops() {
   };
   if (useFirebase && db) {
     db.ref(`camera_crops/${fbUser}`).set(payload).catch(() => {});
-    if (activeRemoteCameraRole && activeRemoteCameraRole !== 'all') {
-      db.ref(`camera_crops/${fbUser}/${activeRemoteCameraRole}`).set(payload).catch(() => {});
-    }
+    db.ref(`camera_crops/${fbUser}/main`).set(payload).catch(() => {});
+    db.ref(`camera_crops/${fbUser}/shot`).set(payload).catch(() => {});
     if (activeRemoteDeviceId) {
       db.ref(`camera_crops/${fbUser}/${activeRemoteDeviceId}`).set(payload).catch(() => {});
     }

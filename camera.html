@@ -678,10 +678,8 @@
     }
 
     function applyRemoteCropPositions(data) {
-      if (!data || !data.crops) return;
+      if (!data) return;
       if (data.sender === myClientId) return;
-      if (data.targetRole && data.targetRole !== 'all' && data.targetRole !== deviceRole) return;
-      if (data.role && data.role !== 'all' && data.role !== deviceRole && !data.targetRole) return;
 
       const roleCrops = {
         all: ['clock', 'home', 'away', 'period', 'shot'],
@@ -690,23 +688,25 @@
       };
       const myOwned = roleCrops[deviceRole] || roleCrops.all;
 
-      const crops = data.crops;
-      const video = document.getElementById('camera-view');
-      if (!video || !video.videoWidth) return;
-
-      myOwned.forEach(k => {
-        const norm = crops[k];
-        const frame = frames[k];
-        if (norm && frame) {
-          const domPos = videoNormToScreen(norm);
-          if (domPos) {
-            frame.style.left = domPos.left;
-            frame.style.top = domPos.top;
-            frame.style.width = domPos.width;
-            frame.style.height = domPos.height;
-          }
+      if (data.crops) {
+        const crops = data.crops;
+        const video = document.getElementById('camera-view');
+        if (video && video.videoWidth) {
+          myOwned.forEach(k => {
+            const norm = crops[k];
+            const frame = frames[k];
+            if (norm && frame) {
+              const domPos = videoNormToScreen(norm);
+              if (domPos) {
+                frame.style.left = domPos.left;
+                frame.style.top = domPos.top;
+                frame.style.width = domPos.width;
+                frame.style.height = domPos.height;
+              }
+            }
+          });
         }
-      });
+      }
 
       if (data.enabledCrops) {
         myOwned.forEach(k => {
@@ -715,7 +715,10 @@
             const cb = document.getElementById(`crop-toggle-${k}`);
             if (cb) cb.checked = !!enabledCrops[k];
             const frame = frames[k];
-            if (frame) frame.style.opacity = enabledCrops[k] ? '1' : '0.2';
+            if (frame) {
+              frame.style.display = enabledCrops[k] ? 'block' : 'none';
+              frame.style.opacity = enabledCrops[k] ? '1' : '0.2';
+            }
           }
         });
         localStorage.setItem('hc_ocr_enabled_crops', JSON.stringify(enabledCrops));
@@ -1299,7 +1302,7 @@
 
       // Render 100% True Native Alpha Transparent Output (Zero Box, Zero Borders, Zero Shade in BOTH states!)
       // - When Invert is CHECKED: Solid pure white digits (rgba(255, 255, 255, 255)), background is 100% true alpha transparent (rgba(0, 0, 0, 0)).
-      // - When Invert is UNCHECKED: Solid pure black digits (rgba(0, 0, 0, 255)), background is 100% true alpha transparent (rgba(0, 0, 0, 0)).
+      // - When Invert is UNCHECKED: Solid pure black digits (rgba(0, 0, 0, 255)), background is 100% true alpha transparent (rgba(255, 255, 255, 0)).
       const isInverted = !!invertStates[key];
       for (let i = 0; i < data.length; i += 4) {
         if (isInverted) {
@@ -1321,10 +1324,10 @@
             data[i+2] = 0;
             data[i+3] = 255; // Solid opaque black digit
           } else {
-            data[i] = 0;
-            data[i+1] = 0;
-            data[i+2] = 0;
-            data[i+3] = 0;   // 100% True Alpha Transparent (Zero white box, zero shade!)
+            data[i] = 255;
+            data[i+1] = 255;
+            data[i+2] = 255;
+            data[i+3] = 0;   // 100% True Alpha Transparent with pure white for Multiply blend mode!
           }
         }
       }
@@ -1521,6 +1524,7 @@
         sender: myClientId,
         role: deviceRole,
         enabledCrops: roleEnabledCrops,
+        invertStates: { ...invertStates },
         timestamp: Date.now()
       };
 
@@ -1702,6 +1706,12 @@
             fbPayload[`enabledCrops/${k}`] = fbPayload.enabledCrops[k];
           });
           delete fbPayload.enabledCrops;
+        }
+        if (fbPayload.invertStates && typeof fbPayload.invertStates === 'object') {
+          Object.keys(fbPayload.invertStates).forEach(k => {
+            fbPayload[`invertStates/${k}`] = fbPayload.invertStates[k];
+          });
+          delete fbPayload.invertStates;
         }
         // Cam 2 (shot clock) only writes to frames/shot, preserving main board view for default remote aligner
         if (deviceRole === 'shot') {
