@@ -1282,7 +1282,12 @@ bc.onmessage = (e) => {
       const senderRole = e.data.role || 'all';
       if (e.data.crops) {
         if (senderRole === 'shot') {
-          if (e.data.crops.shot) remoteNormCrops.shot = e.data.crops.shot;
+          if (e.data.crops.shot) {
+            shotCamNormCrop = { ...e.data.crops.shot };
+            if (activeRemoteCameraRole === 'shot') {
+              remoteNormCrops.shot = { ...e.data.crops.shot };
+            }
+          }
         } else if (senderRole === 'main') {
           ['clock', 'home', 'away', 'period'].forEach(k => {
             if (e.data.crops[k]) remoteNormCrops[k] = e.data.crops[k];
@@ -2635,46 +2640,71 @@ function updateFeedMonitorUI(incoming) {
   updateCrop('Period', cachedFeeds.Period);
 
   // Update Remote Alignment Aligner if active and feed matches active camera role
-  if (incoming.fullFrame) {
-    let shouldDisplay = false;
-    if (activeRemoteDeviceId) {
-      shouldDisplay = (incoming.sender === activeRemoteDeviceId);
-    } else if (activeRemoteCameraRole === 'shot') {
-      shouldDisplay = (incomingRole === 'shot');
-    } else if (activeRemoteCameraRole === 'main') {
-      shouldDisplay = (incomingRole === 'main' || incomingRole === 'all');
-    } else {
-      // 'all' role: show main board or all, unless Cam 2 is the only camera connected
-      shouldDisplay = (incomingRole !== 'shot') || (!connectedDevices || Object.keys(connectedDevices).length <= 1);
-    }
+  const shotFrame = (incoming.frames && incoming.frames.shot) || incoming['frames/shot'] || (incomingRole === 'shot' ? incoming.fullFrame : null) || (connectedDevices && Object.values(connectedDevices).find(d => d.role === 'shot' && d.fullFrame)?.fullFrame);
+  const mainFrame = (incoming.frames && incoming.frames.main) || incoming['frames/main'] || (incomingRole !== 'shot' ? incoming.fullFrame : null) || (connectedDevices && Object.values(connectedDevices).find(d => (d.role === 'main' || d.role === 'all') && d.fullFrame)?.fullFrame);
 
-    if (shouldDisplay) {
-      const feedImg = document.getElementById('remoteCameraFeed');
-      const feedPh = document.getElementById('remotePlaceholder');
-      const statusBadge = document.getElementById('remoteFeedStatusBadge');
-      if (feedImg) {
-        feedImg.src = incoming.fullFrame;
-        feedImg.style.display = 'block';
-      }
-      if (feedPh) feedPh.style.display = 'none';
-      if (statusBadge) {
-        const camLabel = incomingRole === 'shot' ? 'Cam 2 (Shot Clock)' : (incomingRole === 'main' ? 'Cam 1 (Main Board)' : 'Camera');
-        statusBadge.textContent = `🟢 ${camLabel} Streaming Live`;
-        statusBadge.style.background = '#143820';
-        statusBadge.style.borderColor = '#16c784';
-        statusBadge.style.color = '#16c784';
-      }
+  let frameToShow = null;
+  let camLabel = '';
+
+  if (activeRemoteCameraRole === 'shot') {
+    if (shotFrame) {
+      frameToShow = shotFrame;
+      camLabel = 'Cam 2 (Shot Clock)';
+    }
+  } else if (activeRemoteCameraRole === 'main') {
+    if (mainFrame) {
+      frameToShow = mainFrame;
+      camLabel = 'Cam 1 (Main Board)';
+    }
+  } else {
+    // 'all' role: show main board or all, unless Cam 2 is the only camera connected
+    frameToShow = mainFrame || shotFrame;
+    camLabel = mainFrame ? 'Cam 1 (Main Board)' : 'Cam 2 (Shot Clock)';
+  }
+
+  if (frameToShow) {
+    const feedImg = document.getElementById('remoteCameraFeed');
+    const feedPh = document.getElementById('remotePlaceholder');
+    const statusBadge = document.getElementById('remoteFeedStatusBadge');
+    if (feedImg) {
+      if (feedImg.src !== frameToShow) feedImg.src = frameToShow;
+      feedImg.style.display = 'block';
+    }
+    if (feedPh) feedPh.style.display = 'none';
+    if (statusBadge && camLabel) {
+      statusBadge.textContent = `🟢 ${camLabel} Streaming Live`;
+      statusBadge.style.background = '#143820';
+      statusBadge.style.borderColor = '#16c784';
+      statusBadge.style.color = '#16c784';
     }
   }
 
-  if (incoming.aspectRatio) {
+  const activeAspect = (activeRemoteCameraRole === 'shot')
+    ? (incomingRole === 'shot' ? incoming.aspectRatio : null)
+    : (incomingRole !== 'shot' ? incoming.aspectRatio : null);
+
+  if (activeAspect) {
     const container = document.getElementById('remoteVideoContainer');
-    if (container) container.style.aspectRatio = String(incoming.aspectRatio);
+    if (container) container.style.aspectRatio = String(activeAspect);
   }
 
   if (incoming.crops && !isDraggingRemote && !isResizingRemote) {
-    const incomingRole = incoming.role || 'all';
-    if (incomingRole === activeRemoteCameraRole || activeRemoteCameraRole === 'all') {
+    if (incomingRole === 'shot') {
+      if (incoming.crops.shot) {
+        shotCamNormCrop = { ...incoming.crops.shot };
+        if (activeRemoteCameraRole === 'shot') {
+          remoteNormCrops.shot = { ...incoming.crops.shot };
+          applyRemoteBoxStyles();
+        }
+      }
+    } else if (incomingRole === 'main') {
+      ['clock', 'home', 'away', 'period'].forEach(k => {
+        if (incoming.crops[k]) remoteNormCrops[k] = { ...incoming.crops[k] };
+      });
+      if (activeRemoteCameraRole !== 'shot') {
+        applyRemoteBoxStyles();
+      }
+    } else {
       remoteNormCrops = Object.assign(remoteNormCrops, incoming.crops);
       applyRemoteBoxStyles();
     }
@@ -2781,7 +2811,12 @@ function connectSSE(){
         const senderRole = val.role || 'all';
         if (val.crops) {
           if (senderRole === 'shot') {
-            if (val.crops.shot) remoteNormCrops.shot = val.crops.shot;
+            if (val.crops.shot) {
+              shotCamNormCrop = { ...val.crops.shot };
+              if (activeRemoteCameraRole === 'shot') {
+                remoteNormCrops.shot = { ...val.crops.shot };
+              }
+            }
           } else if (senderRole === 'main') {
             ['clock', 'home', 'away', 'period'].forEach(k => {
               if (val.crops[k]) remoteNormCrops[k] = val.crops[k];
@@ -2826,6 +2861,19 @@ function connectSSE(){
           syncCropEnableCheckboxes();
         }
         applyRemoteBoxStyles();
+      }
+    });
+
+    db.ref(`camera_crops/${fbUser}/shot`).on('value', snapshot => {
+      const val = snapshot.val();
+      if (val && val.sender !== myClientId && !isDraggingRemote && !isResizingRemote) {
+        if (val.crops && val.crops.shot) {
+          shotCamNormCrop = { ...val.crops.shot };
+          if (activeRemoteCameraRole === 'shot') {
+            remoteNormCrops.shot = { ...val.crops.shot };
+            applyRemoteBoxStyles();
+          }
+        }
       }
     });
 
@@ -3190,24 +3238,68 @@ function switchRemoteCamera(role) {
 
   if (dev) {
     activeRemoteDeviceId = dev.id;
-    if (dev.fullFrame) {
-      const feedImg = document.getElementById('remoteCameraFeed');
-      const feedPh = document.getElementById('remotePlaceholder');
-      if (feedImg) {
-        feedImg.src = dev.fullFrame;
-        feedImg.style.display = 'block';
-      }
-      if (feedPh) feedPh.style.display = 'none';
-    }
     if (dev.aspectRatio) {
       const container = document.getElementById('remoteVideoContainer');
       if (container) container.style.aspectRatio = String(dev.aspectRatio);
     }
-    if (dev.crops) {
-      remoteNormCrops = Object.assign(remoteNormCrops, dev.crops);
+    if (role === 'shot') {
+      if (dev.crops && dev.crops.shot) {
+        shotCamNormCrop = { ...dev.crops.shot };
+        remoteNormCrops.shot = { ...dev.crops.shot };
+      }
+    } else {
+      if (dev.crops) {
+        ['clock', 'home', 'away', 'period'].forEach(k => {
+          if (dev.crops[k]) remoteNormCrops[k] = { ...dev.crops[k] };
+        });
+      }
     }
   } else {
     activeRemoteDeviceId = null;
+  }
+
+  // Find appropriate frame for selected role
+  const feedImg = document.getElementById('remoteCameraFeed');
+  const feedPh = document.getElementById('remotePlaceholder');
+  const statusBadge = document.getElementById('remoteFeedStatusBadge');
+
+  let targetFrame = null;
+  let camLabel = '';
+  if (role === 'shot') {
+    targetFrame = (dev && dev.fullFrame) ||
+      (window.lastOcrIncoming && window.lastOcrIncoming.frames && window.lastOcrIncoming.frames.shot) ||
+      (window.lastOcrIncoming && window.lastOcrIncoming['frames/shot']) ||
+      (window.lastOcrIncoming && window.lastOcrIncoming.role === 'shot' ? window.lastOcrIncoming.fullFrame : null) ||
+      (connectedDevices && Object.values(connectedDevices).find(d => d.role === 'shot' && d.fullFrame)?.fullFrame);
+    camLabel = 'Cam 2 (Shot Clock)';
+  } else {
+    targetFrame = (dev && dev.fullFrame) ||
+      (window.lastOcrIncoming && window.lastOcrIncoming.frames && window.lastOcrIncoming.frames.main) ||
+      (window.lastOcrIncoming && window.lastOcrIncoming['frames/main']) ||
+      (window.lastOcrIncoming && window.lastOcrIncoming.role !== 'shot' ? window.lastOcrIncoming.fullFrame : null) ||
+      (connectedDevices && Object.values(connectedDevices).find(d => (d.role === 'main' || d.role === 'all') && d.fullFrame)?.fullFrame);
+    camLabel = role === 'main' ? 'Cam 1 (Main Board)' : 'All Cameras';
+  }
+
+  if (targetFrame && feedImg) {
+    feedImg.src = targetFrame;
+    feedImg.style.display = 'block';
+    if (feedPh) feedPh.style.display = 'none';
+    if (statusBadge) {
+      statusBadge.textContent = `🟢 ${camLabel} Streaming Live`;
+      statusBadge.style.background = '#143820';
+      statusBadge.style.borderColor = '#16c784';
+      statusBadge.style.color = '#16c784';
+    }
+  } else if (!targetFrame && feedPh && feedImg) {
+    feedImg.style.display = 'none';
+    feedPh.style.display = 'flex';
+    if (statusBadge) {
+      statusBadge.textContent = `🟡 Waiting for ${camLabel}...`;
+      statusBadge.style.background = '#2a1f0a';
+      statusBadge.style.borderColor = '#7f500d';
+      statusBadge.style.color = '#f5c842';
+    }
   }
 
   if (role === 'shot') {
@@ -3243,6 +3335,7 @@ let remoteAlignActive = false;
 let activeRemoteCrop = 'clock';
 let nudgeStep = 0.005; // 0.5% default step
 let remoteNormCrops = { ...DEFAULT_NORM_CROPS };
+let shotCamNormCrop = { x: 0.25, y: 0.20, w: 0.50, h: 0.55 };
 let remoteEnabledCrops = { clock: true, home: true, away: true, period: true, shot: true };
 let remoteThresholds = { clock: 120, home: 120, away: 120, period: 120, shot: 120 };
 let remoteInvertStates = { clock: false, home: false, away: false, period: false, shot: false };
@@ -3292,6 +3385,10 @@ function loadSavedRemoteCrops() {
     if (saved) {
       remoteNormCrops = Object.assign(remoteNormCrops, JSON.parse(saved));
     }
+    const savedShot = localStorage.getItem('hc_shot_cam_norm_crop');
+    if (savedShot) {
+      shotCamNormCrop = Object.assign(shotCamNormCrop, JSON.parse(savedShot));
+    }
     const savedInv = localStorage.getItem('hc_remote_invert_states') || localStorage.getItem('hc_ocr_invert_states');
     if (savedInv) {
       remoteInvertStates = Object.assign(remoteInvertStates, JSON.parse(savedInv));
@@ -3312,6 +3409,9 @@ function loadSavedRemoteCrops() {
 function saveRemoteCropsLocally() {
   try {
     localStorage.setItem('hc_remote_norm_crops', JSON.stringify(remoteNormCrops));
+    if (shotCamNormCrop) {
+      localStorage.setItem('hc_shot_cam_norm_crop', JSON.stringify(shotCamNormCrop));
+    }
     localStorage.setItem('hc_remote_invert_states', JSON.stringify(remoteInvertStates));
     localStorage.setItem('hc_ocr_invert_states', JSON.stringify(remoteInvertStates));
     localStorage.setItem('hc_remote_thresholds', JSON.stringify(remoteThresholds));
@@ -3324,7 +3424,7 @@ function applyRemoteBoxStyles() {
   const keys = ['clock', 'home', 'away', 'period', 'shot'];
   keys.forEach(k => {
     const box = document.getElementById(`rcrop-${k}`);
-    const c = remoteNormCrops[k];
+    const c = (k === 'shot' && activeRemoteCameraRole === 'shot' && shotCamNormCrop) ? shotCamNormCrop : remoteNormCrops[k];
     if (box && c) {
       box.style.left = `${(c.x * 100).toFixed(2)}%`;
       box.style.top = `${(c.y * 100).toFixed(2)}%`;
@@ -3347,9 +3447,15 @@ function applyRemoteBoxStyles() {
 function selectRemoteCrop(key) {
   activeRemoteCrop = key;
 
-  // If user selects a non-shot crop while role is 'shot', automatically switch to 'all' so box is visible
-  if (key !== 'shot' && activeRemoteCameraRole === 'shot') {
-    switchRemoteCamera('all');
+  // Auto camera-role switching: if Cam 2 is connected, selecting Shot switches to Cam 2 view; selecting any other crop switches to Cam 1
+  const hasShotCam = Object.values(connectedDevices || {}).some(d => d.role === 'shot' && (Date.now() - (d.lastSeen || 0) < 30000));
+
+  if (key === 'shot' && hasShotCam && activeRemoteCameraRole !== 'shot') {
+    switchRemoteCamera('shot');
+    return;
+  } else if (key !== 'shot' && activeRemoteCameraRole === 'shot') {
+    switchRemoteCamera('main');
+    return;
   }
 
   const keys = ['clock', 'home', 'away', 'period', 'shot'];
@@ -3533,20 +3639,26 @@ function setNudgeStep(normStep, pxLabel) {
 }
 
 function nudgeRemoteCrop(dx, dy) {
-  const c = remoteNormCrops[activeRemoteCrop];
+  const c = (activeRemoteCrop === 'shot' && activeRemoteCameraRole === 'shot' && shotCamNormCrop) ? shotCamNormCrop : remoteNormCrops[activeRemoteCrop];
   if (!c) return;
   c.x = +Math.max(0, Math.min(1 - c.w, c.x + (dx * nudgeStep))).toFixed(4);
   c.y = +Math.max(0, Math.min(1 - c.h, c.y + (dy * nudgeStep))).toFixed(4);
+  if (activeRemoteCrop === 'shot' && activeRemoteCameraRole === 'shot') {
+    remoteNormCrops.shot = { ...c };
+  }
   applyRemoteBoxStyles();
   broadcastRemoteCrops();
   saveRemoteCropsLocally();
 }
 
 function resizeRemoteCrop(dw, dh) {
-  const c = remoteNormCrops[activeRemoteCrop];
+  const c = (activeRemoteCrop === 'shot' && activeRemoteCameraRole === 'shot' && shotCamNormCrop) ? shotCamNormCrop : remoteNormCrops[activeRemoteCrop];
   if (!c) return;
   c.w = +Math.max(0.04, Math.min(1 - c.x, c.w + (dw * nudgeStep))).toFixed(4);
   c.h = +Math.max(0.03, Math.min(1 - c.y, c.h + (dh * nudgeStep))).toFixed(4);
+  if (activeRemoteCrop === 'shot' && activeRemoteCameraRole === 'shot') {
+    remoteNormCrops.shot = { ...c };
+  }
   applyRemoteBoxStyles();
   broadcastRemoteCrops();
   saveRemoteCropsLocally();
@@ -3572,10 +3684,16 @@ function applyCropPreset(type) {
     };
     remoteEnabledCrops = { clock: true, home: true, away: true, period: true, shot: true };
   } else if (type === 'shot') {
-    remoteNormCrops.shot = { x: 0.28, y: 0.22, w: 0.44, h: 0.48 };
+    if (activeRemoteCameraRole === 'shot') {
+      shotCamNormCrop = { x: 0.20, y: 0.18, w: 0.60, h: 0.58 };
+      remoteNormCrops.shot = { ...shotCamNormCrop };
+    } else {
+      remoteNormCrops.shot = { x: 0.28, y: 0.22, w: 0.44, h: 0.48 };
+    }
     remoteEnabledCrops.shot = true;
   } else if (type === 'reset') {
     remoteNormCrops = { ...DEFAULT_NORM_CROPS };
+    shotCamNormCrop = { x: 0.25, y: 0.20, w: 0.50, h: 0.55 };
     remoteEnabledCrops = { clock: true, home: true, away: true, period: true, shot: true };
   }
   applyRemoteBoxStyles();
@@ -3590,17 +3708,26 @@ function broadcastRemoteCrops() {
     timestamp: Date.now(),
     targetRole: activeRemoteCameraRole,
     targetDevice: activeRemoteDeviceId,
-    crops: remoteNormCrops,
+    crops: { ...remoteNormCrops },
     thresholds: remoteThresholds,
     invertStates: remoteInvertStates,
     enabledCrops: remoteEnabledCrops
   };
+  if (activeRemoteCameraRole === 'shot') {
+    payload.crops.shot = { ...(shotCamNormCrop || remoteNormCrops.shot) };
+  }
   if (useFirebase && db) {
-    db.ref(`camera_crops/${fbUser}`).set(payload).catch(() => {});
-    db.ref(`camera_crops/${fbUser}/main`).set(payload).catch(() => {});
-    db.ref(`camera_crops/${fbUser}/shot`).set(payload).catch(() => {});
-    if (activeRemoteDeviceId) {
-      db.ref(`camera_crops/${fbUser}/${activeRemoteDeviceId}`).set(payload).catch(() => {});
+    if (activeRemoteCameraRole === 'shot') {
+      db.ref(`camera_crops/${fbUser}/shot`).set(payload).catch(() => {});
+      if (activeRemoteDeviceId) {
+        db.ref(`camera_crops/${fbUser}/${activeRemoteDeviceId}`).set(payload).catch(() => {});
+      }
+    } else {
+      db.ref(`camera_crops/${fbUser}`).set(payload).catch(() => {});
+      db.ref(`camera_crops/${fbUser}/main`).set(payload).catch(() => {});
+      if (activeRemoteDeviceId) {
+        db.ref(`camera_crops/${fbUser}/${activeRemoteDeviceId}`).set(payload).catch(() => {});
+      }
     }
   }
   bc.postMessage({
@@ -3616,17 +3743,17 @@ function updateRemoteActiveCropPreview(incoming) {
   const pEmpty = document.getElementById('rcropPreviewEmpty');
   if (!pImg || !pEmpty) return;
 
-  const streamMap = {
-    clock: incoming.gameClockStream,
-    home: incoming.homeScoreStream,
-    away: incoming.awayScoreStream,
-    period: incoming.periodStream,
-    shot: incoming.shotClockStream
-  };
+  const capitalize = activeRemoteCrop.charAt(0).toUpperCase() + activeRemoteCrop.slice(1);
+  const dataUrl = cachedFeeds[capitalize] || (incoming && (
+    activeRemoteCrop === 'shot' ? incoming.shotClockStream :
+    activeRemoteCrop === 'clock' ? incoming.gameClockStream :
+    activeRemoteCrop === 'home' ? incoming.homeScoreStream :
+    activeRemoteCrop === 'away' ? incoming.awayScoreStream :
+    incoming.periodStream
+  ));
 
-  const dataUrl = streamMap[activeRemoteCrop];
   if (dataUrl) {
-    pImg.src = dataUrl;
+    if (pImg.src !== dataUrl) pImg.src = dataUrl;
     pImg.style.display = 'block';
     pEmpty.style.display = 'none';
   } else {
@@ -3670,7 +3797,8 @@ function startRemoteDrag(e, key) {
   isDraggingRemote = true;
   dragCropKey = key;
   dragStartPointer = getPointerPos(e);
-  dragStartNorm = { ...remoteNormCrops[key] };
+  const source = (key === 'shot' && activeRemoteCameraRole === 'shot' && shotCamNormCrop) ? shotCamNormCrop : remoteNormCrops[key];
+  dragStartNorm = { ...source };
 
   window.addEventListener('mousemove', onRemotePointerMove);
   window.addEventListener('touchmove', onRemotePointerMove, { passive: false });
@@ -3685,7 +3813,8 @@ function startRemoteResize(e, key) {
   isResizingRemote = true;
   dragCropKey = key;
   dragStartPointer = getPointerPos(e);
-  dragStartNorm = { ...remoteNormCrops[key] };
+  const source = (key === 'shot' && activeRemoteCameraRole === 'shot' && shotCamNormCrop) ? shotCamNormCrop : remoteNormCrops[key];
+  dragStartNorm = { ...source };
 
   window.addEventListener('mousemove', onRemotePointerMove);
   window.addEventListener('touchmove', onRemotePointerMove, { passive: false });
@@ -3706,15 +3835,25 @@ function onRemotePointerMove(e) {
   if (isDraggingRemote) {
     const w = dragStartNorm.w;
     const h = dragStartNorm.h;
-    const newX = Math.max(0, Math.min(1 - w, dragStartNorm.x + dxNorm));
-    const newY = Math.max(0, Math.min(1 - h, dragStartNorm.y + dyNorm));
-    remoteNormCrops[dragCropKey].x = +newX.toFixed(4);
-    remoteNormCrops[dragCropKey].y = +newY.toFixed(4);
+    const newX = +Math.max(0, Math.min(1 - w, dragStartNorm.x + dxNorm)).toFixed(4);
+    const newY = +Math.max(0, Math.min(1 - h, dragStartNorm.y + dyNorm)).toFixed(4);
+    remoteNormCrops[dragCropKey].x = newX;
+    remoteNormCrops[dragCropKey].y = newY;
+    if (dragCropKey === 'shot' && activeRemoteCameraRole === 'shot') {
+      if (!shotCamNormCrop) shotCamNormCrop = { ...remoteNormCrops.shot };
+      shotCamNormCrop.x = newX;
+      shotCamNormCrop.y = newY;
+    }
   } else if (isResizingRemote) {
-    const newW = Math.max(0.04, Math.min(1 - dragStartNorm.x, dragStartNorm.w + dxNorm));
-    const newH = Math.max(0.03, Math.min(1 - dragStartNorm.y, dragStartNorm.h + dyNorm));
-    remoteNormCrops[dragCropKey].w = +newW.toFixed(4);
-    remoteNormCrops[dragCropKey].h = +newH.toFixed(4);
+    const newW = +Math.max(0.04, Math.min(1 - dragStartNorm.x, dragStartNorm.w + dxNorm)).toFixed(4);
+    const newH = +Math.max(0.03, Math.min(1 - dragStartNorm.y, dragStartNorm.h + dyNorm)).toFixed(4);
+    remoteNormCrops[dragCropKey].w = newW;
+    remoteNormCrops[dragCropKey].h = newH;
+    if (dragCropKey === 'shot' && activeRemoteCameraRole === 'shot') {
+      if (!shotCamNormCrop) shotCamNormCrop = { ...remoteNormCrops.shot };
+      shotCamNormCrop.w = newW;
+      shotCamNormCrop.h = newH;
+    }
   }
 
   applyRemoteBoxStyles();

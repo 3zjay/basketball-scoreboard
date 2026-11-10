@@ -831,7 +831,7 @@
         lastSeen: Date.now()
       };
 
-      devRef.set(devData).catch(() => {});
+      devRef.update(devData).catch(() => {});
       try {
         devRef.onDisconnect().remove();
       } catch(e) {}
@@ -1649,6 +1649,7 @@
         fctx.drawImage(video, 0, 0, targetW, targetH);
         payload.fullFrame = fc.toDataURL('image/jpeg', 0.55);
         payload[`frames/${deviceRole}`] = payload.fullFrame;
+        payload.frames = { [deviceRole]: payload.fullFrame };
         payload.crops = getNormalizedCrops();
         payload.aspectRatio = +(videoW / videoH).toFixed(3);
 
