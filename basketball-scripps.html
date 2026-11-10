@@ -639,8 +639,8 @@ if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
 }
 
 function gP(n) { return new URLSearchParams(window.location.search).get(n); }
-const currentUser = gP('user') || 'default';
-const firebaseUserKey = currentUser.replace(/[\.\#\$\[\]]/g, '_');
+const currentUser = gP('user') || localStorage.getItem('hc_session_user') || 'default';
+const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
 
 // URL Customization flags
 let isSwapped = gP('swap') === '1' || gP('homeleft') === '1';
@@ -665,7 +665,7 @@ const DEFAULT_STATE = {
   homeBonus: false,
   awayBonus: false,
   gameSeconds: 600,
-  clockRunning: false,
+  gameRunning: false,
   shotSeconds: 24,
   shotRunning: false,
   quarter: 1,
@@ -911,12 +911,16 @@ function renderShotClock() {
 }
 
 /* ══ REALTIME DATA SYNCHRONIZATION ══ */
+let _lastStateMsgTime = 0;
+
 function applyStateMessage(msgData) {
   if (!msgData) return;
+  _lastStateMsgTime = Date.now();
   if (msgData.aiSyncActive !== undefined) aiSyncActive = !!msgData.aiSyncActive;
   if (msgData.aiSyncEnabled !== undefined) aiSyncActive = !!msgData.aiSyncEnabled;
   S = { ...S, ...msgData };
   renderAll();
+  syncLocalTimers();
 }
 
 function applyStreamData(streamData) {
@@ -935,6 +939,37 @@ function applyStreamData(streamData) {
   renderAll();
 }
 
+/* Local clock tickers for smooth continuous decrement between network pulses */
+let gameTimer = null, shotTimer = null;
+function syncLocalTimers() {
+  clearInterval(gameTimer);
+  clearInterval(shotTimer);
+
+  if (S.gameRunning) {
+    gameTimer = setInterval(() => {
+      if (Date.now() - _lastStateMsgTime < 2500) return;
+      if (S.gameSeconds > 0) {
+        S.gameSeconds--;
+        renderClock();
+      } else {
+        clearInterval(gameTimer);
+      }
+    }, 1000);
+  }
+
+  if (S.shotRunning) {
+    shotTimer = setInterval(() => {
+      if (Date.now() - _lastStateMsgTime < 2500) return;
+      if (S.shotSeconds > 0) {
+        S.shotSeconds--;
+        renderShotClock();
+      } else {
+        clearInterval(shotTimer);
+      }
+    }, 1000);
+  }
+}
+
 // 1. BroadcastChannels
 function setupBroadcastChannels() {
   if (typeof BroadcastChannel === 'undefined') return;
@@ -943,8 +978,9 @@ function setupBroadcastChannels() {
       const bc = new BroadcastChannel(chName);
       bc.onmessage = (e) => {
         if (!e || !e.data) return;
+        if (e.data.user && e.data.user !== fbUser && e.data.user !== currentUser) return;
         if (e.data.type === 'state') applyStateMessage(e.data.data);
-        else if (e.data.type === 'stream') applyStreamData(e.data.data);
+        else if (e.data.type === 'stream' || e.data.type === 'ocr') applyStreamData(e.data.data || e.data);
         else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined) applyStateMessage(e.data);
       };
     } catch(err) {}
@@ -955,28 +991,57 @@ setupBroadcastChannels();
 // 2. Window PostMessage (for OBS Browser Source / iframe embedding)
 window.addEventListener('message', (e) => {
   if (!e || !e.data) return;
+  if (e.data.user && e.data.user !== fbUser && e.data.user !== currentUser) return;
   if (e.data.type === 'state') applyStateMessage(e.data.data);
-  else if (e.data.type === 'stream') applyStreamData(e.data.data);
+  else if (e.data.type === 'stream' || e.data.type === 'ocr') applyStreamData(e.data.data || e.data);
   else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined) applyStateMessage(e.data);
 });
 
 // 3. Firebase Realtime Sync
-if (db) {
-  db.ref('scoreboard/' + firebaseUserKey).on('value', snap => {
+if (useFirebase && db) {
+  // Initial state fetch from authoritative scoreboard path
+  db.ref(`states/${fbUser}`).once('value').then(snap => {
+    const val = snap.val();
+    if (val) {
+      S = { ...DEFAULT_STATE, ...val };
+      renderAll();
+      syncLocalTimers();
+    }
+  }).catch(e => console.error("Firebase fetch error:", e));
+
+  // Live state listener
+  db.ref(`states/${fbUser}`).on('value', snap => {
     const val = snap.val();
     if (val) applyStateMessage(val);
+  });
+
+  // Live optical scanner stream
+  db.ref(`ocr/${fbUser}`).on('value', snap => {
+    const d = snap.val();
+    if (d) applyStreamData(d);
   });
 }
 
 // 4. SSE Server Fallback
 function connectSSE() {
   if (!SERVER_URL) return;
+  fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`)
+    .then(r => r.json())
+    .then(d => {
+      if (d && Object.keys(d).length) {
+        S = { ...DEFAULT_STATE, ...d };
+        renderAll();
+        syncLocalTimers();
+      }
+    }).catch(() => {});
+
   try {
     const es = new EventSource(`${SERVER_URL}/events?user=${encodeURIComponent(currentUser)}`);
     es.onmessage = (e) => {
       try {
-        const data = JSON.parse(e.data);
-        applyStateMessage(data);
+        const m = JSON.parse(e.data);
+        if (m.type === 'state') applyStateMessage(m.data);
+        else if (m.type === 'stream') applyStreamData(m.data);
       } catch(err) {}
     };
   } catch(err) {}
