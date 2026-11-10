@@ -233,11 +233,6 @@ function startShotClock(u) {
       stopShotClock(user);
       pushToAll(user, { type: 'state', data: fullState(user) });
       pushToAll(user, { type: 'buzz', kind: 'shot' });
-      // Auto-reset to 24 and restart
-      setTimeout(() => {
-        states[user].shotSeconds = 24;
-        startShotClock(user);
-      }, 500);
     } else {
       pushToAll(user, { type: 'state', data: fullState(user) });
     }
@@ -442,7 +437,11 @@ const requestHandler = async (req, res) => {
         } else if (cmd === 'shot_reset') {
           stopShotClock(user);
           states[user].shotSeconds = seconds || 24;
-          startShotClock(user);
+          if (states[user].gameRunning) {
+            startShotClock(user);
+          } else {
+            pushToAll(user, { type: 'state', data: fullState(user) });
+          }
 
         } else if (cmd === 'reset_all') {
           stopGameClock(user);

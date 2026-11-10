@@ -439,7 +439,7 @@ const isLocalServer = window.location.hostname === 'localhost' ||
 const useFirebase = (typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured) && !isLocalServer;
 
 const SERVER_URL = useFirebase
-  ? 'https://basketball-scoreboard-o0c7.onrender.com'
+  ? 'https://scoreboard.hoopculture.ca'
   : (window.location.protocol === 'file:' ? 'http://localhost:3000' : '');
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -547,15 +547,19 @@ function startLocalTick() {
         db.ref(`states/${fbUser}`).update({ shotSeconds: shotSeconds });
       }
       broadcastShotclock();
+      if (shotSeconds === 0) {
+        stopLocalTick();
+        shotRunning = false;
+        renderClock();
+        if (useFirebase && db) {
+          db.ref(`states/${fbUser}`).update({ shotSeconds: 0, shotRunning: false });
+        }
+        broadcastShotclock();
+        soundBuzzer();
+      }
     }
     else { 
       stopLocalTick(); 
-      if (useFirebase && shotSeconds === 0 && shotRunning) {
-        soundBuzzer();
-        setTimeout(() => {
-          resetShot(24);
-        }, 500);
-      }
     }
   }, 1000);
 }
@@ -586,11 +590,11 @@ function handleLocalCommand(command, seconds) {
     shotRunning = false;
     stopLocalTick();
   } else if (command === 'shot_reset') {
-    shotRunning = false;
     stopLocalTick();
     shotSeconds = seconds || 24;
-    shotRunning = true;
-    startLocalTick();
+    if (shotRunning) {
+      startLocalTick();
+    }
   }
   
   renderClock();
@@ -619,8 +623,11 @@ function toggleShot(e) {
 
 function resetShot(n, e) {
   if (e) ripple(e, e.currentTarget);
-  shotSeconds = n; shotRunning = true;
-  stopLocalTick(); startLocalTick();
+  shotSeconds = n;
+  stopLocalTick();
+  if (shotRunning) {
+    startLocalTick();
+  }
   renderClock(); cmd('shot_reset', n);
 }
 

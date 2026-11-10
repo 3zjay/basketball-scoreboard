@@ -1024,9 +1024,9 @@ body.light .reset-btn:hover { background:#fee2e2; }
 </div>
 
 <div class="footer">
-  OBS Fullscreen → <a id="obsBarLink" href="https://basketball-scoreboard-o0c7.onrender.com/fullscreen" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/fullscreen</a>
+  OBS Fullscreen → <a id="obsBarLink" href="https://scoreboard.hoopculture.ca/fullscreen" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://scoreboard.hoopculture.ca/fullscreen</a>
   &nbsp;·&nbsp;
-  Venue Display → <a id="venueDisplayLink" href="https://basketball-scoreboard-o0c7.onrender.com/display" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://basketball-scoreboard-o0c7.onrender.com/display</a>
+  Venue Display → <a id="venueDisplayLink" href="https://scoreboard.hoopculture.ca/display" target="_blank" style="color:var(--accent);font-weight:700;text-decoration:none;">https://scoreboard.hoopculture.ca/display</a>
   <br style="margin-top:8px;">
   <span style="color:var(--text2);font-size:10px;letter-spacing:1px;">
     ⌨️ &nbsp;HOME: <span style="color:var(--accent)">Q</span>+1 &nbsp;<span style="color:var(--accent)">W</span>+2 &nbsp;<span style="color:var(--accent)">E</span>+3 &nbsp;<span style="color:var(--accent)">A</span>−1 &nbsp;<span style="color:var(--accent)">S</span>−2 &nbsp;&nbsp;
@@ -1061,7 +1061,7 @@ const isLocalServer = window.location.hostname === 'localhost' ||
 const useFirebase = (typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured) && !isLocalServer;
 
 const SERVER_URL = useFirebase
-  ? 'https://basketball-scoreboard-o0c7.onrender.com'
+  ? 'https://scoreboard.hoopculture.ca'
   : '';
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -1236,11 +1236,12 @@ function handleLocalCommand(command, seconds) {
     S.shotRunning = false;
     stopLocalShotTick();
   } else if (command === 'shot_reset') {
-    S.shotRunning = false;
     stopLocalShotTick();
     S.shotSeconds = seconds || 24;
-    S.shotRunning = true;
-    startLocalShotTick();
+    S.shotRunning = S.gameRunning;
+    if (S.shotRunning) {
+      startLocalShotTick();
+    }
   } else if (command === 'reset_all') {
     S.gameRunning = false;
     S.shotRunning = false;
@@ -1795,12 +1796,19 @@ function startLocalGameTick(){
         db.ref(`states/${fbUser}`).update({ gameSeconds: S.gameSeconds });
       }
       broadcastState();
+      if (S.gameSeconds === 0) {
+        stopLocalGameTick();
+        S.gameRunning = false;
+        renderGameClock();
+        if (useFirebase && db) {
+          db.ref(`states/${fbUser}`).update({ gameSeconds: 0, gameRunning: false });
+        }
+        broadcastState();
+        triggerBuzz('game');
+      }
     }
     else { 
       stopLocalGameTick(); 
-      if (useFirebase && S.gameSeconds === 0 && S.gameRunning) {
-        triggerBuzz('game');
-      }
     }
   }, 1000);
 }
@@ -1815,16 +1823,19 @@ function startLocalShotTick(){
         db.ref(`states/${fbUser}`).update({ shotSeconds: S.shotSeconds });
       }
       broadcastState();
+      if (S.shotSeconds === 0) {
+        stopLocalShotTick();
+        S.shotRunning = false;
+        renderShotClock();
+        if (useFirebase && db) {
+          db.ref(`states/${fbUser}`).update({ shotSeconds: 0, shotRunning: false });
+        }
+        broadcastState();
+        triggerBuzz('shot');
+      }
     }
     else { 
       stopLocalShotTick(); 
-      if (useFirebase && S.shotSeconds === 0 && S.shotRunning) {
-        triggerBuzz('shot');
-        setTimeout(() => {
-          S.shotSeconds = 24;
-          cmd('shot_start');
-        }, 500);
-      }
     }
   }, 1000);
 }
@@ -1862,12 +1873,15 @@ function toggleShotClock(){
     cmd('shot_start');
   }
 }
-// Reset always starts the shot clock immediately
+// Reset shot clock (respects active game state instead of forcing run on dead ball)
 function resetShot(n){
   _lastClockCmd = Date.now();
   stopLocalShotTick();
-  S.shotSeconds = n; S.shotRunning = true;
-  startLocalShotTick();
+  S.shotSeconds = n;
+  S.shotRunning = S.gameRunning;
+  if(S.shotRunning){
+    startLocalShotTick();
+  }
   renderShotClock();
   cmd('shot_reset', n);
 }

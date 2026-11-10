@@ -154,7 +154,7 @@ const isLocalServer = window.location.hostname === 'localhost' ||
 const useFirebase = (typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured) && !isLocalServer;
 
 const SERVER_URL = useFirebase
-  ? 'https://basketball-scoreboard-o0c7.onrender.com'
+  ? 'https://scoreboard.hoopculture.ca'
   : (window.location.protocol === 'file:' ? 'http://localhost:3000' : '');
 
 let db = null;
@@ -168,6 +168,12 @@ if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
 const urlParams = new URLSearchParams(window.location.search);
 const currentUser = urlParams.get('user') || localStorage.getItem('hc_session_user') || 'default';
 const fbUser = currentUser.replace(/[\.\#\$\[\]]/g, '_');
+
+// Auto-bypass unlock screen for kiosk / unattended displays
+if (urlParams.get('kiosk') === '1' || urlParams.get('autostart') === '1' || urlParams.get('headless') === '1') {
+  window.addEventListener('DOMContentLoaded', initAudio);
+}
+window.addEventListener('keydown', initAudio, { once: true });
 
 let _lastLocalMsgTime = 0;
 const bc = new BroadcastChannel('hc_scoreboard_sync');
