@@ -96,25 +96,25 @@
       border-radius: 9999px;
       overflow: hidden;
       background: linear-gradient(to right, var(--away-color) 0%, var(--away-color) 50%, var(--home-color) 50%, var(--home-color) 100%);
-      border: 2px solid rgba(255, 255, 255, 0.22);
-      box-shadow: 0 0.8vw 2.5vw rgba(0, 0, 0, 0.85), 0 0.2vw 0.5vw rgba(0, 0, 0, 0.7);
+      border: 1.5px solid rgba(255, 255, 255, 0.28);
+      box-shadow: 0 0.8vw 2.5vw rgba(0, 0, 0, 0.85), 0 0.2vw 0.5vw rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 0 rgba(0, 0, 0, 0.4);
       position: relative;
     }
 
     /* ════ 1. VENUE SEGMENT (FAR LEFT END — Matches Scripps Sports style) ════ */
     .seg-venue {
       min-width: 9.5vw;
-      max-width: 13vw;
-      background: linear-gradient(180deg, #181922 0%, #0d0e13 100%);
-      border-right: 1.5px solid rgba(255, 255, 255, 0.12);
+      max-width: 12.5vw;
+      background: linear-gradient(180deg, #101524 0%, #060910 100%);
+      border-radius: 9999px 0 0 9999px;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: flex-start;
-      padding: 0 1.2vw 0 1.6vw;
-      border-radius: 9999px 0 0 9999px;
+      padding: 0 2vw 0 1.6vw;
       flex-shrink: 0;
       position: relative;
+      z-index: 5;
     }
 
     .venue-tag {
@@ -166,29 +166,36 @@
       height: 100%;
       display: flex;
       align-items: center;
-      padding: 0 1.2vw;
-      gap: 0.8vw;
       position: relative;
       transition: background 0.4s ease;
       overflow: hidden;
     }
 
     .seg-team.away {
-      background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.18) 100%), var(--away-color);
+      margin-left: -1.4vw;
+      border-radius: 9999px 0 0 9999px;
+      padding: 0 1vw 0 0.8vw;
+      gap: 0.7vw;
+      z-index: 10;
+      box-shadow: -0.25vw 0 0.8vw rgba(0, 0, 0, 0.55);
+      border-left: 1.5px solid rgba(255, 255, 255, 0.35);
+      background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%), var(--away-color);
       justify-content: flex-start;
       flex-direction: row;
     }
 
     .seg-team.home {
-      background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.18) 100%), var(--home-color);
+      padding: 0 0.8vw 0 0.8vw;
+      gap: 0.7vw;
+      background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%), var(--home-color);
       justify-content: flex-end;
       flex-direction: row;
     }
 
     /* Team Circular Logo Badges */
     .team-logo-circle {
-      width: 3.8vw;
-      height: 3.8vw;
+      width: 3.6vw;
+      height: 3.6vw;
       border-radius: 50%;
       background: transparent;
       display: flex;
@@ -216,8 +223,8 @@
       background: rgba(0, 0, 0, 0.4);
       border: 1.5px solid rgba(255, 255, 255, 0.35);
       border-radius: 50%;
-      width: 3.5vw;
-      height: 3.5vw;
+      width: 3.4vw;
+      height: 3.4vw;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -299,26 +306,28 @@
       align-items: center;
       justify-content: center;
       height: 100%;
-      background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.18) 100%),
-                  linear-gradient(to right, var(--away-color) 0%, var(--away-color) 50%, var(--home-color) 50%, var(--home-color) 100%);
-      padding: 0.22vw 0;
+      padding: 0.62vw 0;
       flex-shrink: 0;
       position: relative;
-      z-index: 5;
+      z-index: 15;
+      background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%),
+                  linear-gradient(to right, var(--away-color) 0%, var(--away-color) 50%, var(--home-color) 50%, var(--home-color) 100%);
       transition: background 0.4s ease;
     }
 
     .seg-score-capsule {
-      width: 18.2vw;
+      width: 17.5vw;
       height: 100%;
-      background: var(--capsule-bg);
+      background: radial-gradient(ellipse at center, #1b202c 0%, #0d0f17 65%, #050608 100%);
+      background-image: repeating-linear-gradient(180deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 3px),
+                        radial-gradient(ellipse at center, #1b202c 0%, #0d0f17 65%, #050608 100%);
       border-radius: 9999px;
-      border: 2px solid rgba(255, 255, 255, 0.28);
-      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.95), 0 0.15vw 0.6vw rgba(0, 0, 0, 0.65);
+      border: 1.5px solid rgba(255, 255, 255, 0.28);
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.95), 0 3px 10px rgba(0, 0, 0, 0.7);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 1vw;
+      padding: 0 0.9vw;
       position: relative;
       z-index: 10;
       flex-shrink: 0;
@@ -329,18 +338,18 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-width: 4.8vw;
+      min-width: 4.6vw;
     }
 
     .score-num {
       font-family: 'Teko', sans-serif;
-      font-size: 3.5vw;
+      font-size: 3.1vw;
       font-weight: 700;
       color: #ffffff;
-      line-height: 0.82;
+      line-height: 0.85;
       letter-spacing: 0.05vw;
       font-variant-numeric: tabular-nums;
-      text-shadow: 0 0.1vw 0.4vw rgba(0, 0, 0, 0.8);
+      text-shadow: 0 0.1vw 0.4vw rgba(0, 0, 0, 0.85);
       transition: transform 0.15s ease-out, color 0.15s ease-out;
     }
 
@@ -354,9 +363,9 @@
     }
 
     .bonus-tag {
-      font-size: 0.46vw;
+      font-size: 0.45vw;
       font-weight: 900;
-      letter-spacing: 0.14vw;
+      letter-spacing: 0.12vw;
       text-transform: uppercase;
       color: #ffaa00;
       opacity: 0;
@@ -377,12 +386,12 @@
       justify-content: center;
       flex-shrink: 0;
       z-index: 25;
-      margin: 0 -0.2vw;
+      margin: 0 -0.1vw;
     }
 
     .hc-medallion-ring {
-      width: 4.6vw;
-      height: 4.6vw;
+      width: 4.3vw;
+      height: 4.3vw;
       border-radius: 50%;
       background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 35%, #94a3b8 70%, #475569 100%);
       border: 1.5px solid rgba(255, 255, 255, 0.95);
@@ -391,7 +400,7 @@
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      padding: 0.22vw;
+      padding: 0.2vw;
     }
 
     .hc-medallion-inner {
@@ -414,64 +423,37 @@
       filter: drop-shadow(0 0.12vw 0.25vw rgba(0, 0, 0, 0.3));
     }
 
-    /* ════ 5. CLOCK & SHOT CLOCK SEGMENT (FAR RIGHT END — Authentic Scripps Sports Capsule) ════ */
+    /* ════ 5. CLOCK & SHOT CLOCK SEGMENT (FAR RIGHT END — Authentic Scripps Sports Layout) ════ */
     .seg-clock {
-      min-width: 14.5vw;
-      background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.18) 100%), var(--home-color);
-      border-radius: 0 9999px 9999px 0;
       display: flex;
       align-items: center;
-      justify-content: center;
-      padding: 0 1.4vw 0 0.8vw;
-      flex-shrink: 0;
+      justify-content: flex-end;
+      background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%), var(--home-color);
+      border-radius: 0 9999px 9999px 0;
+      padding: 0 1.2vw 0 0.5vw;
       gap: 0.6vw;
+      flex-shrink: 0;
       position: relative;
       transition: background 0.4s ease;
     }
 
-    /* Authentic Scripps Sports White Pod for Period & Game Clock */
-    .clock-white-pod {
+    /* Authentic Scripps Sports White Card for Period */
+    .clock-period-card {
+      background: #ffffff;
+      border-radius: 0.32vw;
+      padding: 0.16vw 0.55vw;
+      box-shadow: 0 0.15vw 0.4vw rgba(0, 0, 0, 0.45);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
-      border: 1.5px solid rgba(255, 255, 255, 0.95);
-      border-radius: 0.45vw;
-      padding: 0.15vw 0.75vw;
-      height: 2.7vw;
-      box-shadow: 0 0.15vw 0.5vw rgba(0, 0, 0, 0.65), inset 0 1px 1px #ffffff;
-      gap: 0.5vw;
-      transition: background 0.3s ease, border-color 0.3s ease;
-    }
-
-    /* Dark Clock Pod Variant */
-    .seg-clock.dark-clock .clock-white-pod {
-      background: #000000;
-      border-color: rgba(255, 255, 255, 0.22);
-      box-shadow: inset 0 0 0.3vw rgba(0, 0, 0, 0.9);
-    }
-    .seg-clock.dark-clock .clock-white-pod .period-val,
-    .seg-clock.dark-clock .clock-white-pod .game-clock-val {
-      color: #ffffff;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
-    }
-    .seg-clock.dark-clock .clock-pod-divider {
-      background: rgba(255, 255, 255, 0.2);
-    }
-
-    .clock-pod-divider {
-      width: 1.5px;
-      height: 1.6vw;
-      background: rgba(10, 13, 20, 0.22);
+      height: 2.35vw;
       flex-shrink: 0;
     }
 
-    /* Period */
     .period-val {
       font-family: 'Barlow Condensed', sans-serif;
       font-size: 1.25vw;
       font-weight: 900;
-      letter-spacing: 0.03vw;
       color: #0a0d14;
       text-transform: uppercase;
       line-height: 1;
@@ -481,17 +463,17 @@
       justify-content: center;
     }
     .period-val sup {
-      font-size: 0.65em;
+      font-size: 0.68em;
       color: #e8430a;
       margin-left: 0.05vw;
     }
 
-    /* Game Clock */
+    /* Game Clock Value (Bold Tabular Digits in White Direct on Home Color) */
     .game-clock-val {
       font-family: 'Teko', sans-serif;
       font-size: 2.35vw;
       font-weight: 700;
-      color: #0a0d14;
+      color: #ffffff;
       line-height: 0.85;
       letter-spacing: 0.04vw;
       font-variant-numeric: tabular-nums;
@@ -500,10 +482,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      text-shadow: 0 0.15vw 0.5vw rgba(0, 0, 0, 0.85), 0 0.05vw 0.1vw rgba(0, 0, 0, 0.95);
       transition: color 0.3s ease;
     }
     .game-clock-val.warn {
-      color: #dc2626;
+      color: #ffffff;
+      text-shadow: 0 0 0.8vw #ff2200, 0 0 1.2vw #ff0000, 0 0.15vw 0.5vw rgba(0, 0, 0, 0.95);
       animation: clkWarnPulse 0.5s infinite alternate;
     }
     @keyframes clkWarnPulse {
@@ -511,29 +495,30 @@
       100% { opacity: 1; }
     }
 
-    /* Shot Clock Stadium Box */
+    /* Shot Clock Card (Frosted Grey Translucent Card matching Scripps [ 15 ]) */
     .shot-clock-pill {
-      background: #181b24;
-      border: 1.5px solid rgba(255, 255, 255, 0.4);
-      border-radius: 0.4vw;
-      padding: 0.1vw 0.5vw;
-      box-shadow: inset 0 0 0.3vw rgba(0, 0, 0, 0.9), 0 0.15vw 0.4vw rgba(0,0,0,0.5);
+      background: rgba(255, 255, 255, 0.28);
+      border: 1px solid rgba(255, 255, 255, 0.38);
+      border-radius: 0.32vw;
+      padding: 0.1vw 0.45vw;
+      min-width: 2.35vw;
+      height: 2.35vw;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-width: 2.6vw;
-      height: 2.7vw;
       flex-shrink: 0;
+      box-shadow: 0 0.15vw 0.4vw rgba(0, 0, 0, 0.35);
     }
 
     .shot-clock-val {
       font-family: 'Teko', sans-serif;
-      font-size: 2.1vw;
+      font-size: 1.95vw;
       font-weight: 700;
       color: #ffffff;
       line-height: 0.85;
       font-variant-numeric: tabular-nums;
       text-align: center;
+      text-shadow: 0 0.1vw 0.3vw rgba(0, 0, 0, 0.7);
     }
     .shot-clock-val.urgent {
       color: #ff3b30;
@@ -548,6 +533,19 @@
     @keyframes scPulse {
       0% { opacity: 1; }
       100% { opacity: 0.35; }
+    }
+
+    /* Dark Clock Theme Overrides */
+    .seg-clock.dark-clock .clock-period-card {
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .seg-clock.dark-clock .clock-period-card .period-val {
+      color: #ffffff;
+    }
+    .seg-clock.dark-clock .shot-clock-pill {
+      background: rgba(0, 0, 0, 0.7);
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     /* ════ OPTICAL SCANNER LIVE FEED STREAM CROPS ════ */
@@ -749,16 +747,17 @@
       </div>
     </div>
 
-    <!-- ⑤ CLOCK & SHOT CLOCK SEGMENT (Far Right — Authentic Scripps Sports Capsule) -->
+    <!-- ⑤ CLOCK & SHOT CLOCK SEGMENT (Far Right — Authentic Scripps Sports Layout) -->
     <div class="seg-clock" id="segClock">
-      <!-- White Scripps Clock Pod containing Period and Game Clock -->
-      <div class="clock-white-pod" id="clockWhitePod">
+      <!-- Authentic Scripps White Pod for Period -->
+      <div class="clock-period-card" id="clockPeriodCard">
         <div class="period-val" id="periodVal">1<sup>ST</sup></div>
-        <div class="clock-pod-divider" id="clockPodDivider"></div>
-        <div class="game-clock-val" id="gameClockVal">10:00</div>
       </div>
 
-      <!-- Adjacent Shot Clock Stadium Box -->
+      <!-- Game Clock Direct on Team Color -->
+      <div class="game-clock-val" id="gameClockVal">10:00</div>
+
+      <!-- Adjacent Shot Clock Stadium Box (Frosted Glass Card) -->
       <div class="shot-clock-pill" id="shotClockPill">
         <div class="shot-clock-val" id="shotClockVal">14</div>
       </div>
@@ -1037,14 +1036,14 @@ function renderTeams() {
   const bug = $('scorebug');
   if (bug) bug.style.background = `linear-gradient(to right, ${leftColor} 0%, ${leftColor} 50%, ${rightColor} 50%, ${rightColor} 100%)`;
   const awaySeg = $('awayTeamSeg');
-  if (awaySeg) awaySeg.style.background = `linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.18) 100%), ${leftColor}`;
+  if (awaySeg) awaySeg.style.background = `linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%), ${leftColor}`;
   const homeSeg = $('homeTeamSeg');
-  if (homeSeg) homeSeg.style.background = `linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.18) 100%), ${rightColor}`;
+  if (homeSeg) homeSeg.style.background = `linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%), ${rightColor}`;
   const clockSeg = $('segClock');
-  if (clockSeg) clockSeg.style.background = `linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.18) 100%), ${rightColor}`;
+  if (clockSeg) clockSeg.style.background = `linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%), ${rightColor}`;
   const scoreCapsuleWrap = $('scoreCapsuleWrap');
   if (scoreCapsuleWrap) {
-    scoreCapsuleWrap.style.background = `linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.18) 100%), linear-gradient(to right, ${leftColor} 0%, ${leftColor} 50%, ${rightColor} 50%, ${rightColor} 100%)`;
+    scoreCapsuleWrap.style.background = `linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.18) 100%), linear-gradient(to right, ${leftColor} 0%, ${leftColor} 50%, ${rightColor} 50%, ${rightColor} 100%)`;
   }
 
   // Dynamic contrast colors for team names (Dark text on yellow/gold like Scripps Sports LAL, white on dark like DET)
