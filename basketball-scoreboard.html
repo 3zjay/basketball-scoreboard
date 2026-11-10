@@ -2533,6 +2533,8 @@ function openScannerModal(e) {
   window.open(scannerUrl, 'ScoreboardScannerWindow', 'width=900,height=700,resizable=yes,scrollbars=yes');
 }
 
+let cachedFeeds = { Home: null, Away: null, Clock: null, Shot: null, Period: null };
+
 function updateFeedMonitorUI(incoming) {
   if (!incoming) return;
   lastFeedTimestamp = Date.now();
@@ -2547,9 +2549,21 @@ function updateFeedMonitorUI(incoming) {
     el.style.display = isEnabled ? 'flex' : 'none';
   });
 
+  // Multi-Device Stream Merging: Cache latest frames so streams from separate cameras never clear each other
+  if (incoming.homeScoreStream) cachedFeeds.Home = incoming.homeScoreStream;
+  if (incoming.awayScoreStream) cachedFeeds.Away = incoming.awayScoreStream;
+  if (incoming.gameClockStream) cachedFeeds.Clock = incoming.gameClockStream;
+  if (incoming.shotClockStream) cachedFeeds.Shot = incoming.shotClockStream;
+  if (incoming.periodStream) cachedFeeds.Period = incoming.periodStream;
+
   const badge = document.getElementById('aiFeedStatusBadge');
   if (badge) {
-    badge.textContent = '🟢 Scanner Live Stream';
+    const devCount = (typeof connectedDevices === 'object' && connectedDevices) ? Object.keys(connectedDevices).length : 0;
+    if (devCount >= 2) {
+      badge.textContent = `🟢 ${devCount} Scanners Active (Multi-Cam Live)`;
+    } else {
+      badge.textContent = '🟢 Scanner Live Stream';
+    }
     badge.style.background = '#143820';
     badge.style.borderColor = '#16c784';
     badge.style.color = '#16c784';
@@ -2561,7 +2575,7 @@ function updateFeedMonitorUI(incoming) {
 
     if (img) {
       if (imgData) {
-        img.src = imgData;
+        if (img.src !== imgData) img.src = imgData;
         img.style.display = 'block';
         if (ph) ph.style.display = 'none';
       } else {
@@ -2571,27 +2585,35 @@ function updateFeedMonitorUI(incoming) {
     }
   };
 
-  updateCrop('Home', incoming.homeScoreStream);
-  updateCrop('Away', incoming.awayScoreStream);
-  updateCrop('Clock', incoming.gameClockStream);
-  updateCrop('Shot', incoming.shotClockStream);
-  updateCrop('Period', incoming.periodStream);
+  updateCrop('Home', cachedFeeds.Home);
+  updateCrop('Away', cachedFeeds.Away);
+  updateCrop('Clock', cachedFeeds.Clock);
+  updateCrop('Shot', cachedFeeds.Shot);
+  updateCrop('Period', cachedFeeds.Period);
 
-  // Update Remote Alignment Aligner if active
+  // Update Remote Alignment Aligner if active and feed matches active camera role
   if (incoming.fullFrame) {
-    const feedImg = document.getElementById('remoteCameraFeed');
-    const feedPh = document.getElementById('remotePlaceholder');
-    const statusBadge = document.getElementById('remoteFeedStatusBadge');
-    if (feedImg) {
-      feedImg.src = incoming.fullFrame;
-      feedImg.style.display = 'block';
-    }
-    if (feedPh) feedPh.style.display = 'none';
-    if (statusBadge) {
-      statusBadge.textContent = '🟢 Phone Streaming Live';
-      statusBadge.style.background = '#143820';
-      statusBadge.style.borderColor = '#16c784';
-      statusBadge.style.color = '#16c784';
+    const incomingRole = incoming.role || 'all';
+    const shouldDisplay = (activeRemoteCameraRole === 'all') || 
+                          (activeRemoteCameraRole === incomingRole) ||
+                          (!activeRemoteDeviceId || incoming.sender === activeRemoteDeviceId);
+
+    if (shouldDisplay) {
+      const feedImg = document.getElementById('remoteCameraFeed');
+      const feedPh = document.getElementById('remotePlaceholder');
+      const statusBadge = document.getElementById('remoteFeedStatusBadge');
+      if (feedImg) {
+        feedImg.src = incoming.fullFrame;
+        feedImg.style.display = 'block';
+      }
+      if (feedPh) feedPh.style.display = 'none';
+      if (statusBadge) {
+        const camLabel = incomingRole === 'shot' ? 'Cam 2 (Shot Clock)' : (incomingRole === 'main' ? 'Cam 1 (Main Board)' : 'Camera');
+        statusBadge.textContent = `🟢 ${camLabel} Streaming Live`;
+        statusBadge.style.background = '#143820';
+        statusBadge.style.borderColor = '#16c784';
+        statusBadge.style.color = '#16c784';
+      }
     }
   }
 
@@ -2601,8 +2623,11 @@ function updateFeedMonitorUI(incoming) {
   }
 
   if (incoming.crops && !isDraggingRemote && !isResizingRemote) {
-    remoteNormCrops = Object.assign(remoteNormCrops, incoming.crops);
-    applyRemoteBoxStyles();
+    const incomingRole = incoming.role || 'all';
+    if (incomingRole === activeRemoteCameraRole || activeRemoteCameraRole === 'all') {
+      remoteNormCrops = Object.assign(remoteNormCrops, incoming.crops);
+      applyRemoteBoxStyles();
+    }
   }
 
   if (typeof updateRemoteActiveCropPreview === 'function') {
@@ -2712,6 +2737,11 @@ function connectSSE(){
         if (val.enabledCrops) remoteEnabledCrops = Object.assign(remoteEnabledCrops, val.enabledCrops);
         applyRemoteBoxStyles();
       }
+    });
+
+    db.ref(`ocr_devices/${fbUser}`).on('value', snapshot => {
+      connectedDevices = snapshot.val() || {};
+      updateConnectedDevicesUI();
     });
 
     db.ref(`buzz/${fbUser}`).on('value', snapshot => {
@@ -2958,28 +2988,148 @@ fetch('/api/ip')
   })
   .catch(() => {});
 
-// QR Scanner Connect Modal Handlers
-function openScannerModal(e) {
-  if (e) e.preventDefault();
-  const suffix = `?user=${encodeURIComponent(currentUser)}`;
+// Multi-Device Optical Scanner & QR Handlers
+let currentQrRole = 'all';
+let activeRemoteCameraRole = 'all';
+let activeRemoteDeviceId = null;
+let connectedDevices = {};
+
+function switchScannerQrTab(role) {
+  currentQrRole = role;
+  ['all', 'main', 'shot'].forEach(r => {
+    const tab = document.getElementById(`scanner-tab-${r}`);
+    if (tab) {
+      const active = (r === role);
+      tab.style.background = active ? 'var(--orange)' : '#18110b';
+      tab.style.color = active ? '#fff' : '#888';
+      tab.style.borderColor = active ? 'var(--orange)' : '#332318';
+    }
+  });
+
+  const suffix = `?user=${encodeURIComponent(currentUser)}&role=${role}`;
   let scannerUrl = '';
-  
   if (location.protocol === 'http:' && (location.port === '3000' || location.port === '')) {
     let host = location.hostname;
-    // Fallback to resolved local network IP if on localhost
-    if ((host === 'localhost' || host === '127.0.0.1') && serverNetworkIp) {
-      host = serverNetworkIp;
-    }
+    if ((host === 'localhost' || host === '127.0.0.1') && serverNetworkIp) host = serverNetworkIp;
     scannerUrl = `https://${host}:3001/camera${suffix}`;
   } else {
     scannerUrl = `${window.location.origin}/camera${suffix}`;
   }
 
-  document.getElementById('scannerCopyUrl').value = scannerUrl;
-  document.getElementById('scannerOpenBtn').href = scannerUrl;
-  document.getElementById('scannerQrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(scannerUrl)}`;
+  const descEl = document.getElementById('scannerTabDesc');
+  if (descEl) {
+    if (role === 'shot') {
+      descEl.textContent = '⏱️ Dedicated Shot Clock: Point this camera at the backboard/hoop shot clock.';
+    } else if (role === 'main') {
+      descEl.textContent = '📹 Main Scoreboard: Point this camera at the gym wall scoreboard for Game Clock, Scores, and Period.';
+    } else {
+      descEl.textContent = '🌟 All-In-One: Point 1 camera at the entire scoreboard to capture all fields simultaneously.';
+    }
+  }
+
+  const copyInp = document.getElementById('scannerCopyUrl');
+  if (copyInp) copyInp.value = scannerUrl;
+  const openBtn = document.getElementById('scannerOpenBtn');
+  if (openBtn) openBtn.href = scannerUrl;
+  const qrImg = document.getElementById('scannerQrImage');
+  if (qrImg) qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(scannerUrl)}`;
+}
+
+function updateConnectedDevicesUI() {
+  const listEl = document.getElementById('scannerDevicesList');
+  const countBadge = document.getElementById('scannerDeviceCountBadge');
+  const devices = Object.values(connectedDevices || {});
+  const now = Date.now();
+  const activeDevs = devices.filter(d => (now - (d.lastSeen || 0) < 25000));
+
+  if (countBadge) {
+    countBadge.textContent = `${activeDevs.length} Camera${activeDevs.length === 1 ? '' : 's'} Connected`;
+    countBadge.style.color = activeDevs.length > 0 ? '#16c784' : '#888';
+  }
+
+  if (listEl) {
+    if (activeDevs.length === 0) {
+      listEl.innerHTML = '<div style="font-size:11px; color:#666; font-style:italic;">No phone cameras detected yet. Scan the QR code above to connect!</div>';
+    } else {
+      listEl.innerHTML = activeDevs.map(d => {
+        const icon = d.role === 'shot' ? '⏱️' : (d.role === 'main' ? '📹' : '🌟');
+        const roleLabel = d.role === 'shot' ? 'Shot Clock Cam' : (d.role === 'main' ? 'Main Board Cam' : 'All-In-One Cam');
+        return `<div style="display:flex; justify-content:space-between; align-items:center; background:#120c08; border:1px solid #2a1c12; border-radius:6px; padding:6px 10px; font-size:11px;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="color:#16c784;">●</span>
+            <span style="font-weight:700; color:#fff;">${icon} ${d.name || roleLabel}</span>
+          </div>
+          <span style="font-family:monospace; color:#ff6b1a; font-size:10px;">ONLINE</span>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  updateRemoteAlignCameraTabs(activeDevs);
+}
+
+function updateRemoteAlignCameraTabs(activeDevs) {
+  const shotDev = activeDevs.find(d => d.role === 'shot');
+  const mainDev = activeDevs.find(d => d.role === 'main');
+
+  const btnShot = document.getElementById('remote-cam-btn-shot');
+  if (btnShot && shotDev) {
+    btnShot.innerHTML = '⏱️ Cam 2: Shot <span style="color:#16c784;">●</span>';
+  }
+  const btnMain = document.getElementById('remote-cam-btn-main');
+  if (btnMain && mainDev) {
+    btnMain.innerHTML = '📹 Cam 1: Main <span style="color:#16c784;">●</span>';
+  }
+}
+
+function switchRemoteCamera(role) {
+  activeRemoteCameraRole = role;
   
+  ['all', 'main', 'shot'].forEach(r => {
+    const btn = document.getElementById(`remote-cam-btn-${r}`);
+    if (btn) {
+      const active = (r === role);
+      btn.style.background = active ? 'var(--orange)' : '#18110b';
+      btn.style.color = active ? '#fff' : '#888';
+      btn.style.borderColor = active ? 'var(--orange)' : '#332318';
+    }
+  });
+
+  const dev = Object.values(connectedDevices || {}).find(d => d.role === role);
+  if (dev) {
+    activeRemoteDeviceId = dev.id;
+    if (dev.fullFrame) {
+      const feedImg = document.getElementById('remoteCameraFeed');
+      const feedPh = document.getElementById('remotePlaceholder');
+      if (feedImg) {
+        feedImg.src = dev.fullFrame;
+        feedImg.style.display = 'block';
+      }
+      if (feedPh) feedPh.style.display = 'none';
+    }
+    if (dev.aspectRatio) {
+      const container = document.getElementById('remoteVideoContainer');
+      if (container) container.style.aspectRatio = String(dev.aspectRatio);
+    }
+    if (dev.crops) {
+      remoteNormCrops = Object.assign(remoteNormCrops, dev.crops);
+    }
+  }
+
+  if (role === 'shot') {
+    selectRemoteCrop('shot');
+  } else if (role === 'main') {
+    if (activeRemoteCrop === 'shot') selectRemoteCrop('clock');
+  }
+
+  applyRemoteBoxStyles();
+}
+
+function openScannerModal(e) {
+  if (e) e.preventDefault();
+  switchScannerQrTab(currentQrRole);
   document.getElementById('scannerModal').style.display = 'flex';
+  updateConnectedDevicesUI();
 }
 
 function closeScannerModal() {
@@ -3080,6 +3230,15 @@ function applyRemoteBoxStyles() {
       box.style.width = `${(c.w * 100).toFixed(2)}%`;
       box.style.height = `${(c.h * 100).toFixed(2)}%`;
       box.style.opacity = remoteEnabledCrops[k] === false ? '0.25' : '1';
+
+      // Multi-Device Role Filtering: Show relevant crops for the active remote camera
+      if (activeRemoteCameraRole === 'shot') {
+        box.style.display = (k === 'shot') ? 'block' : 'none';
+      } else if (activeRemoteCameraRole === 'main') {
+        box.style.display = (k === 'shot') ? 'none' : 'block';
+      } else {
+        box.style.display = 'block';
+      }
     }
   });
 }
@@ -3237,6 +3396,8 @@ function broadcastRemoteCrops() {
   const payload = {
     sender: myClientId,
     timestamp: Date.now(),
+    targetRole: activeRemoteCameraRole,
+    targetDevice: activeRemoteDeviceId,
     crops: remoteNormCrops,
     thresholds: remoteThresholds,
     invertStates: remoteInvertStates,
@@ -3244,6 +3405,12 @@ function broadcastRemoteCrops() {
   };
   if (useFirebase && db) {
     db.ref(`camera_crops/${fbUser}`).set(payload).catch(() => {});
+    if (activeRemoteCameraRole && activeRemoteCameraRole !== 'all') {
+      db.ref(`camera_crops/${fbUser}/${activeRemoteCameraRole}`).set(payload).catch(() => {});
+    }
+    if (activeRemoteDeviceId) {
+      db.ref(`camera_crops/${fbUser}/${activeRemoteDeviceId}`).set(payload).catch(() => {});
+    }
   }
   bc.postMessage({
     type: 'crop_update',
@@ -3389,17 +3556,34 @@ syncCropInvertCheckboxes();
 
 <!-- Scanner Connect Modal -->
 <div id="scannerModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:11000; align-items:center; justify-content:center; padding:20px;">
-  <div style="background:#080605; border:1px solid var(--border); border-radius:12px; max-width:400px; width:100%; padding:24px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-    <div style="font-family:'Barlow Condensed', sans-serif; font-size:20px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:var(--orange2); margin-bottom:12px;">📱 Connect AI Scanner</div>
-    <div style="font-size:12px; color:var(--grey); margin-bottom:20px; font-family:sans-serif; line-height:1.5;">Scan this QR code with your iPhone camera to launch the scanner automatically over secure HTTPS (Offline Port 3001).</div>
+  <div style="background:#080605; border:1px solid var(--border); border-radius:12px; max-width:440px; width:100%; padding:24px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div style="font-family:'Barlow Condensed', sans-serif; font-size:20px; font-weight:900; letter-spacing:1px; text-transform:uppercase; color:var(--orange2);">📱 Connect AI Scanner</div>
+      <span id="scannerDeviceCountBadge" style="font-size:11px; padding:3px 8px; border-radius:10px; background:#18110b; border:1px solid #332318; color:#888;">0 Connected</span>
+    </div>
+
+    <!-- Multi-Device Role Selector Tabs -->
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:14px;">
+      <button id="scanner-tab-all" onclick="switchScannerQrTab('all')" style="font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:8px 4px; border-radius:6px; border:1px solid var(--orange); background:var(--orange); color:#fff; cursor:pointer;">🌟 All-in-One</button>
+      <button id="scanner-tab-main" onclick="switchScannerQrTab('main')" style="font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:8px 4px; border-radius:6px; border:1px solid #332318; background:#18110b; color:#888; cursor:pointer;">📹 Cam 1: Main</button>
+      <button id="scanner-tab-shot" onclick="switchScannerQrTab('shot')" style="font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:8px 4px; border-radius:6px; border:1px solid #332318; background:#18110b; color:#888; cursor:pointer;">⏱️ Cam 2: Shot</button>
+    </div>
+
+    <div id="scannerTabDesc" style="font-size:12px; color:var(--grey); margin-bottom:16px; font-family:sans-serif; line-height:1.5;">Scan this QR code with your iPhone camera to launch Camera 1 / All-in-One scanner.</div>
     
-    <div style="background:#fff; padding:15px; border-radius:8px; display:inline-block; margin-bottom:20px; box-shadow:0 4px 15px rgba(0,0,0,0.2);">
+    <div style="background:#fff; padding:15px; border-radius:8px; display:inline-block; margin-bottom:16px; box-shadow:0 4px 15px rgba(0,0,0,0.2);">
       <img id="scannerQrImage" src="" alt="QR Code" style="width:180px; height:180px; display:block;">
     </div>
 
-    <div style="margin-bottom:18px;">
+    <div style="margin-bottom:14px;">
       <span style="display:block; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--grey); margin-bottom:6px;">Scanner URL:</span>
       <input type="text" id="scannerCopyUrl" readonly style="width:100%; background:#100b08; border:1px solid var(--border); color:#fff; padding:8px 12px; border-radius:6px; font-size:11px; text-align:center; outline:none; font-family:monospace;" onclick="this.select()">
+    </div>
+
+    <!-- Live Connected Devices Presence List -->
+    <div id="scannerDevicesSection" style="margin-bottom:14px; text-align:left; background:#0e0b08; border:1px solid #2a1e14; border-radius:8px; padding:10px;">
+      <div style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--orange2); margin-bottom:6px;">📡 Active Scanner Feeds:</div>
+      <div id="scannerDevicesList" style="font-size:11px; color:#888;">No cameras connected yet. Scan QR code above with phone.</div>
     </div>
 
     <div style="display:flex; gap:12px; justify-content:center; margin-bottom:14px;">
@@ -3428,6 +3612,14 @@ syncCropInvertCheckboxes();
           <div style="font-size:11px; color:var(--grey); line-height:1.2;">Live phone camera feed — drag, resize, or nudge crop boxes directly from this laptop.</div>
         </div>
       </div>
+
+      <!-- Multi-Camera Remote Aligner Selector -->
+      <div style="display:flex; align-items:center; gap:6px; background:#080604; border:1px solid #2a1e14; padding:3px; border-radius:8px;">
+        <button id="remote-cam-btn-all" onclick="switchRemoteCamera('all')" style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:5px 10px; border-radius:5px; border:1px solid var(--orange); background:var(--orange); color:#fff; cursor:pointer;">🌟 All</button>
+        <button id="remote-cam-btn-main" onclick="switchRemoteCamera('main')" style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:5px 10px; border-radius:5px; border:1px solid transparent; background:transparent; color:#888; cursor:pointer;">📹 Cam 1: Main</button>
+        <button id="remote-cam-btn-shot" onclick="switchRemoteCamera('shot')" style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:5px 10px; border-radius:5px; border:1px solid transparent; background:transparent; color:#888; cursor:pointer;">⏱️ Cam 2: Shot</button>
+      </div>
+
       <div style="display:flex; align-items:center; gap:10px;">
         <span id="remoteFeedStatusBadge" style="font-size:11px; padding:4px 10px; border-radius:12px; background:#2a1f0a; border:1px solid #7f500d; color:#f5c842; font-weight:700;">🟡 Waiting for Phone Stream...</span>
         <button class="btn" onclick="openScannerModal(event)" style="font-size:11px; padding:5px 10px; background:#18110b; border-color:#16c784; color:#16c784;">📱 Phone QR</button>

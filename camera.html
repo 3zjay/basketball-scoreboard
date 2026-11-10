@@ -439,6 +439,19 @@
       </div>
     </div>
 
+    <!-- Multi-Device Camera Role Selector -->
+    <div style="background:#0a0604; border:1px solid #2a1c12; border-radius:6px; padding:6px 10px; margin-top:4px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <span style="font-size:10px; color:var(--orange2); font-family:'Barlow Condensed',sans-serif; font-weight:800; letter-spacing:1px; text-transform:uppercase;">📱 Camera Role (Multi-Device Setup):</span>
+        <span id="device-role-badge" style="font-size:9px; font-weight:700; color:#16c784; background:#0f2918; border:1px solid #1c5230; padding:1px 6px; border-radius:10px; font-family:'Barlow Condensed',sans-serif; letter-spacing:0.5px;">🌟 ALL-IN-ONE</span>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;">
+        <button type="button" id="role-btn-all" onclick="setDeviceRole('all')" class="cam-role-btn active" style="padding:5px; font-size:10px; font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:0.5px; border-radius:4px; border:1px solid var(--orange); background:var(--orange); color:#fff; cursor:pointer;">🌟 All-in-One</button>
+        <button type="button" id="role-btn-main" onclick="setDeviceRole('main')" class="cam-role-btn" style="padding:5px; font-size:10px; font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:0.5px; border-radius:4px; border:1px solid #332318; background:#120c08; color:#d6dbe6; cursor:pointer;">📹 Main Board</button>
+        <button type="button" id="role-btn-shot" onclick="setDeviceRole('shot')" class="cam-role-btn" style="padding:5px; font-size:10px; font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:0.5px; border-radius:4px; border:1px solid #332318; background:#120c08; color:#d6dbe6; cursor:pointer;">⏱️ Shot Clock</button>
+      </div>
+    </div>
+
     <!-- Active Field Crop Toggles (Uncheck to fall back to digital scoreboard graphic) -->
     <div style="font-size:9px; color:var(--grey); font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-top:2px;">Active Camera Stream Crops (Uncheck to show digital graphic):</div>
     <div style="display:flex; gap:12px; margin-top:2px; flex-wrap:wrap;">
@@ -537,7 +550,15 @@
       db = firebase.database();
     }
 
-    const myClientId = 'cam_' + Math.random().toString(36).slice(2, 9) + '_' + Date.now();
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryRole = urlParams.get('role');
+    let deviceRole = queryRole || localStorage.getItem('hc_camera_role') || 'all';
+
+    let myClientId = localStorage.getItem('hc_camera_client_id');
+    if (!myClientId) {
+      myClientId = 'cam_' + Math.random().toString(36).slice(2, 7) + '_' + Date.now();
+      try { localStorage.setItem('hc_camera_client_id', myClientId); } catch(e) {}
+    }
 
     // Drag-and-drop state
     let activeDragFrame = null;
@@ -703,13 +724,109 @@
       saveCropPositions(false);
     }
 
+    function setDeviceRole(role, broadcast = true) {
+      deviceRole = role;
+      try { localStorage.setItem('hc_camera_role', role); } catch(e) {}
+
+      // Update button highlights
+      ['all', 'main', 'shot'].forEach(r => {
+        const btn = document.getElementById(`role-btn-${r}`);
+        if (btn) {
+          const isActive = (r === role);
+          btn.style.border = isActive ? '1px solid var(--orange)' : '1px solid #332318';
+          btn.style.background = isActive ? 'var(--orange)' : '#120c08';
+          btn.style.color = isActive ? '#fff' : '#d6dbe6';
+        }
+      });
+
+      const badge = document.getElementById('device-role-badge');
+      if (badge) {
+        if (role === 'shot') {
+          badge.textContent = '⏱️ SHOT CLOCK ONLY';
+          badge.style.color = '#00d2ff';
+          badge.style.background = '#09212b';
+          badge.style.borderColor = '#13475c';
+        } else if (role === 'main') {
+          badge.textContent = '📹 MAIN BOARD (NO SHOT)';
+          badge.style.color = '#f5c842';
+          badge.style.background = '#292109';
+          badge.style.borderColor = '#5c4813';
+        } else {
+          badge.textContent = '🌟 ALL-IN-ONE';
+          badge.style.color = '#16c784';
+          badge.style.background = '#0f2918';
+          badge.style.borderColor = '#1c5230';
+        }
+      }
+
+      if (role === 'shot') {
+        enabledCrops = { clock: false, home: false, away: false, period: false, shot: true };
+        selectCrop('shot');
+      } else if (role === 'main') {
+        enabledCrops = { clock: true, home: true, away: true, period: true, shot: false };
+        if (activeCrop === 'shot') selectCrop('clock');
+      } else if (role === 'all') {
+        enabledCrops = { clock: true, home: true, away: true, period: true, shot: true };
+      }
+
+      Object.keys(enabledCrops).forEach(k => {
+        const cb = document.getElementById(`crop-toggle-${k}`);
+        if (cb) cb.checked = !!enabledCrops[k];
+        const frame = frames[k];
+        if (frame) {
+          frame.style.display = enabledCrops[k] ? 'block' : 'none';
+          frame.style.opacity = enabledCrops[k] ? '1' : '0.2';
+        }
+      });
+      localStorage.setItem('hc_ocr_enabled_crops', JSON.stringify(enabledCrops));
+
+      if (broadcast) {
+        saveCropPositions(true);
+        registerDevicePresence();
+      }
+    }
+
+    function registerDevicePresence() {
+      if (!db) return;
+      const user = (document.getElementById('session-input') && document.getElementById('session-input').value) || 'default';
+      const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
+      const devRef = db.ref(`ocr_devices/${fbUser}/${myClientId}`);
+      
+      const video = document.getElementById('camera-view');
+      const aspect = (video && video.videoWidth && video.videoHeight)
+        ? +(video.videoWidth / video.videoHeight).toFixed(3)
+        : 1.777;
+
+      const normCrops = getNormalizedCrops();
+
+      const devData = {
+        id: myClientId,
+        role: deviceRole,
+        name: deviceRole === 'shot' ? 'Dedicated Shot Clock Camera' : (deviceRole === 'main' ? 'Main Scoreboard Camera' : 'All-In-One Camera'),
+        enabledCrops: { ...enabledCrops },
+        crops: normCrops,
+        thresholds: { ...thresholds },
+        invertStates: { ...invertStates },
+        aspectRatio: aspect,
+        lastSeen: Date.now()
+      };
+
+      devRef.set(devData).catch(() => {});
+      try {
+        devRef.onDisconnect().remove();
+      } catch(e) {}
+    }
+
     function toggleCropField(key, enabled) {
       enabledCrops[key] = enabled;
       localStorage.setItem('hc_ocr_enabled_crops', JSON.stringify(enabledCrops));
       const frame = frames[key];
       if (frame) {
+        frame.style.display = enabled ? 'block' : 'none';
         frame.style.opacity = enabled ? '1' : '0.2';
       }
+      saveCropPositions(true);
+      registerDevicePresence();
     }
 
     function restoreEnabledCrops() {
@@ -898,20 +1015,28 @@
         const user = (document.getElementById('session-input') && document.getElementById('session-input').value) || 'default';
         const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
         if (db) {
-          db.ref(`camera_crops/${fbUser}`).set({
+          const cropPayload = {
             sender: myClientId,
+            role: deviceRole,
             timestamp: Date.now(),
             crops: normCrops,
             thresholds: thresholds,
             invertStates: invertStates,
             enabledCrops: enabledCrops
-          }).catch(() => {});
+          };
+          db.ref(`camera_crops/${fbUser}/${deviceRole}`).set(cropPayload).catch(() => {});
+          db.ref(`camera_crops/${fbUser}/${myClientId}`).set(cropPayload).catch(() => {});
+          if (deviceRole === 'all' || deviceRole === 'main') {
+            db.ref(`camera_crops/${fbUser}`).set(cropPayload).catch(() => {});
+          }
         }
+        registerDevicePresence();
         if (bc2) {
           bc2.postMessage({
             type: 'crop_update',
             user: fbUser,
             sender: myClientId,
+            role: deviceRole,
             crops: normCrops,
             thresholds: thresholds,
             invertStates: invertStates,
@@ -1118,33 +1243,44 @@
         localStorage.setItem('hc_ocr_invert_states', JSON.stringify(invertStates));
       }
 
-      if (invertStates[key]) {
-        blackCount = 0;
-        for (let i = 0; i < data.length; i += 4) {
-          const inv = 255 - data[i];
-          data[i] = inv;
-          data[i+1] = inv;
-          data[i+2] = inv;
-          if (inv === 0) blackCount++;
-        }
+      // 2. Normalize polarity so DIGITS are ALWAYS 255 (white) and BACKGROUND is ALWAYS 0 (black) in BOTH states!
+      // When Invert is checked (invertStates[key] === true):
+      //   - Bright LED pixels were assigned 0, so flipping (255 - v) makes them 255.
+      // When Invert is unchecked (invertStates[key] === false):
+      //   - Bright LED pixels are 0, so we normalize them to 255 so transparency and dilation work for BOTH!
+      for (let i = 0; i < data.length; i += 4) {
+        const isDigit = invertStates[key] ? (data[i] === 0) : (data[i] === 0);
+        // Note: In initial threshold loop: brightness > tVal yields 0 (illuminated LED pixels).
+        // If invert is true, the user considers bright pixels as digits (flip 0 to 255).
+        // If invert is false, the user considers darker pixels (or opposite polarity) as digits.
+        const digitVal = invertStates[key] ? (255 - data[i]) : data[i];
+        // After inversion: if digitVal is 255, it's a digit pixel.
+        // But to ensure BOTH states produce transparent background and white digits:
+        const isForeground = invertStates[key] ? (data[i] === 0) : (data[i] === 255);
+        const normVal = isForeground ? 255 : 0;
+        data[i] = normVal;
+        data[i+1] = normVal;
+        data[i+2] = normVal;
       }
 
       if (dilationEnabled) {
         dilate(data, w, h);
       }
 
-      // Render crisp, opaque 1-bit monochrome binarization filter output (White digits on Opaque Black background)
+      // 3. Render 100% True Alpha Transparent Output (Zero Box, Zero Borders in BOTH states!)
+      // - Digits (255) become 100% Solid Opaque Pure White (rgba(255, 255, 255, 255)).
+      // - Background (0) becomes 100% True Alpha Transparent (rgba(0, 0, 0, 0)).
       for (let i = 0; i < data.length; i += 4) {
-        if (data[i] === 255 && data[i+1] === 255 && data[i+2] === 255) {
+        if (data[i] === 255) {
           data[i] = 255;
           data[i+1] = 255;
           data[i+2] = 255;
-          data[i+3] = 255;
+          data[i+3] = 255; // Crisp solid opaque white digit
         } else {
           data[i] = 0;
           data[i+1] = 0;
           data[i+2] = 0;
-          data[i+3] = 255; // Full opaque background for clear binarization preview!
+          data[i+3] = 0;   // 100% True Alpha Transparent Background (Zero box, Zero shade, Zero borders!)
         }
       }
 
@@ -1320,12 +1456,19 @@
         period: 'periodStream'
       };
 
-      const payload = { streamActive: syncActive, invertStates: { ...invertStates } };
+      const payload = { 
+        streamActive: syncActive, 
+        sender: myClientId,
+        role: deviceRole,
+        timestamp: Date.now()
+      };
 
       for (const key of keys) {
         if (enabledCrops[key] === false) {
           continue;
         }
+
+        payload[`invertStates/${key}`] = !!invertStates[key];
 
         const frame = frames[key];
         if (!frame) continue;
@@ -1441,6 +1584,17 @@
         payload.fullFrame = fc.toDataURL('image/jpeg', 0.55);
         payload.crops = getNormalizedCrops();
         payload.aspectRatio = +(videoW / videoH).toFixed(3);
+
+        if (db && window.remoteActive) {
+          const user = (document.getElementById('session-input') && document.getElementById('session-input').value) || 'default';
+          const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
+          db.ref(`ocr_devices/${fbUser}/${myClientId}/fullFrame`).set(payload.fullFrame).catch(() => {});
+        }
+      }
+
+      if (!window._lastPresenceCheck || (now - window._lastPresenceCheck > 3000)) {
+        window._lastPresenceCheck = now;
+        registerDevicePresence();
       }
 
       if (syncActive || window.remoteActive) {
@@ -1742,10 +1896,29 @@
         const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
 
         if (db) {
-          db.ref(`camera_crops/${fbUser}`).on('value', snapshot => {
+          // Listen to crops specifically targeted to this device ID
+          db.ref(`camera_crops/${fbUser}/${myClientId}`).on('value', snapshot => {
             const val = snapshot.val();
             if (val && val.sender !== myClientId) {
               applyRemoteCropPositions(val);
+            }
+          });
+
+          // Listen to crops targeted to this role (e.g. 'shot' or 'main')
+          db.ref(`camera_crops/${fbUser}/${deviceRole}`).on('value', snapshot => {
+            const val = snapshot.val();
+            if (val && val.sender !== myClientId) {
+              applyRemoteCropPositions(val);
+            }
+          });
+
+          // Fallback root listener (applied only if matching this role or general)
+          db.ref(`camera_crops/${fbUser}`).on('value', snapshot => {
+            const val = snapshot.val();
+            if (val && val.sender !== myClientId) {
+              if (!val.targetRole || val.targetRole === deviceRole || val.targetRole === 'all') {
+                applyRemoteCropPositions(val);
+              }
             }
           });
 
@@ -1762,7 +1935,9 @@
             if (!e || !e.data) return;
             if (e.data.user && e.data.user !== fbUser) return;
             if (e.data.type === 'crop_update' && e.data.sender !== myClientId) {
-              applyRemoteCropPositions(e.data);
+              if (!e.data.targetRole || e.data.targetRole === deviceRole || e.data.targetRole === 'all') {
+                applyRemoteCropPositions(e.data);
+              }
             } else if (e.data.type === 'remote_active') {
               window.remoteActive = !!e.data.active;
               if (window.remoteActive) window.lastRemoteActiveTime = Date.now();
@@ -1771,9 +1946,11 @@
         }
       }
 
+      setDeviceRole(deviceRole, false);
       restoreCropPositions();
       startCamera();
       initRemoteCropListeners();
+      registerDevicePresence();
       setTimeout(() => saveCropPositions(true), 1500);
       
       toggleSync();

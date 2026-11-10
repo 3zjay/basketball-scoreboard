@@ -341,30 +341,18 @@ function applyStreamImgStyles(img, cropKey) {
     cropKey = img.dataset.cropKey;
   }
 
-  // Universal Broadcast Screen Blending:
-  // In sports broadcasts, scoreboard digits are always bright/white on the broadcast bug.
-  // - If the incoming feed has a BLACK background (Invert CHECKED / true):
-  //   Screen blend makes the black background 100% transparent with 0 box and 0 shade.
-  // - If the incoming feed has a WHITE background (Invert UNCHECKED / false):
-  //   Filter invert(1) converts white background to pure black and dark digits to bright white,
-  //   and Screen blend makes the converted black background 100% transparent!
-  //
-  // This guarantees 100% SEAMLESS TRANSPARENCY with ZERO BOXES and ZERO BORDERS in BOTH STATES!
-  let isWhiteBg = false;
+  // 100% True Native Alpha Transparency (Zero Box, Zero Borders):
+  // Stream crop PNGs are generated with 100% pure transparent alpha (rgba(0,0,0,0)).
+  // - Digits are 100% solid crisp white (rgba(255,255,255,255)) on all broadcast backgrounds.
+  // - Background is completely transparent with zero boxes, zero borders, and zero background shade.
+  const forceBlackDigits = (feedInvertMode === 'black');
 
-  if (feedInvertMode === 'black') {
-    isWhiteBg = true;
-  } else if (feedInvertMode === 'white') {
-    isWhiteBg = false;
-  } else if (cropKey && cropInvertStates[cropKey] !== undefined) {
-    isWhiteBg = !cropInvertStates[cropKey];
-  }
-
-  img.style.mixBlendMode = 'screen';
-  if (isWhiteBg) {
-    img.style.filter = 'invert(1) contrast(2.5) brightness(1.3)';
+  if (forceBlackDigits) {
+    img.style.mixBlendMode = 'normal';
+    img.style.filter = 'invert(1)';
   } else {
-    img.style.filter = 'contrast(2.5) brightness(1.3)';
+    img.style.mixBlendMode = 'normal';
+    img.style.filter = 'none';
   }
 }
 
