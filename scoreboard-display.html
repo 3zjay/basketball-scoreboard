@@ -425,6 +425,11 @@ let feedInvertMode = (urlParams.get('invert') === 'black' || urlParams.get('inve
 
 function applyStreamImgStyles(img) {
   if (!img) return;
+  img.style.border = 'none';
+  img.style.outline = 'none';
+  img.style.background = 'transparent';
+  img.style.boxShadow = 'none';
+
   let isLightBg = false;
   try {
     if (img.naturalWidth > 0 && img.naturalHeight > 0) {
@@ -439,10 +444,10 @@ function applyStreamImgStyles(img) {
 
   if (feedInvertMode === 'black') {
     img.style.mixBlendMode = 'multiply';
-    img.style.filter = isLightBg ? 'contrast(1.35) brightness(0.9)' : 'invert(1) contrast(1.35) brightness(0.9)';
+    img.style.filter = isLightBg ? 'contrast(2.5) brightness(1.3)' : 'invert(1) contrast(2.5) brightness(1.3)';
   } else {
     img.style.mixBlendMode = 'screen';
-    img.style.filter = isLightBg ? 'invert(1) contrast(1.35) brightness(1.25)' : 'contrast(1.35) brightness(1.25)';
+    img.style.filter = isLightBg ? 'invert(1) contrast(2.5) brightness(1.3)' : 'contrast(2.5) brightness(1.3)';
   }
 }
 
