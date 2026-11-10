@@ -1,5 +1,5 @@
 // Service Worker — enables PWA install on Android & iOS
-const CACHE = 'scoreboard-v5';
+const CACHE = 'scoreboard-v6';
 const ASSETS = [
   '/control',
   '/shotclock',

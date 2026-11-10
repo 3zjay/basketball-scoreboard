@@ -176,15 +176,21 @@ if (urlParams.get('kiosk') === '1' || urlParams.get('autostart') === '1' || urlP
 window.addEventListener('keydown', initAudio, { once: true });
 
 let _lastLocalMsgTime = 0;
+let _lastBuzzTime = 0;
 const bc = new BroadcastChannel('hc_scoreboard_sync');
 bc.onmessage = (e) => {
   const msg = e.data;
   if (!msg || msg.user !== fbUser) return;
   _lastLocalMsgTime = Date.now();
   if (msg.type === 'state') {
+    const prevSec = shotSeconds;
     if (msg.data.shotSeconds != null) shotSeconds = msg.data.shotSeconds;
     shotRunning = !!msg.data.shotRunning;
     render();
+    if (shotSeconds === 0 && prevSec > 0 && (Date.now() - _lastBuzzTime > 1500)) {
+      _lastBuzzTime = Date.now();
+      playBuzz();
+    }
   } else if (msg.type === 'buzz') {
     if (msg.kind === 'shot' && msg.timestamp > _lastBuzzTime) {
       _lastBuzzTime = msg.timestamp;
@@ -199,13 +205,20 @@ let shotRunning = false;
 // ── Audio ──
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
+const _buzzAudio = new Audio('/buzzer.mp3');
+_buzzAudio.preload = 'auto';
+_buzzAudio.load();
 
 function initAudio() {
   if (!audioCtx) audioCtx = new AudioCtx();
   if (audioCtx.state === 'suspended') audioCtx.resume();
-  // Pre-warm buzzer
-  const a = new Audio('/buzzer.mp3'); a.volume = 0;
-  a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => {});
+  // Pre-warm buzzer audio in hardware buffer
+  _buzzAudio.volume = 0;
+  _buzzAudio.play().then(() => { 
+    _buzzAudio.pause(); 
+    _buzzAudio.currentTime = 0; 
+    _buzzAudio.volume = 1.0;
+  }).catch(() => {});
   document.getElementById('unlock').style.display = 'none';
 }
 
@@ -214,14 +227,16 @@ document.addEventListener('touchstart', () => {
 }, { passive: true });
 
 function playBuzz() {
-  const a = new Audio('/buzzer.mp3');
-  a.volume = 1;
-  a.play().catch(() => {});
+  _buzzAudio.currentTime = 0;
+  _buzzAudio.volume = 1.0;
+  _buzzAudio.play().catch(() => {});
   // Flash screen
   const fl = document.getElementById('buzzFlash');
-  fl.classList.remove('flash');
-  void fl.offsetWidth;
-  fl.classList.add('flash');
+  if (fl) {
+    fl.classList.remove('flash');
+    void fl.offsetWidth;
+    fl.classList.add('flash');
+  }
 }
 
 // ── Render (server is source of truth — no local tick) ──
@@ -255,9 +270,14 @@ function connectSSE() {
       if (Date.now() - _lastLocalMsgTime < 2000) return;
       const d = snapshot.val();
       if (!d) return;
+      const prevSec = shotSeconds;
       if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
       shotRunning = !!d.shotRunning;
       render();
+      if (shotSeconds === 0 && prevSec > 0 && (Date.now() - _lastBuzzTime > 1500)) {
+        _lastBuzzTime = Date.now();
+        playBuzz();
+      }
     });
     db.ref(`buzz/${fbUser}`).on('value', snapshot => {
       if (Date.now() - _lastLocalMsgTime < 2000) return;
@@ -281,9 +301,14 @@ function connectSSE() {
       if (msg.type === 'state') {
         if (Date.now() - _lastLocalMsgTime < 2000) return;
         const d = msg.data;
+        const prevSec = shotSeconds;
         shotSeconds = d.shotSeconds != null ? d.shotSeconds : shotSeconds;
         shotRunning = !!d.shotRunning;
         render();
+        if (shotSeconds === 0 && prevSec > 0 && (Date.now() - _lastBuzzTime > 1500)) {
+          _lastBuzzTime = Date.now();
+          playBuzz();
+        }
       } else if (msg.type === 'buzz' && msg.kind === 'shot') {
         if (Date.now() - _lastLocalMsgTime < 2000) return;
         playBuzz();
