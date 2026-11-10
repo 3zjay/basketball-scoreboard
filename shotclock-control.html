@@ -341,6 +341,21 @@ html, body {
   border-color: #ffaa00;
   color: #ffaa00;
 }
+.btn-header.btn-fs {
+  border-color: #3b82f6;
+  color: #60a5fa;
+  font-weight: 800;
+}
+.btn-header.btn-fs:hover,
+.btn-header.btn-fs:active {
+  border-color: #ffaa00;
+  color: #ffaa00;
+}
+.btn-header.btn-fs.fs-active {
+  border-color: #ffaa00;
+  color: #ffaa00;
+  background: rgba(255, 170, 0, 0.12);
+}
 
 .btn-adjust {
   height: clamp(40px, 8vh, 58px);
@@ -553,8 +568,10 @@ html, body {
   <div class="offline-banner" id="offlineBanner">⚠ Disconnected — Reconnecting…</div>
 
   <div class="header">
-    <div style="display:flex;align-items:center;gap:12px;">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
       <div class="header-title">⏱ Shot Clock</div>
+      <button class="btn-header btn-fs" id="fsToggle" onclick="toggleFullscreen()" title="Toggle Fullscreen (F)">⛶ Fullscreen</button>
+      <a href="/shotclock-display" target="_blank" class="btn-header" title="Open Fullscreen Display View">📺 Display</a>
       <button class="btn-header" id="installBtn" onclick="installApp()" style="display:none;border-color:#22c55e;color:#22c55e;">📲 Install App</button>
       <a href="/" class="btn-header">🏠 Home</a>
       <button class="btn-header" onclick="logout()" style="border-color:#ef4444;color:#ef4444;">🚪 Logout</button>
@@ -567,7 +584,7 @@ html, body {
 
   <div class="main-body">
 
-    <div class="clock-display">
+    <div class="clock-display" ondblclick="toggleFullscreen()" title="Double-click to toggle Fullscreen">
       <div class="clock-label">Shot Clock</div>
       <div class="clock-number" id="clockNum">24</div>
       <div class="status-row">
@@ -607,7 +624,7 @@ html, body {
       <button class="btn-buzzer" id="buzzerBtn" onclick="soundBuzzer(event)">🔔 SOUND BUZZER</button>
 
       <div class="keyboard-hints">
-        ⌨ <strong>Shortcuts:</strong> Space = Start/Pause • 2 = 24s • 1 = 14s • +/− = Adjust • B = Buzzer
+        ⌨ <strong>Shortcuts:</strong> Space = Start/Pause • 2 = 24s • 1 = 14s • +/− = Adjust • B = Buzzer • F = Fullscreen
       </div>
 
     </div>
@@ -1043,6 +1060,8 @@ document.addEventListener('keydown', (e) => {
     adjustShot(-1);
   } else if (k === 'b') {
     soundBuzzer();
+  } else if (k === 'f') {
+    toggleFullscreen();
   }
 });
 
@@ -1168,6 +1187,51 @@ function installApp() {
     document.getElementById('installBtn').style.display = 'none';
   });
 }
+
+// ── Fullscreen Support ──
+function toggleFullscreen() {
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+  if (!isFs) {
+    const el = document.documentElement;
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch(() => {});
+    } else if (el.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen();
+    } else if (el.mozRequestFullScreen) {
+      el.mozRequestFullScreen();
+    } else if (el.msRequestFullscreen) {
+      el.msRequestFullscreen();
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.mozCancelFullScreen) {
+      document.mozCancelFullScreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+  }
+}
+
+function updateFullscreenBtn() {
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+  const btn = document.getElementById('fsToggle');
+  if (btn) {
+    btn.innerHTML = isFs ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+    if (isFs) {
+      btn.classList.add('fs-active');
+    } else {
+      btn.classList.remove('fs-active');
+    }
+  }
+}
+
+document.addEventListener('fullscreenchange', updateFullscreenBtn);
+document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+document.addEventListener('mozfullscreenchange', updateFullscreenBtn);
+document.addEventListener('MSFullscreenChange', updateFullscreenBtn);
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
