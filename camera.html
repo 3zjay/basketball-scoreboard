@@ -552,12 +552,23 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const queryRole = urlParams.get('role');
-    let deviceRole = queryRole || localStorage.getItem('hc_camera_role') || 'all';
+    if (queryRole) {
+      try { sessionStorage.setItem('hc_camera_role_tab', queryRole); } catch(e) {}
+    }
+    let deviceRole = queryRole || (function(){ try { return sessionStorage.getItem('hc_camera_role_tab'); } catch(e){ return null; } })() || localStorage.getItem('hc_camera_role') || 'all';
 
-    let myClientId = localStorage.getItem('hc_camera_client_id');
-    if (!myClientId) {
-      myClientId = 'cam_' + Math.random().toString(36).slice(2, 7) + '_' + Date.now();
-      try { localStorage.setItem('hc_camera_client_id', myClientId); } catch(e) {}
+    let tabSessionId = null;
+    try { tabSessionId = sessionStorage.getItem('hc_cam_tab_id'); } catch(e) {}
+    if (!tabSessionId) {
+      tabSessionId = Math.random().toString(36).slice(2, 7) + '_' + Date.now().toString(36);
+      try { sessionStorage.setItem('hc_cam_tab_id', tabSessionId); } catch(e) {}
+    }
+    let myClientId = 'cam_' + deviceRole + '_' + tabSessionId;
+
+    function getOwnedCropKeys(role = deviceRole) {
+      if (role === 'shot') return ['shot'];
+      if (role === 'main') return ['clock', 'home', 'away', 'period'];
+      return ['clock', 'home', 'away', 'period', 'shot'];
     }
 
     // Drag-and-drop state
@@ -664,12 +675,12 @@
       };
     }
 
-    function getNormalizedCrops() {
+    function getNormalizedCrops(onlyOwned = true) {
       const norm = {};
-      const keys = ['clock', 'home', 'away', 'period', 'shot'];
+      const keys = onlyOwned ? getOwnedCropKeys(deviceRole) : ['clock', 'home', 'away', 'period', 'shot'];
       keys.forEach(k => {
         const f = frames[k];
-        if (f) {
+        if (f && f.style.display !== 'none' && f.offsetWidth > 0 && f.offsetHeight > 0) {
           const n = screenToVideoNorm(f);
           if (n) norm[k] = n;
         }
@@ -680,13 +691,11 @@
     function applyRemoteCropPositions(data) {
       if (!data) return;
       if (data.sender === myClientId) return;
+      if (data.targetRole && data.targetRole !== 'all' && data.targetRole !== deviceRole && !(deviceRole === 'all' && data.targetRole === 'main')) {
+        return;
+      }
 
-      const roleCrops = {
-        all: ['clock', 'home', 'away', 'period', 'shot'],
-        main: ['clock', 'home', 'away', 'period'],
-        shot: ['shot']
-      };
-      const myOwned = roleCrops[deviceRole] || roleCrops.all;
+      const myOwned = getOwnedCropKeys(deviceRole);
 
       if (data.crops) {
         const crops = data.crops;
@@ -695,7 +704,7 @@
           myOwned.forEach(k => {
             const norm = crops[k];
             const frame = frames[k];
-            if (norm && frame) {
+            if (norm && frame && norm.w > 0.01 && norm.h > 0.01) {
               const domPos = videoNormToScreen(norm);
               if (domPos) {
                 frame.style.left = domPos.left;
@@ -721,7 +730,7 @@
             }
           }
         });
-        localStorage.setItem('hc_ocr_enabled_crops', JSON.stringify(enabledCrops));
+        try { localStorage.setItem('hc_ocr_enabled_crops_' + deviceRole, JSON.stringify(enabledCrops)); } catch(e) {}
       }
 
       if (data.thresholds) {
@@ -744,9 +753,53 @@
       saveCropPositions(false);
     }
 
+    let _boundRoleRef = null;
+    let _boundClientRef = null;
+    function bindRoleCropListeners() {
+      if (!db) return;
+      const user = (document.getElementById('session-input') && document.getElementById('session-input').value) || 'default';
+      const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
+
+      if (_boundRoleRef) {
+        try { _boundRoleRef.off(); } catch(e) {}
+      }
+      if (_boundClientRef) {
+        try { _boundClientRef.off(); } catch(e) {}
+      }
+
+      _boundClientRef = db.ref(`camera_crops/${fbUser}/${myClientId}`);
+      _boundClientRef.on('value', snapshot => {
+        const val = snapshot.val();
+        if (val && val.sender !== myClientId) {
+          applyRemoteCropPositions(val);
+        }
+      });
+
+      const targetSlot = (deviceRole === 'shot') ? 'shot' : 'main';
+      _boundRoleRef = db.ref(`camera_crops/${fbUser}/${targetSlot}`);
+      _boundRoleRef.on('value', snapshot => {
+        const val = snapshot.val();
+        if (val && val.sender !== myClientId) {
+          applyRemoteCropPositions(val);
+        }
+      });
+    }
+
     function setDeviceRole(role, broadcast = true) {
+      const prevRole = deviceRole;
+      const prevClientId = myClientId;
       deviceRole = role;
-      try { localStorage.setItem('hc_camera_role', role); } catch(e) {}
+      myClientId = 'cam_' + deviceRole + '_' + tabSessionId;
+      try { sessionStorage.setItem('hc_camera_role_tab', role); } catch(e) {}
+      if (!queryRole) {
+        try { localStorage.setItem('hc_camera_role', role); } catch(e) {}
+      }
+
+      if (db && prevClientId && prevClientId !== myClientId) {
+        const user = (document.getElementById('session-input') && document.getElementById('session-input').value) || 'default';
+        const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
+        db.ref(`ocr_devices/${fbUser}/${prevClientId}`).remove().catch(() => {});
+      }
 
       // Update button highlights
       ['all', 'main', 'shot'].forEach(r => {
@@ -805,7 +858,11 @@
           frame.style.opacity = enabledCrops[k] ? '1' : '0.2';
         }
       });
-      localStorage.setItem('hc_ocr_enabled_crops', JSON.stringify(enabledCrops));
+      try { localStorage.setItem('hc_ocr_enabled_crops_' + deviceRole, JSON.stringify(enabledCrops)); } catch(e) {}
+
+      if (prevRole !== role && db) {
+        bindRoleCropListeners();
+      }
 
       if (broadcast) {
         saveCropPositions(true);
@@ -824,16 +881,25 @@
         ? +(video.videoWidth / video.videoHeight).toFixed(3)
         : 1.777;
 
-      const normCrops = getNormalizedCrops();
+      const myOwned = getOwnedCropKeys(deviceRole);
+      const normCrops = getNormalizedCrops(true);
+      const roleEnabled = {};
+      const roleThresholds = {};
+      const roleInverts = {};
+      myOwned.forEach(k => {
+        roleEnabled[k] = enabledCrops[k] !== false;
+        if (thresholds[k] != null) roleThresholds[k] = thresholds[k];
+        roleInverts[k] = !!invertStates[k];
+      });
 
       const devData = {
         id: myClientId,
         role: deviceRole,
         name: deviceRole === 'shot' ? 'Dedicated Shot Clock Camera' : (deviceRole === 'main' ? 'Main Scoreboard Camera' : 'All-In-One Camera'),
-        enabledCrops: { ...enabledCrops },
+        enabledCrops: roleEnabled,
         crops: normCrops,
-        thresholds: { ...thresholds },
-        invertStates: { ...invertStates },
+        thresholds: roleThresholds,
+        invertStates: roleInverts,
         aspectRatio: aspect,
         lastSeen: Date.now()
       };
@@ -846,7 +912,7 @@
 
     function toggleCropField(key, enabled) {
       enabledCrops[key] = enabled;
-      localStorage.setItem('hc_ocr_enabled_crops', JSON.stringify(enabledCrops));
+      try { localStorage.setItem('hc_ocr_enabled_crops_' + deviceRole, JSON.stringify(enabledCrops)); } catch(e) {}
       const frame = frames[key];
       if (frame) {
         frame.style.display = enabled ? 'block' : 'none';
@@ -857,15 +923,23 @@
     }
 
     function restoreEnabledCrops() {
-      const saved = localStorage.getItem('hc_ocr_enabled_crops');
+      const saved = localStorage.getItem('hc_ocr_enabled_crops_' + deviceRole);
+      const myOwned = getOwnedCropKeys(deviceRole);
       if (saved) {
         try {
-          enabledCrops = Object.assign(enabledCrops, JSON.parse(saved));
+          const parsed = JSON.parse(saved);
+          myOwned.forEach(k => {
+            if (parsed[k] !== undefined) enabledCrops[k] = !!parsed[k];
+          });
           Object.keys(enabledCrops).forEach(k => {
+            if (!myOwned.includes(k)) enabledCrops[k] = false;
             const cb = document.getElementById(`crop-toggle-${k}`);
             if (cb) cb.checked = !!enabledCrops[k];
             const frame = frames[k];
-            if (frame) frame.style.opacity = enabledCrops[k] ? '1' : '0.2';
+            if (frame) {
+              frame.style.display = enabledCrops[k] ? 'block' : 'none';
+              frame.style.opacity = enabledCrops[k] ? '1' : '0.2';
+            }
           });
         } catch(e) {}
       }
@@ -1019,10 +1093,11 @@
     }
 
     function saveCropPositions(broadcast = true) {
+      const myOwned = getOwnedCropKeys(deviceRole);
       const positions = {};
-      Object.keys(frames).forEach(k => {
+      myOwned.forEach(k => {
         const f = frames[k];
-        if (f) {
+        if (f && f.style.display !== 'none' && f.offsetWidth > 0 && f.offsetHeight > 0) {
           positions[k] = {
             left: f.style.left || (f.offsetLeft + 'px'),
             top: f.style.top || (f.offsetTop + 'px'),
@@ -1031,23 +1106,16 @@
           };
         }
       });
-      localStorage.setItem('hc_ocr_crop_positions', JSON.stringify(positions));
+      try { localStorage.setItem('hc_ocr_crop_positions_' + deviceRole, JSON.stringify(positions)); } catch(e) {}
 
-      const normCrops = getNormalizedCrops();
+      const normCrops = getNormalizedCrops(true);
       if (normCrops && Object.keys(normCrops).length) {
-        localStorage.setItem('hc_ocr_crops_norm', JSON.stringify(normCrops));
+        try { localStorage.setItem('hc_ocr_crops_norm_' + deviceRole, JSON.stringify(normCrops)); } catch(e) {}
       }
 
       if (broadcast) {
         const user = (document.getElementById('session-input') && document.getElementById('session-input').value) || 'default';
         const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
-
-        const roleCrops = {
-          all: ['clock', 'home', 'away', 'period', 'shot'],
-          main: ['clock', 'home', 'away', 'period'],
-          shot: ['shot']
-        };
-        const myOwned = roleCrops[deviceRole] || roleCrops.all;
 
         const roleNormCrops = {};
         const roleThresholds = {};
@@ -1061,30 +1129,29 @@
         });
 
         if (db) {
+          const targetSlot = (deviceRole === 'shot') ? 'shot' : 'main';
           const cropPayload = {
             sender: myClientId,
             role: deviceRole,
-            targetRole: deviceRole,
+            targetRole: targetSlot,
             timestamp: Date.now(),
             crops: roleNormCrops,
             thresholds: roleThresholds,
             invertStates: roleInvertStates,
             enabledCrops: roleEnabledCrops
           };
-          db.ref(`camera_crops/${fbUser}/${deviceRole}`).set(cropPayload).catch(() => {});
+          db.ref(`camera_crops/${fbUser}/${targetSlot}`).set(cropPayload).catch(() => {});
           db.ref(`camera_crops/${fbUser}/${myClientId}`).set(cropPayload).catch(() => {});
-          if (deviceRole === 'all') {
-            db.ref(`camera_crops/${fbUser}`).set(cropPayload).catch(() => {});
-          }
         }
         registerDevicePresence();
         if (bc2) {
+          const targetSlot = (deviceRole === 'shot') ? 'shot' : 'main';
           bc2.postMessage({
             type: 'crop_update',
             user: fbUser,
             sender: myClientId,
             role: deviceRole,
-            targetRole: deviceRole,
+            targetRole: targetSlot,
             crops: roleNormCrops,
             thresholds: roleThresholds,
             invertStates: roleInvertStates,
@@ -1095,16 +1162,17 @@
     }
 
     function restoreCropPositions() {
+      const myOwned = getOwnedCropKeys(deviceRole);
       // First attempt to restore using normalized coordinates mapped to current screen dimensions
-      const normSaved = localStorage.getItem('hc_ocr_crops_norm');
+      const normSaved = localStorage.getItem('hc_ocr_crops_norm_' + deviceRole) || localStorage.getItem('hc_ocr_crops_norm');
       const video = document.getElementById('camera-view');
       if (normSaved && video && video.videoWidth && video.offsetWidth) {
         try {
           const norm = JSON.parse(normSaved);
           let applied = false;
-          Object.keys(norm).forEach(k => {
+          myOwned.forEach(k => {
             const frame = frames[k];
-            if (frame && norm[k]) {
+            if (frame && norm[k] && norm[k].w > 0.01 && norm[k].h > 0.01) {
               const domPos = videoNormToScreen(norm[k]);
               if (domPos) {
                 frame.style.left = domPos.left;
@@ -1120,14 +1188,14 @@
       }
 
       // Fallback to literal saved screen pixels
-      const saved = localStorage.getItem('hc_ocr_crop_positions');
+      const saved = localStorage.getItem('hc_ocr_crop_positions_' + deviceRole) || localStorage.getItem('hc_ocr_crop_positions');
       if (saved) {
         try {
           const positions = JSON.parse(saved);
-          Object.keys(positions).forEach(k => {
+          myOwned.forEach(k => {
             const f = frames[k];
             const p = positions[k];
-            if (f && p) {
+            if (f && p && parseInt(p.width) >= 25 && parseInt(p.height) >= 18) {
               if (p.left) f.style.left = p.left;
               if (p.top) f.style.top = p.top;
               if (p.width) f.style.width = p.width;
@@ -1143,20 +1211,21 @@
     function handleOrientationOrResize() {
       clearTimeout(orientationResizeTimer);
       orientationResizeTimer = setTimeout(() => {
+        const myOwned = getOwnedCropKeys(deviceRole);
         let norm = null;
-        const normSaved = localStorage.getItem('hc_ocr_crops_norm');
+        const normSaved = localStorage.getItem('hc_ocr_crops_norm_' + deviceRole) || localStorage.getItem('hc_ocr_crops_norm');
         if (normSaved) {
           try { norm = JSON.parse(normSaved); } catch(e) {}
         }
         if (!norm) {
-          norm = getNormalizedCrops();
+          norm = getNormalizedCrops(true);
         }
         if (!norm) return;
         const video = document.getElementById('camera-view');
         if (!video || !video.videoWidth || !video.offsetWidth) return;
-        Object.keys(norm).forEach(k => {
+        myOwned.forEach(k => {
           const frame = frames[k];
-          if (frame && norm[k]) {
+          if (frame && norm[k] && norm[k].w > 0.01 && norm[k].h > 0.01) {
             const domPos = videoNormToScreen(norm[k]);
             if (domPos) {
               frame.style.left = domPos.left;
@@ -1516,22 +1585,25 @@
       // Cam 2 ('shot') ONLY processes and streams 'shot'!
       // Cam 1 ('main') ONLY processes and streams 'clock', 'home', 'away', 'period'!
       // All-In-One ('all') processes all 5.
-      let ownedKeys = keys;
-      if (deviceRole === 'shot') {
-        ownedKeys = ['shot'];
-      } else if (deviceRole === 'main') {
-        ownedKeys = ['clock', 'home', 'away', 'period'];
-      }
+      const ownedKeys = getOwnedCropKeys(deviceRole);
 
       const roleEnabledCrops = {};
-      ownedKeys.forEach(k => { roleEnabledCrops[k] = enabledCrops[k] !== false; });
+      const roleInvertStates = {};
+      ownedKeys.forEach(k => {
+        roleEnabledCrops[k] = enabledCrops[k] !== false;
+        roleInvertStates[k] = !!invertStates[k];
+      });
+
+      const camSlot = (deviceRole === 'shot') ? 'shot' : 'main';
+      const currentAspect = +(videoW / videoH).toFixed(3);
 
       const payload = { 
         streamActive: syncActive, 
         sender: myClientId,
         role: deviceRole,
         enabledCrops: roleEnabledCrops,
-        invertStates: { ...invertStates },
+        invertStates: roleInvertStates,
+        aspectRatios: { [camSlot]: currentAspect },
         timestamp: Date.now()
       };
 
@@ -1540,8 +1612,6 @@
           payload[fieldMap[key]] = null;
           continue;
         }
-
-        payload[`invertStates/${key}`] = !!invertStates[key];
 
         const frame = frames[key];
         if (!frame) continue;
@@ -1654,17 +1724,25 @@
         }
         const fctx = fc.getContext('2d');
         fctx.drawImage(video, 0, 0, targetW, targetH);
-        payload.fullFrame = fc.toDataURL('image/jpeg', 0.55);
-        payload[`frames/${deviceRole}`] = payload.fullFrame;
-        payload.frames = { [deviceRole]: payload.fullFrame };
-        payload.crops = getNormalizedCrops();
-        payload.aspectRatio = +(videoW / videoH).toFixed(3);
+        const fullFrameJpeg = fc.toDataURL('image/jpeg', 0.55);
+        payload.fullFrame = fullFrameJpeg;
+        payload.frames = { [camSlot]: fullFrameJpeg };
+        payload.crops = getNormalizedCrops(true);
+        payload.aspectRatio = currentAspect;
 
-        if (db && window.remoteActive) {
+        if (db) {
           const user = (document.getElementById('session-input') && document.getElementById('session-input').value) || 'default';
           const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
-          db.ref(`ocr_devices/${fbUser}/${myClientId}/fullFrame`).set(payload.fullFrame).catch(() => {});
-          db.ref(`ocr_devices/${fbUser}/${myClientId}/role`).set(deviceRole).catch(() => {});
+          db.ref(`ocr_cams/${fbUser}/${camSlot}`).set({
+            sender: myClientId,
+            role: deviceRole,
+            fullFrame: fullFrameJpeg,
+            aspectRatio: currentAspect,
+            crops: payload.crops,
+            invertStates: roleInvertStates,
+            enabledCrops: roleEnabledCrops,
+            timestamp: now
+          }).catch(() => {});
         }
       }
 
@@ -1707,37 +1785,50 @@
 
       if (target === 'firebase' && db) {
         const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
+        const ownedKeys = getOwnedCropKeys(deviceRole);
+        const camSlot = (deviceRole === 'shot') ? 'shot' : 'main';
         const fbPayload = { ...payload };
-        // Flatten enabledCrops so multi-devices don't wipe each other's crop enabled states
+
+        // Strictly flatten ONLY owned keys for enabledCrops, invertStates, and crops
         if (fbPayload.enabledCrops && typeof fbPayload.enabledCrops === 'object') {
-          Object.keys(fbPayload.enabledCrops).forEach(k => {
-            fbPayload[`enabledCrops/${k}`] = fbPayload.enabledCrops[k];
+          ownedKeys.forEach(k => {
+            if (fbPayload.enabledCrops[k] !== undefined) {
+              fbPayload[`enabledCrops/${k}`] = fbPayload.enabledCrops[k];
+            }
           });
           delete fbPayload.enabledCrops;
         }
         if (fbPayload.invertStates && typeof fbPayload.invertStates === 'object') {
-          Object.keys(fbPayload.invertStates).forEach(k => {
-            fbPayload[`invertStates/${k}`] = fbPayload.invertStates[k];
+          ownedKeys.forEach(k => {
+            if (fbPayload.invertStates[k] !== undefined) {
+              fbPayload[`invertStates/${k}`] = fbPayload.invertStates[k];
+            }
           });
           delete fbPayload.invertStates;
         }
-        // Flatten crops so multi-cameras never overwrite each other's crop coordinates
         if (fbPayload.crops && typeof fbPayload.crops === 'object') {
-          Object.keys(fbPayload.crops).forEach(k => {
-            fbPayload[`crops/${k}`] = fbPayload.crops[k];
+          ownedKeys.forEach(k => {
+            if (fbPayload.crops[k] && fbPayload.crops[k].w > 0.01 && fbPayload.crops[k].h > 0.01) {
+              fbPayload[`crops/${k}`] = fbPayload.crops[k];
+            }
           });
           delete fbPayload.crops;
         }
-        // Remove nested frames object to prevent Firebase update() path conflict with frames/${deviceRole}
-        delete fbPayload.frames;
-        if (payload.fullFrame) {
-          fbPayload[`frames/${deviceRole}`] = payload.fullFrame;
+        if (fbPayload.aspectRatios && typeof fbPayload.aspectRatios === 'object') {
+          Object.keys(fbPayload.aspectRatios).forEach(s => {
+            fbPayload[`aspectRatios/${s}`] = fbPayload.aspectRatios[s];
+          });
+          delete fbPayload.aspectRatios;
         }
 
-        // Cam 2 (shot clock) only writes to frames/shot, preserving main board view for default remote aligner
-        if (deviceRole === 'shot') {
-          delete fbPayload.fullFrame;
+        // Write fullFrame strictly to isolated frames/main or frames/shot slot — NEVER overwrite shared root fullFrame or aspectRatio!
+        delete fbPayload.frames;
+        delete fbPayload.fullFrame;
+        delete fbPayload.aspectRatio;
+        if (payload.fullFrame) {
+          fbPayload[`frames/${camSlot}`] = payload.fullFrame;
         }
+
         db.ref(`ocr/${fbUser}`).update(fbPayload)
           .then(() => {
             const statusEl = document.getElementById('status-text');
@@ -1799,14 +1890,26 @@
         document.getElementById('status-text').textContent = 'Stopped';
         document.getElementById('status-text').style.color = '#f5c842';
         
-        sendUpdate({
+        const stopPayload = {
           streamActive: false,
-          gameClockStream: null,
-          shotClockStream: null,
-          homeScoreStream: null,
-          awayScoreStream: null,
-          periodStream: null
-        });
+          sender: myClientId,
+          role: deviceRole
+        };
+        if (deviceRole === 'shot') {
+          stopPayload.shotClockStream = null;
+        } else if (deviceRole === 'main') {
+          stopPayload.gameClockStream = null;
+          stopPayload.homeScoreStream = null;
+          stopPayload.awayScoreStream = null;
+          stopPayload.periodStream = null;
+        } else {
+          stopPayload.gameClockStream = null;
+          stopPayload.shotClockStream = null;
+          stopPayload.homeScoreStream = null;
+          stopPayload.awayScoreStream = null;
+          stopPayload.periodStream = null;
+        }
+        sendUpdate(stopPayload);
       }
     }
 
@@ -2004,31 +2107,7 @@
         const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
 
         if (db) {
-          // Listen to crops specifically targeted to this device ID
-          db.ref(`camera_crops/${fbUser}/${myClientId}`).on('value', snapshot => {
-            const val = snapshot.val();
-            if (val && val.sender !== myClientId) {
-              applyRemoteCropPositions(val);
-            }
-          });
-
-          // Listen to crops targeted to this role (e.g. 'shot' or 'main')
-          db.ref(`camera_crops/${fbUser}/${deviceRole}`).on('value', snapshot => {
-            const val = snapshot.val();
-            if (val && val.sender !== myClientId) {
-              applyRemoteCropPositions(val);
-            }
-          });
-
-          // Fallback root listener (applied only if matching this role or general)
-          db.ref(`camera_crops/${fbUser}`).on('value', snapshot => {
-            const val = snapshot.val();
-            if (val && val.sender !== myClientId) {
-              if (!val.targetRole || val.targetRole === deviceRole || val.targetRole === 'all') {
-                applyRemoteCropPositions(val);
-              }
-            }
-          });
+          bindRoleCropListeners();
 
           db.ref(`ocr/${fbUser}/remoteActive`).on('value', snapshot => {
             window.remoteActive = snapshot.val() === true;
@@ -2058,7 +2137,8 @@
             if (!e || !e.data) return;
             if (e.data.user && e.data.user !== fbUser) return;
             if (e.data.type === 'crop_update' && e.data.sender !== myClientId) {
-              if (!e.data.targetRole || e.data.targetRole === deviceRole || e.data.targetRole === 'all') {
+              const targetSlot = (deviceRole === 'shot') ? 'shot' : 'main';
+              if (!e.data.targetRole || e.data.targetRole === deviceRole || e.data.targetRole === targetSlot || e.data.targetRole === 'all') {
                 applyRemoteCropPositions(e.data);
               }
             } else if (e.data.type === 'remote_active') {

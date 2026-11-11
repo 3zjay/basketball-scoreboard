@@ -475,35 +475,33 @@ function applyStreamData(data) {
   }
   aiSyncActive = true;
 
-  if (role === 'all' || role === 'main') {
+  const isLocalShotOnly = (role === 'shot' && data.homeScoreStream === undefined && data.awayScoreStream === undefined && data.gameClockStream === undefined && data.periodStream === undefined);
+
+  if (!isLocalShotOnly) {
     if (data.gameClockStream !== undefined) S.gameClockStream = data.gameClockStream;
     if (data.homeScoreStream !== undefined) S.homeScoreStream = data.homeScoreStream;
     if (data.awayScoreStream !== undefined) S.awayScoreStream = data.awayScoreStream;
     if (data.periodStream !== undefined) S.periodStream = data.periodStream;
   }
   if (role === 'shot') {
-    if (data.shotClockStream !== undefined) {
+    _lastDedicatedShotCamTime = Date.now();
+  }
+  if (data.shotClockStream !== undefined) {
+    if (role === 'shot' || !isLocalShotOnly || Date.now() - _lastDedicatedShotCamTime > 45000) {
       S.shotClockStream = data.shotClockStream;
-      _lastDedicatedShotCamTime = Date.now();
-    }
-  } else if (role === 'all') {
-    if (Date.now() - _lastDedicatedShotCamTime > 45000) {
-      if (data.shotClockStream !== undefined) S.shotClockStream = data.shotClockStream;
     }
   }
 
   if (data.enabledCrops) {
-    if (role === 'all' || role === 'main') {
+    if (!isLocalShotOnly) {
       if (data.enabledCrops.clock === false) S.gameClockStream = null;
       if (data.enabledCrops.home === false) S.homeScoreStream = null;
       if (data.enabledCrops.away === false) S.awayScoreStream = null;
       if (data.enabledCrops.period === false) S.periodStream = null;
     }
-    if (role === 'all' || role === 'shot') {
-      if (data.enabledCrops.shot === false) {
-        if (role === 'shot' || Date.now() - _lastDedicatedShotCamTime > 45000) {
-          S.shotClockStream = null;
-        }
+    if (data.enabledCrops.shot === false) {
+      if (role === 'shot' || !isLocalShotOnly || Date.now() - _lastDedicatedShotCamTime > 45000) {
+        S.shotClockStream = null;
       }
     }
   }

@@ -1551,7 +1551,9 @@ function applyStreamData(streamData) {
 
   let streamImagesChanged = false;
 
-  if (role === 'all' || role === 'main') {
+  const isLocalShotOnly = (role === 'shot' && streamData.homeScoreStream === undefined && streamData.awayScoreStream === undefined && streamData.gameClockStream === undefined && streamData.periodStream === undefined);
+
+  if (!isLocalShotOnly) {
     if (streamData.gameClockStream !== undefined && S.gameClockStream !== streamData.gameClockStream) {
       S.gameClockStream = streamData.gameClockStream;
     }
@@ -1570,31 +1572,25 @@ function applyStreamData(streamData) {
   }
 
   if (role === 'shot') {
-    if (streamData.shotClockStream !== undefined && S.shotClockStream !== streamData.shotClockStream) {
+    _lastDedicatedShotCamTime = Date.now();
+  }
+  if (streamData.shotClockStream !== undefined && S.shotClockStream !== streamData.shotClockStream) {
+    if (role === 'shot' || !isLocalShotOnly || Date.now() - _lastDedicatedShotCamTime > 45000) {
       S.shotClockStream = streamData.shotClockStream;
-      _lastDedicatedShotCamTime = Date.now();
-    }
-  } else if (role === 'all') {
-    if (Date.now() - _lastDedicatedShotCamTime > 45000) {
-      if (streamData.shotClockStream !== undefined && S.shotClockStream !== streamData.shotClockStream) {
-        S.shotClockStream = streamData.shotClockStream;
-      }
     }
   }
 
   if (streamData.enabledCrops) {
-    if (role === 'all' || role === 'main') {
+    if (!isLocalShotOnly) {
       if (streamData.enabledCrops.clock === false && S.gameClockStream !== null) { S.gameClockStream = null; streamImagesChanged = true; }
       if (streamData.enabledCrops.home === false && S.homeScoreStream !== null) { S.homeScoreStream = null; streamImagesChanged = true; }
       if (streamData.enabledCrops.away === false && S.awayScoreStream !== null) { S.awayScoreStream = null; streamImagesChanged = true; }
       if (streamData.enabledCrops.period === false && S.periodStream !== null) { S.periodStream = null; streamImagesChanged = true; }
     }
-    if (role === 'all' || role === 'shot') {
-      if (streamData.enabledCrops.shot === false && S.shotClockStream !== null) {
-        if (role === 'shot' || Date.now() - _lastDedicatedShotCamTime > 45000) {
-          S.shotClockStream = null;
-          streamImagesChanged = true;
-        }
+    if (streamData.enabledCrops.shot === false && S.shotClockStream !== null) {
+      if (role === 'shot' || !isLocalShotOnly || Date.now() - _lastDedicatedShotCamTime > 45000) {
+        S.shotClockStream = null;
+        streamImagesChanged = true;
       }
     }
   }

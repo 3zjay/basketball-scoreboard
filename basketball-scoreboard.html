@@ -2572,7 +2572,58 @@ function openScannerModal(e) {
 let cachedFeeds = { Home: null, Away: null, Clock: null, Shot: null, Period: null };
 let cachedMainFrame = null;
 let cachedShotFrame = null;
+let cachedMainAspect = 1.777;
+let cachedShotAspect = 1.777;
 let _lastDedicatedShotCamTime = 0;
+
+function renderRemoteCameraFeedUI() {
+  const feedImg = document.getElementById('remoteCameraFeed');
+  const feedPh = document.getElementById('remotePlaceholder');
+  const statusBadge = document.getElementById('remoteFeedStatusBadge');
+  const container = document.getElementById('remoteVideoContainer');
+
+  let frameToShow = null;
+  let camLabel = '';
+  let aspectToUse = null;
+
+  if (activeRemoteCameraRole === 'shot') {
+    frameToShow = cachedShotFrame;
+    camLabel = 'Cam 2 (Shot Clock)';
+    aspectToUse = cachedShotAspect;
+  } else if (activeRemoteCameraRole === 'main') {
+    frameToShow = cachedMainFrame;
+    camLabel = 'Cam 1 (Main Board)';
+    aspectToUse = cachedMainAspect;
+  } else {
+    frameToShow = cachedMainFrame || cachedShotFrame;
+    camLabel = cachedMainFrame ? 'Cam 1 (Main Board)' : 'Cam 2 (Shot Clock)';
+    aspectToUse = cachedMainFrame ? cachedMainAspect : cachedShotAspect;
+  }
+
+  if (container && aspectToUse) {
+    const nextAspect = String(aspectToUse);
+    if (container.style.aspectRatio !== nextAspect) {
+      container.style.aspectRatio = nextAspect;
+    }
+  }
+
+  if (frameToShow) {
+    if (feedImg) {
+      if (feedImg.src !== frameToShow) feedImg.src = frameToShow;
+      if (feedImg.style.display !== 'block') feedImg.style.display = 'block';
+    }
+    if (feedPh && feedPh.style.display !== 'none') feedPh.style.display = 'none';
+    if (statusBadge && camLabel) {
+      const nextText = `🟢 ${camLabel} Streaming Live`;
+      if (statusBadge.textContent !== nextText) {
+        statusBadge.textContent = nextText;
+        statusBadge.style.background = '#143820';
+        statusBadge.style.borderColor = '#16c784';
+        statusBadge.style.color = '#16c784';
+      }
+    }
+  }
+}
 
 function updateFeedMonitorUI(incoming) {
   if (!incoming) return;
@@ -2588,9 +2639,16 @@ function updateFeedMonitorUI(incoming) {
     el.style.display = isEnabled ? 'flex' : 'none';
   });
 
-  // Multi-Device Stream Merging: Cache latest frames so streams from separate cameras never clear each other
+  // Multi-Device Stream Merging:
+  // In Firebase RTDB, `ocr/${fbUser}` merges all cameras' streams into one object,
+  // while `incoming.role` simply reflects whichever camera wrote last!
+  // Since Cam 1 ONLY writes home/away/clock/period and Cam 2 ONLY writes shotClockStream,
+  // we update each stream whenever it is present in `incoming`, without letting `incoming.role`
+  // block the other camera's fields in a merged Firebase snapshot!
   const incomingRole = incoming.role || 'all';
-  if (incomingRole === 'all' || incomingRole === 'main') {
+  const isLocalShotOnly = (incomingRole === 'shot' && incoming.homeScoreStream === undefined && incoming.awayScoreStream === undefined && incoming.gameClockStream === undefined && incoming.periodStream === undefined);
+
+  if (!isLocalShotOnly) {
     if (incoming.homeScoreStream !== undefined) cachedFeeds.Home = incoming.homeScoreStream;
     if (incoming.awayScoreStream !== undefined) cachedFeeds.Away = incoming.awayScoreStream;
     if (incoming.gameClockStream !== undefined) cachedFeeds.Clock = incoming.gameClockStream;
@@ -2602,30 +2660,34 @@ function updateFeedMonitorUI(incoming) {
       if (incoming.enabledCrops.period === false) cachedFeeds.Period = null;
     }
   }
+
   if (incomingRole === 'shot') {
-    if (incoming.shotClockStream !== undefined) {
+    _lastDedicatedShotCamTime = Date.now();
+  }
+  if (incoming.shotClockStream !== undefined) {
+    if (incomingRole === 'shot' || incoming._fromFirebase || (Date.now() - _lastDedicatedShotCamTime > 45000)) {
       cachedFeeds.Shot = incoming.shotClockStream;
-      _lastDedicatedShotCamTime = Date.now();
     }
-    if (incoming.enabledCrops && incoming.enabledCrops.shot === false) cachedFeeds.Shot = null;
-  } else if (incomingRole === 'all') {
-    if (Date.now() - _lastDedicatedShotCamTime > 45000) {
-      if (incoming.shotClockStream !== undefined) cachedFeeds.Shot = incoming.shotClockStream;
-      if (incoming.enabledCrops && incoming.enabledCrops.shot === false) cachedFeeds.Shot = null;
+  }
+  if (incoming.enabledCrops && incoming.enabledCrops.shot === false) {
+    if (incomingRole === 'shot' || incoming._fromFirebase || (Date.now() - _lastDedicatedShotCamTime > 45000)) {
+      cachedFeeds.Shot = null;
     }
   }
 
   const badge = document.getElementById('aiFeedStatusBadge');
   if (badge) {
-    const devCount = (typeof connectedDevices === 'object' && connectedDevices) ? Object.keys(connectedDevices).length : 0;
-    if (devCount >= 2) {
-      badge.textContent = `🟢 ${devCount} Scanners Active (Multi-Cam Live)`;
-    } else {
-      badge.textContent = '🟢 Scanner Live Stream';
+    const now = Date.now();
+    const activeCount = (typeof connectedDevices === 'object' && connectedDevices)
+      ? Object.values(connectedDevices).filter(d => d && (now - (d.lastSeen || 0) < 25000)).length
+      : 0;
+    const nextBadgeText = activeCount >= 2 ? `🟢 ${activeCount} Scanners Active (Multi-Cam Live)` : '🟢 Scanner Live Stream';
+    if (badge.textContent !== nextBadgeText) {
+      badge.textContent = nextBadgeText;
+      badge.style.background = '#143820';
+      badge.style.borderColor = '#16c784';
+      badge.style.color = '#16c784';
     }
-    badge.style.background = '#143820';
-    badge.style.borderColor = '#16c784';
-    badge.style.color = '#16c784';
   }
 
   const updateCrop = (type, imgData) => {
@@ -2635,11 +2697,11 @@ function updateFeedMonitorUI(incoming) {
     if (img) {
       if (imgData) {
         if (img.src !== imgData) img.src = imgData;
-        img.style.display = 'block';
-        if (ph) ph.style.display = 'none';
+        if (img.style.display !== 'block') img.style.display = 'block';
+        if (ph && ph.style.display !== 'none') ph.style.display = 'none';
       } else {
-        img.style.display = 'none';
-        if (ph) ph.style.display = 'inline';
+        if (img.style.display !== 'none') img.style.display = 'none';
+        if (ph && ph.style.display !== 'inline') ph.style.display = 'inline';
       }
     }
   };
@@ -2650,74 +2712,22 @@ function updateFeedMonitorUI(incoming) {
   updateCrop('Shot', cachedFeeds.Shot);
   updateCrop('Period', cachedFeeds.Period);
 
-  // Update Remote Alignment Aligner if active and feed matches active camera role
-  const incomingShotFrame = (incoming.frames && incoming.frames.shot) || incoming['frames/shot'] || (incomingRole === 'shot' ? incoming.fullFrame : null);
+  // Strictly isolated full-frame & aspect ratio extraction per camera slot
+  const incomingShotFrame = (incoming.frames && incoming.frames.shot) || incoming['frames/shot'] || (!incoming._fromFirebase && incomingRole === 'shot' ? incoming.fullFrame : null);
   if (incomingShotFrame) cachedShotFrame = incomingShotFrame;
-  const incomingMainFrame = (incoming.frames && incoming.frames.main) || incoming['frames/main'] || (incomingRole !== 'shot' ? incoming.fullFrame : null);
+
+  const incomingMainFrame = (incoming.frames && (incoming.frames.main || incoming.frames.all)) || incoming['frames/main'] || incoming['frames/all'] || (!incoming._fromFirebase && incomingRole !== 'shot' ? incoming.fullFrame : null);
   if (incomingMainFrame) cachedMainFrame = incomingMainFrame;
 
-  let frameToShow = null;
-  let camLabel = '';
-
-  if (activeRemoteCameraRole === 'shot') {
-    frameToShow = cachedShotFrame || (connectedDevices && Object.values(connectedDevices).find(d => d.role === 'shot' && d.fullFrame)?.fullFrame);
-    camLabel = 'Cam 2 (Shot Clock)';
-  } else if (activeRemoteCameraRole === 'main') {
-    frameToShow = cachedMainFrame || (connectedDevices && Object.values(connectedDevices).find(d => (d.role === 'main' || d.role === 'all') && d.fullFrame)?.fullFrame);
-    camLabel = 'Cam 1 (Main Board)';
-  } else {
-    // 'all' role: show main board or all, unless Cam 2 is the only camera connected
-    frameToShow = cachedMainFrame || cachedShotFrame;
-    camLabel = cachedMainFrame ? 'Cam 1 (Main Board)' : 'Cam 2 (Shot Clock)';
+  if (incoming.aspectRatios) {
+    if (incoming.aspectRatios.shot) cachedShotAspect = incoming.aspectRatios.shot;
+    if (incoming.aspectRatios.main) cachedMainAspect = incoming.aspectRatios.main;
+  } else if (!incoming._fromFirebase && incoming.aspectRatio) {
+    if (incomingRole === 'shot') cachedShotAspect = incoming.aspectRatio;
+    else cachedMainAspect = incoming.aspectRatio;
   }
 
-  if (frameToShow) {
-    const feedImg = document.getElementById('remoteCameraFeed');
-    const feedPh = document.getElementById('remotePlaceholder');
-    const statusBadge = document.getElementById('remoteFeedStatusBadge');
-    if (feedImg) {
-      if (feedImg.src !== frameToShow) feedImg.src = frameToShow;
-      feedImg.style.display = 'block';
-    }
-    if (feedPh) feedPh.style.display = 'none';
-    if (statusBadge && camLabel) {
-      statusBadge.textContent = `🟢 ${camLabel} Streaming Live`;
-      statusBadge.style.background = '#143820';
-      statusBadge.style.borderColor = '#16c784';
-      statusBadge.style.color = '#16c784';
-    }
-  }
-
-  const activeAspect = (activeRemoteCameraRole === 'shot')
-    ? (incomingRole === 'shot' ? incoming.aspectRatio : null)
-    : (incomingRole !== 'shot' ? incoming.aspectRatio : null);
-
-  if (activeAspect) {
-    const container = document.getElementById('remoteVideoContainer');
-    if (container) container.style.aspectRatio = String(activeAspect);
-  }
-
-  if (incoming.crops && !isDraggingRemote && !isResizingRemote) {
-    if (incomingRole === 'shot') {
-      if (incoming.crops.shot) {
-        shotCamNormCrop = { ...incoming.crops.shot };
-        if (activeRemoteCameraRole === 'shot') {
-          remoteNormCrops.shot = { ...incoming.crops.shot };
-          applyRemoteBoxStyles();
-        }
-      }
-    } else if (incomingRole === 'main') {
-      ['clock', 'home', 'away', 'period'].forEach(k => {
-        if (incoming.crops[k]) remoteNormCrops[k] = { ...incoming.crops[k] };
-      });
-      if (activeRemoteCameraRole !== 'shot') {
-        applyRemoteBoxStyles();
-      }
-    } else {
-      remoteNormCrops = Object.assign(remoteNormCrops, incoming.crops);
-      applyRemoteBoxStyles();
-    }
-  }
+  renderRemoteCameraFeedUI();
 
   if (typeof updateRemoteActiveCropPreview === 'function') {
     updateRemoteActiveCropPreview(incoming);
@@ -2813,84 +2823,88 @@ function connectSSE(){
     db.ref(`ocr/${fbUser}`).on('value', snapshot => {
       const val = snapshot.val();
       if (!val) return;
-      if (val.fullFrame) {
-        if (val.role === 'shot') cachedShotFrame = val.fullFrame;
-        else cachedMainFrame = val.fullFrame;
-      }
+      val._fromFirebase = true;
       if (val.frames) {
         if (val.frames.shot) cachedShotFrame = val.frames.shot;
-        if (val.frames.main) cachedMainFrame = val.frames.main;
+        if (val.frames.main || val.frames.all) cachedMainFrame = val.frames.main || val.frames.all;
       }
       if (val['frames/shot']) cachedShotFrame = val['frames/shot'];
       if (val['frames/main']) cachedMainFrame = val['frames/main'];
+      if (val.aspectRatios) {
+        if (val.aspectRatios.shot) cachedShotAspect = val.aspectRatios.shot;
+        if (val.aspectRatios.main) cachedMainAspect = val.aspectRatios.main;
+      }
       processOcrData(val);
+    });
+
+    db.ref(`ocr_cams/${fbUser}/main`).on('value', snapshot => {
+      const cam = snapshot.val();
+      if (!cam) return;
+      if (cam.fullFrame) cachedMainFrame = cam.fullFrame;
+      if (cam.aspectRatio) cachedMainAspect = cam.aspectRatio;
+      renderRemoteCameraFeedUI();
+    });
+
+    db.ref(`ocr_cams/${fbUser}/shot`).on('value', snapshot => {
+      const cam = snapshot.val();
+      if (!cam) return;
+      if (cam.fullFrame) cachedShotFrame = cam.fullFrame;
+      if (cam.aspectRatio) cachedShotAspect = cam.aspectRatio;
+      renderRemoteCameraFeedUI();
     });
 
     const handleCropSnapshot = (val) => {
       if (!val || val.sender === myClientId || isDraggingRemote || isResizingRemote) return;
       const senderRole = val.role || val.targetRole || 'all';
 
-      // Support nested role structures if root was fetched
-      if (val.shot && typeof val.shot === 'object') handleCropSnapshot(val.shot);
-      if (val.main && typeof val.main === 'object') handleCropSnapshot(val.main);
-
       if (val.crops) {
         if (senderRole === 'shot') {
-          if (val.crops.shot) {
+          if (val.crops.shot && val.crops.shot.w > 0.01 && val.crops.shot.h > 0.01) {
             shotCamNormCrop = { ...val.crops.shot };
             if (activeRemoteCameraRole === 'shot') {
               remoteNormCrops.shot = { ...val.crops.shot };
             }
           }
-        } else if (senderRole === 'main') {
-          ['clock', 'home', 'away', 'period'].forEach(k => {
-            if (val.crops[k]) remoteNormCrops[k] = val.crops[k];
-          });
         } else {
-          remoteNormCrops = Object.assign(remoteNormCrops, val.crops);
+          ['clock', 'home', 'away', 'period'].forEach(k => {
+            if (val.crops[k] && val.crops[k].w > 0.01 && val.crops[k].h > 0.01) {
+              remoteNormCrops[k] = val.crops[k];
+            }
+          });
         }
       }
       if (val.thresholds) {
         if (senderRole === 'shot') {
           if (val.thresholds.shot != null) remoteThresholds.shot = val.thresholds.shot;
-        } else if (senderRole === 'main') {
+        } else {
           ['clock', 'home', 'away', 'period'].forEach(k => {
             if (val.thresholds[k] != null) remoteThresholds[k] = val.thresholds[k];
           });
-        } else {
-          remoteThresholds = Object.assign(remoteThresholds, val.thresholds);
         }
       }
       if (val.invertStates && (Date.now() - lastInvertChangeTime > 2000)) {
         if (senderRole === 'shot') {
           if (val.invertStates.shot != null) remoteInvertStates.shot = val.invertStates.shot;
-        } else if (senderRole === 'main') {
+        } else {
           ['clock', 'home', 'away', 'period'].forEach(k => {
             if (val.invertStates[k] != null) remoteInvertStates[k] = val.invertStates[k];
           });
-        } else {
-          remoteInvertStates = Object.assign(remoteInvertStates, val.invertStates);
         }
         syncCropInvertCheckboxes();
       }
       if (val.enabledCrops) {
         if (senderRole === 'shot') {
           if (val.enabledCrops.shot !== undefined) remoteEnabledCrops.shot = val.enabledCrops.shot;
-        } else if (senderRole === 'main') {
+        } else {
           ['clock', 'home', 'away', 'period'].forEach(k => {
             if (val.enabledCrops[k] !== undefined) remoteEnabledCrops[k] = val.enabledCrops[k];
           });
-        } else {
-          remoteEnabledCrops = Object.assign(remoteEnabledCrops, val.enabledCrops);
         }
         syncCropEnableCheckboxes();
       }
       applyRemoteBoxStyles();
     };
 
-    db.ref(`camera_crops/${fbUser}`).on('value', snapshot => {
-      handleCropSnapshot(snapshot.val());
-    });
     db.ref(`camera_crops/${fbUser}/shot`).on('value', snapshot => {
       handleCropSnapshot(snapshot.val());
     });
@@ -2900,32 +2914,7 @@ function connectSSE(){
 
     db.ref(`ocr_devices/${fbUser}`).on('value', snapshot => {
       connectedDevices = snapshot.val() || {};
-      Object.keys(connectedDevices).forEach(id => {
-        const d = connectedDevices[id];
-        if (d && d.role === 'shot' && d.fullFrame) {
-          cachedShotFrame = d.fullFrame;
-        } else if (d && (d.role === 'main' || d.role === 'all') && d.fullFrame) {
-          cachedMainFrame = d.fullFrame;
-        }
-      });
       updateConnectedDevicesUI();
-      if (activeRemoteCameraRole === 'shot' && cachedShotFrame) {
-        const feedImg = document.getElementById('remoteCameraFeed');
-        const feedPh = document.getElementById('remotePlaceholder');
-        if (feedImg) {
-          if (feedImg.src !== cachedShotFrame) feedImg.src = cachedShotFrame;
-          feedImg.style.display = 'block';
-        }
-        if (feedPh) feedPh.style.display = 'none';
-      } else if (activeRemoteCameraRole === 'main' && cachedMainFrame) {
-        const feedImg = document.getElementById('remoteCameraFeed');
-        const feedPh = document.getElementById('remotePlaceholder');
-        if (feedImg) {
-          if (feedImg.src !== cachedMainFrame) feedImg.src = cachedMainFrame;
-          feedImg.style.display = 'block';
-        }
-        if (feedPh) feedPh.style.display = 'none';
-      }
     });
 
     db.ref(`buzz/${fbUser}`).on('value', snapshot => {
@@ -3171,10 +3160,11 @@ fetch('/api/ip')
   .catch(() => {});
 
 // Multi-Device Optical Scanner & QR Handlers
-let currentQrRole = 'all';
-let activeRemoteCameraRole = 'all';
+let currentQrRole = 'main';
+let activeRemoteCameraRole = 'main';
 let activeRemoteDeviceId = null;
 let connectedDevices = {};
+let _lastDevicesSignature = '';
 
 function switchScannerQrTab(role) {
   currentQrRole = role;
@@ -3222,14 +3212,26 @@ function updateConnectedDevicesUI() {
   const countBadge = document.getElementById('scannerDeviceCountBadge');
   const devices = Object.values(connectedDevices || {});
   const now = Date.now();
-  const activeDevs = devices.filter(d => (now - (d.lastSeen || 0) < 25000));
+  const activeDevs = devices.filter(d => d && (now - (d.lastSeen || 0) < 25000));
+
+  activeDevs.forEach(d => {
+    if (d.aspectRatio) {
+      if (d.role === 'shot') cachedShotAspect = d.aspectRatio;
+      else cachedMainAspect = d.aspectRatio;
+    }
+  });
 
   if (countBadge) {
-    countBadge.textContent = `${activeDevs.length} Camera${activeDevs.length === 1 ? '' : 's'} Connected`;
-    countBadge.style.color = activeDevs.length > 0 ? '#16c784' : '#888';
+    const nextCount = `${activeDevs.length} Camera${activeDevs.length === 1 ? '' : 's'} Connected`;
+    if (countBadge.textContent !== nextCount) {
+      countBadge.textContent = nextCount;
+      countBadge.style.color = activeDevs.length > 0 ? '#16c784' : '#888';
+    }
   }
 
-  if (listEl) {
+  const sig = activeDevs.map(d => `${d.id}:${d.role}:${d.name || ''}`).sort().join('|');
+  if (listEl && sig !== _lastDevicesSignature) {
+    _lastDevicesSignature = sig;
     if (activeDevs.length === 0) {
       listEl.innerHTML = '<div style="font-size:11px; color:#666; font-style:italic;">No phone cameras detected yet. Scan the QR code above to connect!</div>';
     } else {
@@ -3252,15 +3254,17 @@ function updateConnectedDevicesUI() {
 
 function updateRemoteAlignCameraTabs(activeDevs) {
   const shotDev = activeDevs.find(d => d.role === 'shot');
-  const mainDev = activeDevs.find(d => d.role === 'main');
+  const mainDev = activeDevs.find(d => d.role === 'main' || d.role === 'all');
 
   const btnShot = document.getElementById('remote-cam-btn-shot');
-  if (btnShot && shotDev) {
-    btnShot.innerHTML = '⏱️ Cam 2: Shot <span style="color:#16c784;">●</span>';
+  if (btnShot) {
+    const nextShotHtml = shotDev ? '⏱️ Cam 2: Shot <span style="color:#16c784;">●</span>' : '⏱️ Cam 2: Shot';
+    if (btnShot.innerHTML !== nextShotHtml) btnShot.innerHTML = nextShotHtml;
   }
   const btnMain = document.getElementById('remote-cam-btn-main');
-  if (btnMain && mainDev) {
-    btnMain.innerHTML = '📹 Cam 1: Main <span style="color:#16c784;">●</span>';
+  if (btnMain) {
+    const nextMainHtml = mainDev ? '📹 Cam 1: Main <span style="color:#16c784;">●</span>' : '📹 Cam 1: Main';
+    if (btnMain.innerHTML !== nextMainHtml) btnMain.innerHTML = nextMainHtml;
   }
 }
 
@@ -3278,59 +3282,45 @@ function switchRemoteCamera(role) {
   });
 
   const dev = Object.values(connectedDevices || {}).find(d => {
-    if (role === 'all') return d.role === 'all' || d.role === 'main';
+    if (role === 'all' || role === 'main') return d.role === 'main' || d.role === 'all';
     return d.role === role;
   });
 
   if (dev) {
     activeRemoteDeviceId = dev.id;
     if (dev.aspectRatio) {
-      const container = document.getElementById('remoteVideoContainer');
-      if (container) container.style.aspectRatio = String(dev.aspectRatio);
-    }
-    if (role === 'shot') {
-      if (dev.crops && dev.crops.shot) {
-        shotCamNormCrop = { ...dev.crops.shot };
-        remoteNormCrops.shot = { ...dev.crops.shot };
-      }
-    } else {
-      if (dev.crops) {
-        ['clock', 'home', 'away', 'period'].forEach(k => {
-          if (dev.crops[k]) remoteNormCrops[k] = { ...dev.crops[k] };
-        });
-      }
+      if (role === 'shot') cachedShotAspect = dev.aspectRatio;
+      else cachedMainAspect = dev.aspectRatio;
     }
   } else {
     activeRemoteDeviceId = null;
   }
 
-  // Find appropriate frame for selected role
+  // Find appropriate frame for selected role strictly from isolated camera cache
   const feedImg = document.getElementById('remoteCameraFeed');
   const feedPh = document.getElementById('remotePlaceholder');
   const statusBadge = document.getElementById('remoteFeedStatusBadge');
+  const container = document.getElementById('remoteVideoContainer');
 
   let targetFrame = null;
   let camLabel = '';
+  let targetAspect = null;
   if (role === 'shot') {
-    targetFrame = cachedShotFrame ||
-      (dev && dev.fullFrame) ||
-      (window.lastOcrIncoming && window.lastOcrIncoming.frames && window.lastOcrIncoming.frames.shot) ||
-      (window.lastOcrIncoming && window.lastOcrIncoming['frames/shot']) ||
-      (window.lastOcrIncoming && window.lastOcrIncoming.role === 'shot' ? window.lastOcrIncoming.fullFrame : null) ||
-      (connectedDevices && Object.values(connectedDevices).find(d => d.role === 'shot' && d.fullFrame)?.fullFrame);
+    targetFrame = cachedShotFrame;
     camLabel = 'Cam 2 (Shot Clock)';
+    targetAspect = cachedShotAspect;
   } else {
-    targetFrame = cachedMainFrame ||
-      (dev && dev.fullFrame) ||
-      (window.lastOcrIncoming && window.lastOcrIncoming.frames && window.lastOcrIncoming.frames.main) ||
-      (window.lastOcrIncoming && window.lastOcrIncoming['frames/main']) ||
-      (window.lastOcrIncoming && window.lastOcrIncoming.role !== 'shot' ? window.lastOcrIncoming.fullFrame : null) ||
-      (connectedDevices && Object.values(connectedDevices).find(d => (d.role === 'main' || d.role === 'all') && d.fullFrame)?.fullFrame);
+    targetFrame = cachedMainFrame;
     camLabel = role === 'main' ? 'Cam 1 (Main Board)' : 'All Cameras';
+    targetAspect = cachedMainAspect;
+  }
+
+  if (container && targetAspect) {
+    container.style.aspectRatio = String(targetAspect);
   }
 
   if (targetFrame && feedImg) {
-    feedImg.src = targetFrame;
+    if (feedImg.src !== targetFrame) feedImg.src = targetFrame;
     feedImg.style.display = 'block';
     if (feedPh) feedPh.style.display = 'none';
     if (statusBadge) {
@@ -3749,30 +3739,38 @@ function applyCropPreset(type) {
 }
 
 function broadcastRemoteCrops() {
+  const isShotRole = (activeRemoteCameraRole === 'shot');
+  const targetSlot = isShotRole ? 'shot' : 'main';
+  const ownedKeys = isShotRole ? ['shot'] : ['clock', 'home', 'away', 'period'];
+
+  const roleCrops = {};
+  const roleThresholds = {};
+  const roleInvertStates = {};
+  const roleEnabledCrops = {};
+
+  ownedKeys.forEach(k => {
+    roleCrops[k] = (k === 'shot' && isShotRole && shotCamNormCrop) ? { ...shotCamNormCrop } : { ...remoteNormCrops[k] };
+    roleThresholds[k] = remoteThresholds[k];
+    roleInvertStates[k] = !!remoteInvertStates[k];
+    roleEnabledCrops[k] = remoteEnabledCrops[k] !== false;
+  });
+
   const payload = {
     sender: myClientId,
     timestamp: Date.now(),
-    targetRole: activeRemoteCameraRole,
+    role: targetSlot,
+    targetRole: targetSlot,
     targetDevice: activeRemoteDeviceId,
-    crops: { ...remoteNormCrops },
-    thresholds: remoteThresholds,
-    invertStates: remoteInvertStates,
-    enabledCrops: remoteEnabledCrops
+    crops: roleCrops,
+    thresholds: roleThresholds,
+    invertStates: roleInvertStates,
+    enabledCrops: roleEnabledCrops
   };
-  if (activeRemoteCameraRole === 'shot') {
-    payload.crops.shot = { ...(shotCamNormCrop || remoteNormCrops.shot) };
-  }
+
   if (useFirebase && db) {
-    if (activeRemoteCameraRole === 'shot') {
-      db.ref(`camera_crops/${fbUser}/shot`).set(payload).catch(() => {});
-      if (activeRemoteDeviceId) {
-        db.ref(`camera_crops/${fbUser}/${activeRemoteDeviceId}`).set(payload).catch(() => {});
-      }
-    } else {
-      db.ref(`camera_crops/${fbUser}/main`).set(payload).catch(() => {});
-      if (activeRemoteDeviceId) {
-        db.ref(`camera_crops/${fbUser}/${activeRemoteDeviceId}`).set(payload).catch(() => {});
-      }
+    db.ref(`camera_crops/${fbUser}/${targetSlot}`).set(payload).catch(() => {});
+    if (activeRemoteDeviceId) {
+      db.ref(`camera_crops/${fbUser}/${activeRemoteDeviceId}`).set(payload).catch(() => {});
     }
   }
   bc.postMessage({
