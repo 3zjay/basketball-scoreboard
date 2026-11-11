@@ -376,6 +376,110 @@ html, body {
 .btn-adjust:hover { border-color: #4b5563; color: #cbd5e1; }
 .btn-adjust:active { transform: scale(0.96); background: #1e2638; color: #fff; border-color: #f59e0b; }
 
+/* ── PERIOD CONTROLS ── */
+.period-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(245, 200, 66, 0.1);
+  border: 1.5px solid rgba(245, 200, 66, 0.35);
+  border-radius: 999px;
+  padding: 2px 14px;
+  margin-bottom: 4px;
+}
+.period-badge-label {
+  font-size: clamp(10px, 2.5vw, 14px);
+  font-weight: 800;
+  letter-spacing: 0.2vw;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+.period-badge-val {
+  font-family: 'Teko', sans-serif;
+  font-size: clamp(18px, 4.5vw, 28px);
+  font-weight: 700;
+  line-height: 1;
+  color: #f5c842;
+  letter-spacing: 1px;
+}
+.period-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #111520;
+  border: 1.5px solid #1e2536;
+  border-radius: clamp(8px, 2vw, 14px);
+  padding: clamp(6px, 1.2vh, 10px) clamp(8px, 2vw, 12px);
+}
+.period-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.period-title {
+  font-size: clamp(11px, 2.8vw, 15px);
+  font-weight: 800;
+  letter-spacing: 0.2vw;
+  color: #94a3b8;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.period-title span {
+  color: #f5c842;
+  font-weight: 900;
+}
+.btn-period-next {
+  background: #1a2133;
+  border: 1.5px solid #334155;
+  border-radius: 7px;
+  color: #e2e8f0;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(12px, 2.8vw, 15px);
+  font-weight: 800;
+  letter-spacing: 0.12vw;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.15s, color 0.15s, background 0.15s;
+}
+.btn-period-next:hover { border-color: #f5c842; color: #f5c842; }
+.btn-period-next:active { transform: scale(0.96); background: rgba(245, 200, 66, 0.15); border-color: #f5c842; color: #f5c842; }
+.period-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: clamp(4px, 1.4vw, 8px);
+}
+.btn-period {
+  height: clamp(34px, 6.5vh, 46px);
+  border-radius: clamp(6px, 1.5vw, 10px);
+  border: 1.5px solid #283044;
+  background: #161b28;
+  color: #94a3b8;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(14px, 3.6vw, 20px);
+  font-weight: 900;
+  letter-spacing: 0.08vw;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.1s, background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.btn-period:hover { border-color: #475569; color: #e2e8f0; }
+.btn-period:active { transform: scale(0.95); }
+.btn-period.active {
+  background: rgba(245, 200, 66, 0.16);
+  border-color: #f5c842;
+  color: #f5c842;
+  box-shadow: 0 0 12px rgba(245, 200, 66, 0.25);
+}
+
 .keyboard-hints {
   text-align: center;
   font-size: clamp(10px, 2.4vw, 12px);
@@ -481,8 +585,16 @@ html, body {
     font-size: clamp(13px, 2.4vw, 20px);
   }
   .btn-buzzer {
-    height: clamp(36px, 10vh, 50px);
+    height: clamp(34px, 9vh, 46px);
     font-size: clamp(14px, 2.5vw, 22px);
+  }
+  .period-section {
+    padding: clamp(4px, 0.9vh, 8px) clamp(6px, 1.5vw, 10px);
+    gap: 4px;
+  }
+  .btn-period {
+    height: clamp(28px, 6.5vh, 38px);
+    font-size: clamp(13px, 2.2vw, 18px);
   }
   .keyboard-hints {
     font-size: 11px;
@@ -507,33 +619,48 @@ html, body {
     letter-spacing: 2px;
   }
   .clock-number {
-    font-size: 40vh;
+    font-size: 36vh;
   }
   .status-text {
     font-size: 11px;
   }
   .btn-area {
-    gap: 5px;
+    gap: 4px;
     padding: 4px 14px 6px;
   }
   .btn-main {
-    height: 40px;
-    font-size: 17px;
+    height: 36px;
+    font-size: 16px;
   }
   .btn-reset {
-    height: 38px;
-    font-size: 24px;
+    height: 34px;
+    font-size: 22px;
   }
   .btn-reset .sub {
     font-size: 9px;
   }
   .btn-adjust {
-    height: 30px;
-    font-size: 13px;
+    height: 28px;
+    font-size: 12px;
+  }
+  .period-section {
+    padding: 3px 8px;
+    gap: 3px;
+  }
+  .period-title {
+    font-size: 11px;
+  }
+  .btn-period-next {
+    font-size: 11px;
+    padding: 1px 8px;
+  }
+  .btn-period {
+    height: 26px;
+    font-size: 12px;
   }
   .btn-buzzer {
-    height: 34px;
-    font-size: 14px;
+    height: 30px;
+    font-size: 13px;
   }
   .keyboard-hints {
     display: none; /* Hide keyboard shortcut text on compact touch mobile screens */
@@ -585,6 +712,10 @@ html, body {
   <div class="main-body">
 
     <div class="clock-display" ondblclick="toggleFullscreen()" title="Double-click to toggle Fullscreen">
+      <div class="period-badge" title="Current Game Period">
+        <span class="period-badge-label">Period</span>
+        <span class="period-badge-val" id="periodBadgeVal">1ST</span>
+      </div>
       <div class="clock-label">Shot Clock</div>
       <div class="clock-number" id="clockNum">24</div>
       <div class="status-row">
@@ -621,10 +752,26 @@ html, body {
         <button class="btn-adjust" onclick="adjustShot(+1, event)">+1 SEC</button>
       </div>
 
+      <!-- Period Selector -->
+      <div class="period-section">
+        <div class="period-header-row">
+          <div class="period-title">🏀 Period: <span id="periodHeaderVal">1ST</span></div>
+          <button class="btn-period-next" onclick="nextPeriod(event)">Next Period →</button>
+        </div>
+        <div class="period-grid">
+          <button class="btn-period active" data-q="1" onclick="setPeriod(1, event)">1ST</button>
+          <button class="btn-period" data-q="2" onclick="setPeriod(2, event)">2ND</button>
+          <button class="btn-period" data-q="3" onclick="setPeriod(3, event)">3RD</button>
+          <button class="btn-period" data-q="4" onclick="setPeriod(4, event)">4TH</button>
+          <button class="btn-period" data-q="OT" onclick="setPeriod('OT', event)">OT</button>
+          <button class="btn-period" data-q="2OT" onclick="setPeriod('2OT', event)">2OT</button>
+        </div>
+      </div>
+
       <button class="btn-buzzer" id="buzzerBtn" onclick="soundBuzzer(event)">🔔 SOUND BUZZER</button>
 
       <div class="keyboard-hints">
-        ⌨ <strong>Shortcuts:</strong> Space = Start/Pause • 2 = 24s • 1 = 14s • +/− = Adjust • B = Buzzer • F = Fullscreen
+        ⌨ <strong>Shortcuts:</strong> Space = Start/Pause • 2 = 24s • 1 = 14s • +/− = Adjust • P = Next Period • B = Buzzer • F = Fullscreen
       </div>
 
     </div>
@@ -664,6 +811,7 @@ function broadcastShotclock() {
     data: {
       shotSeconds: shotSeconds,
       shotRunning: shotRunning,
+      quarter: currentQuarter,
       shotLeader: myClientId,
       shotLeaderTime: Date.now()
     }
@@ -676,7 +824,12 @@ bc.onmessage = (e) => {
   if (e.data.user && e.data.user !== fbUser) return;
   if (e.data.type === 'state') {
     const d = e.data.data;
-    if (!d || d.shotSeconds === undefined) return;
+    if (!d) return;
+    if (d.quarter !== undefined && (Date.now() - _lastPeriodCmd > 800)) {
+      currentQuarter = d.quarter;
+      renderPeriod();
+    }
+    if (d.shotSeconds === undefined) return;
     if (d.shotLeader && d.shotLeader !== myClientId) {
       isShotLeader = false;
       stopLocalTick();
@@ -730,8 +883,67 @@ function logout() {
 
 let shotSeconds = 24;
 let shotRunning = false;
+let currentQuarter = 1;
 let _lastCmd = 0;
+let _lastPeriodCmd = 0;
 let _localTick = null;
+
+const PERIODS = ['1ST', '2ND', '3RD', '4TH', 'OT', '2OT'];
+const QTRS = [1, 2, 3, 4, 'OT', '2OT'];
+
+function formatPeriodLabel(q) {
+  if (typeof q === 'number') {
+    return q === 0 ? PERIODS[0] : (PERIODS[q - 1] || `Q${q}`);
+  }
+  return String(q || '1ST').toUpperCase();
+}
+
+function renderPeriod() {
+  const label = formatPeriodLabel(currentQuarter);
+  const badgeEl = document.getElementById('periodBadgeVal');
+  const hdrEl = document.getElementById('periodHeaderVal');
+  if (badgeEl && badgeEl.textContent !== label) badgeEl.textContent = label;
+  if (hdrEl && hdrEl.textContent !== label) hdrEl.textContent = label;
+
+  document.querySelectorAll('.btn-period').forEach(btn => {
+    const qAttr = btn.getAttribute('data-q');
+    const isMatch = String(currentQuarter) === qAttr || btn.textContent.trim() === label;
+    btn.classList.toggle('active', isMatch);
+  });
+}
+
+function setPeriod(q, e) {
+  if (e) ripple(e, e.currentTarget);
+  if (navigator.vibrate) navigator.vibrate(25);
+
+  currentQuarter = q;
+  _lastPeriodCmd = Date.now();
+  renderPeriod();
+
+  bc.postMessage({
+    type: 'state',
+    user: fbUser,
+    data: { quarter: currentQuarter }
+  });
+
+  if (useFirebase && db) {
+    db.ref(`states/${fbUser}`).update({
+      quarter: currentQuarter
+    }).catch(err => console.error(err));
+  } else {
+    fetch(`${SERVER_URL}/update?user=${encodeURIComponent(currentUser)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quarter: currentQuarter })
+    }).catch(() => {});
+  }
+}
+
+function nextPeriod(e) {
+  const idx = QTRS.findIndex(item => String(item) === String(currentQuarter));
+  const nextIdx = (idx >= 0 && idx < QTRS.length - 1) ? idx + 1 : 0;
+  setPeriod(QTRS[nextIdx], e);
+}
 
 // ── Connection status ──
 function setConnected(v) {
@@ -1058,6 +1270,8 @@ document.addEventListener('keydown', (e) => {
     adjustShot(1);
   } else if (k === '-' || k === '_') {
     adjustShot(-1);
+  } else if (k === 'p') {
+    nextPeriod();
   } else if (k === 'b') {
     soundBuzzer();
   } else if (k === 'f') {
@@ -1075,6 +1289,11 @@ function connectSSE() {
     db.ref(`states/${fbUser}`).on('value', snapshot => {
       const d = snapshot.val();
       if (!d) return;
+
+      if (d.quarter !== undefined && (Date.now() - _lastPeriodCmd > 800)) {
+        currentQuarter = d.quarter;
+        renderPeriod();
+      }
 
       // Check if another client is leader
       if (d.shotLeader && d.shotLeader !== myClientId && (Date.now() - (d.shotLeaderTime || 0) < 3000)) {
@@ -1113,6 +1332,10 @@ function connectSSE() {
         const d = msg.data;
         // In server mode, server is master clock: stop any local tick
         stopLocalTick();
+        if (d.quarter !== undefined && (Date.now() - _lastPeriodCmd > 800)) {
+          currentQuarter = d.quarter;
+          renderPeriod();
+        }
         if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
         if (Date.now() - _lastCmd > 600) {
           shotRunning = !!d.shotRunning;
@@ -1138,17 +1361,24 @@ if (useFirebase && db) {
     if (d) {
       if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
       shotRunning = !!d.shotRunning;
+      if (d.quarter !== undefined) currentQuarter = d.quarter;
     }
     renderClock();
+    renderPeriod();
   }).catch(() => {
     renderClock();
+    renderPeriod();
   }).finally(() => connectSSE());
 } else {
   fetch(`${SERVER_URL}/state?user=${encodeURIComponent(currentUser)}`).then(r => r.json()).then(d => {
     if (d.shotSeconds != null) shotSeconds = d.shotSeconds;
     shotRunning = !!d.shotRunning;
+    if (d.quarter !== undefined) currentQuarter = d.quarter;
     renderClock();
-  }).catch(() => {}).finally(() => connectSSE());
+    renderPeriod();
+  }).catch(() => {
+    renderPeriod();
+  }).finally(() => connectSSE());
 }
 
 // ── PWA Install Logic ──

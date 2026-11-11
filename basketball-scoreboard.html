@@ -1336,6 +1336,11 @@ bc.onmessage = (e) => {
   } else if (e.data.type === 'state') {
     if (e.data.user && e.data.user !== fbUser) return;
     const d = e.data.data;
+    if (d && d.quarter !== undefined && S.quarter !== d.quarter) {
+      S.quarter = d.quarter;
+      try { localStorage.setItem('bball_v3', JSON.stringify(S)); } catch(err) {}
+      renderAll();
+    }
     if (d && d.shotSeconds !== undefined) {
       if (d.shotLeader && d.shotLeader !== myClientId) {
         isShotLeader = false;
