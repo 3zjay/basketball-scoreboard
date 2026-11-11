@@ -410,23 +410,6 @@
       animation: scoreBump 0.4s ease-out;
     }
 
-    .bonus-tag {
-      font-size: 0.45vw;
-      font-weight: 900;
-      letter-spacing: 0.12vw;
-      text-transform: uppercase;
-      color: #ffaa00;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      line-height: 1;
-      text-shadow: 0 0 0.3vw rgba(255, 170, 0, 0.6);
-      position: absolute;
-      bottom: 0.1vw;
-    }
-    .bonus-tag.active {
-      opacity: 1;
-    }
-
     /* Official Hoop Culture Center Medallion (Elevated Chrome Bezel on Bright Brushed Silver Face) */
     .hc-medallion-anchor {
       position: relative;
@@ -730,7 +713,6 @@
         <!-- Away Score -->
         <div class="score-block">
           <div class="score-num" id="awayScore">68</div>
-          <div class="bonus-tag" id="awayBonus">BONUS</div>
         </div>
 
         <!-- Center Hoop Culture Official Medallion -->
@@ -745,7 +727,6 @@
         <!-- Home Score -->
         <div class="score-block">
           <div class="score-num" id="homeScore">57</div>
-          <div class="bonus-tag" id="homeBonus">BONUS</div>
         </div>
       </div>
     </div>
@@ -1187,18 +1168,6 @@ function renderTeams() {
     const isRightPoss = S.possession === rightTeamKey;
     leftPossArrow.classList.toggle('active', isLeftPoss);
     rightPossArrow.classList.toggle('active', isRightPoss);
-  }
-
-  // Bonus Indicator (< 5 fouls = off, >= 5 fouls = on)
-  const leftBonusEl = $('awayBonus');
-  const rightBonusEl = $('homeBonus');
-  if (leftBonusEl && rightBonusEl) {
-    const leftFouls = S[leftTeamKey + 'Fouls'] || 0;
-    const rightFouls = S[rightTeamKey + 'Fouls'] || 0;
-    const leftBonus = S[leftTeamKey + 'Bonus'] || leftFouls >= 5;
-    const rightBonus = S[rightTeamKey + 'Bonus'] || rightFouls >= 5;
-    leftBonusEl.classList.toggle('active', leftBonus);
-    rightBonusEl.classList.toggle('active', rightBonus);
   }
 }
 
