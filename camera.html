@@ -384,7 +384,7 @@
     <div class="resize-handle" onmousedown="startResize(event, 'period')" ontouchstart="startResize(event, 'period')"></div>
   </div>
 
-  <div class="crop-frame shot" id="frame-shot" style="top: 45%; left: 45%; width: 80px; height: 50px;">
+  <div class="crop-frame shot" id="frame-shot" style="top: 20%; left: 20%; width: 60%; height: 58%;">
     <div class="crop-label">SHOT</div>
     <canvas class="crop-binarized-preview" id="crop-preview-shot" style="position:absolute; inset:0; width:100%; height:100%; opacity:0.65; pointer-events:none; border-radius:3px; image-rendering:pixelated; object-fit:fill; z-index:1;"></canvas>
     <div class="resize-handle" onmousedown="startResize(event, 'shot')" ontouchstart="startResize(event, 'shot')"></div>
@@ -781,6 +781,13 @@
 
       if (role === 'shot') {
         enabledCrops = { clock: false, home: false, away: false, period: false, shot: true };
+        const sf = frames.shot;
+        if (sf && (!sf.style.width || parseInt(sf.style.width) < 120)) {
+          sf.style.left = '20%';
+          sf.style.top = '18%';
+          sf.style.width = '60%';
+          sf.style.height = '58%';
+        }
         selectCrop('shot');
       } else if (role === 'main') {
         enabledCrops = { clock: true, home: true, away: true, period: true, shot: false };
@@ -2027,6 +2034,21 @@
             window.remoteActive = snapshot.val() === true;
             if (window.remoteActive) {
               window.lastRemoteActiveTime = Date.now();
+            }
+          });
+
+          // Auto-yield shot role if another active camera is dedicated to shot
+          db.ref(`ocr_devices/${fbUser}`).on('value', snapshot => {
+            const devices = snapshot.val() || {};
+            const now = Date.now();
+            const hasDedicatedShotCam = Object.keys(devices).some(id => {
+              if (id === myClientId) return false;
+              const d = devices[id];
+              return d && d.role === 'shot' && (now - (d.lastSeen || 0) < 30000);
+            });
+            if (hasDedicatedShotCam && deviceRole === 'all') {
+              console.log('[Multi-Cam] Dedicated Shot Clock detected, auto-yielding Cam 1 to Main Board role');
+              setDeviceRole('main', true);
             }
           });
         }

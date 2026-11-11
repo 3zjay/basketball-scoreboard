@@ -328,7 +328,8 @@ let feedInvertMode = (explicitInvert === 'black' || explicitInvert === '1' || ur
   ? 'black'
   : (explicitInvert === 'white' || explicitInvert === '0' || urlParams.get('white') === '1' ? 'white' : 'auto');
 
-let cropInvertStates = { home: true, away: true, clock: true, shot: true, period: true };
+let cropInvertStates = { home: false, away: false, clock: false, shot: false, period: false };
+let _lastDedicatedShotCamTime = 0;
 
 function applyStreamImgStyles(img, cropKey) {
   if (!img) return;
@@ -341,7 +342,7 @@ function applyStreamImgStyles(img, cropKey) {
     cropKey = img.dataset.cropKey;
   }
 
-  let isChecked = true;
+  let isChecked = false;
   if (cropKey && cropInvertStates[cropKey] !== undefined) {
     isChecked = !!cropInvertStates[cropKey];
   } else if (feedInvertMode === 'black') {
@@ -351,9 +352,11 @@ function applyStreamImgStyles(img, cropKey) {
   }
 
   if (isChecked) {
+    // Invert CHECKED: Pure white digits on dark background -> Screen blend mode makes dark transparent, bright white digits shine through
     img.style.mixBlendMode = 'screen';
     img.style.filter = 'contrast(2.5) brightness(1.3)';
   } else {
+    // Invert UNCHECKED: Dark/black digits on light background -> Multiply blend mode makes white 100% transparent, dark digits show through
     img.style.mixBlendMode = 'multiply';
     img.style.filter = 'contrast(2.5) brightness(1.1)';
   }
@@ -421,8 +424,15 @@ function applyStreamData(data) {
     if (data.awayScoreStream !== undefined) S.awayScoreStream = data.awayScoreStream;
     if (data.periodStream !== undefined) S.periodStream = data.periodStream;
   }
-  if (role === 'all' || role === 'shot') {
-    if (data.shotClockStream !== undefined) S.shotClockStream = data.shotClockStream;
+  if (role === 'shot') {
+    if (data.shotClockStream !== undefined) {
+      S.shotClockStream = data.shotClockStream;
+      _lastDedicatedShotCamTime = Date.now();
+    }
+  } else if (role === 'all') {
+    if (Date.now() - _lastDedicatedShotCamTime > 45000) {
+      if (data.shotClockStream !== undefined) S.shotClockStream = data.shotClockStream;
+    }
   }
 
   if (data.enabledCrops) {
@@ -433,7 +443,11 @@ function applyStreamData(data) {
       if (data.enabledCrops.period === false) S.periodStream = null;
     }
     if (role === 'all' || role === 'shot') {
-      if (data.enabledCrops.shot === false) S.shotClockStream = null;
+      if (data.enabledCrops.shot === false) {
+        if (role === 'shot' || Date.now() - _lastDedicatedShotCamTime > 45000) {
+          S.shotClockStream = null;
+        }
+      }
     }
   }
 
