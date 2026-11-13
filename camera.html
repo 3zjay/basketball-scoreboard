@@ -346,6 +346,17 @@
     body.controls-hidden .bottom-bar {
       transform: translateY(calc(100% + 45px)) !important;
     }
+    body.saver-mode #video-container {
+      width: 2px !important;
+      height: 2px !important;
+      overflow: hidden !important;
+      opacity: 0.01 !important;
+      pointer-events: none !important;
+    }
+    body.saver-mode .controls-overlay,
+    body.saver-mode .crop-frame {
+      display: none !important;
+    }
     @keyframes pulseSaver {
       0%, 100% { opacity: 0.6; }
       50% { opacity: 1; }
@@ -751,6 +762,7 @@
       }
 
       saveCropPositions(false);
+      resetCropHashCache();
     }
 
     let _boundRoleRef = null;
@@ -864,6 +876,8 @@
         bindRoleCropListeners();
       }
 
+      resetCropHashCache();
+
       if (broadcast) {
         saveCropPositions(true);
         registerDevicePresence();
@@ -918,6 +932,7 @@
         frame.style.display = enabled ? 'block' : 'none';
         frame.style.opacity = enabled ? '1' : '0.2';
       }
+      resetCropHashCache();
       saveCropPositions(true);
       registerDevicePresence();
     }
@@ -1054,6 +1069,7 @@
       thresholds[activeCrop] = thresholdValue;
       document.getElementById('threshold-val').textContent = thresholdValue;
       localStorage.setItem('hc_ocr_thresholds', JSON.stringify(thresholds));
+      resetCropHashCache();
     }
 
     // Drag-and-drop mechanics
@@ -1120,6 +1136,8 @@
       if (normCrops && Object.keys(normCrops).length) {
         try { localStorage.setItem('hc_ocr_crops_norm_' + deviceRole, JSON.stringify(normCrops)); } catch(e) {}
       }
+
+      resetCropHashCache();
 
       if (broadcast) {
         const user = (document.getElementById('session-input') && document.getElementById('session-input').value) || 'default';
@@ -1306,11 +1324,13 @@
     function toggleDilation(enabled) {
       dilationEnabled = enabled;
       localStorage.setItem('hc_ocr_dilation', enabled);
+      resetCropHashCache();
     }
 
     function toggleInvert(enabled) {
       invertStates[activeCrop] = !!enabled;
       localStorage.setItem('hc_ocr_invert_states', JSON.stringify(invertStates));
+      resetCropHashCache();
       saveCropPositions(true);
     }
 
@@ -1346,11 +1366,37 @@
       }
     }
 
+    const _cropCanvases = {};
+    const _cropContexts = {};
+    function getCropCanvasAndCtx(key, w, h) {
+      let c = _cropCanvases[key];
+      if (!c) {
+        c = document.createElement('canvas');
+        _cropCanvases[key] = c;
+        _cropContexts[key] = c.getContext('2d', { willReadFrequently: true });
+      }
+      if (c.width !== w || c.height !== h) {
+        c.width = w;
+        c.height = h;
+      }
+      return { canvas: c, ctx: _cropContexts[key] };
+    }
+
+    function resetCropHashCache() {
+      if (typeof _lastCropHashes === 'object') {
+        Object.keys(_lastCropHashes).forEach(k => delete _lastCropHashes[k]);
+      }
+      if (typeof _lastSentStreams === 'object') {
+        Object.keys(_lastSentStreams).forEach(k => delete _lastSentStreams[k]);
+      }
+      if (typeof _lastHeartbeatByKey === 'object') {
+        Object.keys(_lastHeartbeatByKey).forEach(k => delete _lastHeartbeatByKey[k]);
+      }
+    }
+
     function preprocess(ctx, w, h, key) {
       const imgData = ctx.getImageData(0, 0, w, h);
       const data = imgData.data;
-      let blackCount = 0;
-      const totalPixels = w * h;
 
       const tVal = thresholds[key] || thresholdValue;
 
@@ -1360,7 +1406,6 @@
         data[i] = v;
         data[i+1] = v;
         data[i+2] = v;
-        if (v === 0) blackCount++;
       }
 
       if (invertStates[key] === undefined || invertStates[key] === null) {
@@ -1374,13 +1419,11 @@
 
       // If Invert is checked: flip so LED digits become 255 (white) and background becomes 0 (black)
       if (invertStates[key]) {
-        blackCount = 0;
         for (let i = 0; i < data.length; i += 4) {
           const inv = 255 - data[i];
           data[i] = inv;
           data[i+1] = inv;
           data[i+2] = inv;
-          if (inv === 0) blackCount++;
         }
       }
 
@@ -1388,22 +1431,28 @@
         dilate(data, w, h);
       }
 
-      // Render 100% True Native Alpha Transparent Output (Zero Box, Zero Borders, Zero Shade in BOTH states!)
-      // - When Invert is CHECKED: Solid pure white digits (rgba(255, 255, 255, 255)), background is 100% true alpha transparent (rgba(0, 0, 0, 0)).
-      // - When Invert is UNCHECKED: Solid pure black digits (rgba(0, 0, 0, 255)), background is 100% true alpha transparent (rgba(255, 255, 255, 0)).
+      // Render 100% True Native Alpha Transparent Output + compute fast FNV-1a checksum in one pass
       const isInverted = !!invertStates[key];
+      let hash = 2166136261;
+      hash = Math.imul(hash ^ (isInverted ? 1 : 0), 16777619);
+      hash = Math.imul(hash ^ w, 16777619);
+      hash = Math.imul(hash ^ h, 16777619);
+
       for (let i = 0; i < data.length; i += 4) {
+        let on;
         if (isInverted) {
           if (data[i] === 255) {
             data[i] = 255;
             data[i+1] = 255;
             data[i+2] = 255;
             data[i+3] = 255; // Solid opaque white digit
+            on = 1;
           } else {
             data[i] = 0;
             data[i+1] = 0;
             data[i+2] = 0;
-            data[i+3] = 0;   // 100% True Alpha Transparent (Zero black box, zero shade!)
+            data[i+3] = 0;   // 100% True Alpha Transparent
+            on = 0;
           }
         } else {
           if (data[i] === 0) {
@@ -1411,17 +1460,20 @@
             data[i+1] = 0;
             data[i+2] = 0;
             data[i+3] = 255; // Solid opaque black digit
+            on = 1;
           } else {
             data[i] = 255;
             data[i+1] = 255;
             data[i+2] = 255;
-            data[i+3] = 0;   // 100% True Alpha Transparent with pure white for Multiply blend mode!
+            data[i+3] = 0;   // 100% True Alpha Transparent for Multiply blend mode
+            on = 0;
           }
         }
+        hash = Math.imul(hash ^ on, 16777619);
       }
 
       ctx.putImageData(imgData, 0, 0);
-      return true;
+      return hash >>> 0;
     }
 
     function selectCrop(key) {
@@ -1561,8 +1613,14 @@
 
     let streamTimer = null;
     let _firebaseUploadInFlight = false;
+    let _firebaseUploadStartedAt = 0;
     let _lastSentStreams = {};
     let _lastHeartbeatByKey = {};
+    let _lastCropHashes = {};
+    let _lastSaverCanvasHashes = {};
+    let _tickCounter = 0;
+    let _lastAnyCropChangeTime = Date.now();
+    let _lastKeepaliveSent = 0;
     const REMOTE_ALIGN_LEASE_MS = 180000; // Auto-expire remote alignment full-frame mode after 3 mins
 
     // Optical Bridge Thermal-Optimized Stream Loop
@@ -1594,7 +1652,9 @@
         return;
       }
 
+      _tickCounter++;
       const now = Date.now();
+      if (!window._camStartTime) window._camStartTime = now;
       const isRemoteLeaseActive = window.remoteActive && (now - (window.remoteActivatedAt || 0) < REMOTE_ALIGN_LEASE_MS);
       const controlsVisible = !document.body.classList.contains('controls-hidden') && !batterySaverActive;
 
@@ -1648,7 +1708,6 @@
         offsetX = (scaledWidth - viewW) / 2;
       }
 
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       let changedStreamCount = 0;
 
       for (const key of ownedKeys) {
@@ -1657,8 +1716,15 @@
           if (_lastSentStreams[streamKey] !== null) {
             payload[streamKey] = null;
             _lastSentStreams[streamKey] = null;
+            delete _lastCropHashes[key];
             changedStreamCount++;
           }
+          continue;
+        }
+
+        // Sub-sample slow-changing crops (home, away, period) every 3rd tick when controls are hidden
+        const isSlowCrop = (key === 'home' || key === 'away' || key === 'period');
+        if (!controlsVisible && isSlowCrop && (_tickCounter % 3 !== 0)) {
           continue;
         }
 
@@ -1682,14 +1748,11 @@
         const scale = Math.min(maxCropWidth / cropW, 1.0);
         const targetW = Math.max(1, Math.round(cropW * scale));
         const targetH = Math.max(1, Math.round(cropH * scale));
-        if (canvas.width !== targetW || canvas.height !== targetH) {
-          canvas.width = targetW;
-          canvas.height = targetH;
-        }
 
+        const { canvas: cropCanvas, ctx } = getCropCanvasAndCtx(key, targetW, targetH);
         ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, targetW, targetH);
 
-        preprocess(ctx, targetW, targetH, key);
+        const cropHash = preprocess(ctx, targetW, targetH, key);
 
         // Only update calibration previews when controls are visible on screen (saves GPU/CPU when auto-hidden or in Saver Mode)
         if (controlsVisible) {
@@ -1701,7 +1764,7 @@
             }
             const cCtx = cPreview.getContext('2d');
             cCtx.clearRect(0, 0, targetW, targetH);
-            cCtx.drawImage(canvas, 0, 0);
+            cCtx.drawImage(cropCanvas, 0, 0);
           }
 
           if (key === activeCrop) {
@@ -1713,7 +1776,7 @@
               }
               const pCtx = pCanvas.getContext('2d');
               pCtx.clearRect(0, 0, targetW, targetH);
-              pCtx.drawImage(canvas, 0, 0);
+              pCtx.drawImage(cropCanvas, 0, 0);
             }
             const ocrTextEl = document.getElementById('ocr-recognized-text');
             if (ocrTextEl && ocrTextEl.textContent !== 'Live Feed Stream') {
@@ -1721,8 +1784,8 @@
               ocrTextEl.style.color = '#16c784';
             }
           }
-        } else if (batterySaverActive && (!window._lastSaverPreviewTime || now - window._lastSaverPreviewTime > 600)) {
-          // In Saver Mode, refresh tiny monitor thumbnails at low rate (1.5 FPS) to keep phone cool
+        } else if (batterySaverActive && (cropHash !== _lastSaverCanvasHashes[key] || (now - (window._lastSaverPreviewTime || 0) > 2000))) {
+          // In Saver Mode, refresh tiny monitor thumbnails only when crop pixels change or every 2s
           const sCanvas = document.getElementById(`saver-canvas-${key}`);
           if (sCanvas) {
             if (sCanvas.width !== targetW || sCanvas.height !== targetH) {
@@ -1731,16 +1794,20 @@
             }
             const sCtx = sCanvas.getContext('2d');
             sCtx.clearRect(0, 0, targetW, targetH);
-            sCtx.drawImage(canvas, 0, 0);
+            sCtx.drawImage(cropCanvas, 0, 0);
+            _lastSaverCanvasHashes[key] = cropHash;
           }
         }
 
-        const dataUrl = canvas.toDataURL('image/png');
-        const prevUrl = _lastSentStreams[streamKey];
         const sinceHeartbeat = now - (_lastHeartbeatByKey[streamKey] || 0);
 
-        // Delta Deduplication: Only transmit crop over network if its pixels changed or 3.5s heartbeat elapsed
-        if (dataUrl !== prevUrl || sinceHeartbeat > 3500) {
+        // Hash-First Deduplication: Skip PNG encoding completely unless pixels changed or 30s heartbeat elapsed
+        if (cropHash !== _lastCropHashes[key] || sinceHeartbeat > 30000) {
+          if (cropHash !== _lastCropHashes[key]) {
+            _lastAnyCropChangeTime = now;
+          }
+          const dataUrl = cropCanvas.toDataURL('image/png');
+          _lastCropHashes[key] = cropHash;
           payload[streamKey] = dataUrl;
           _lastSentStreams[streamKey] = dataUrl;
           _lastHeartbeatByKey[streamKey] = now;
@@ -1748,14 +1815,26 @@
         }
       }
 
-      if (batterySaverActive && (!window._lastSaverPreviewTime || now - window._lastSaverPreviewTime > 600)) {
-        window._lastSaverPreviewTime = now;
+      if (batterySaverActive) {
+        if (!window._lastSaverPreviewTime || now - window._lastSaverPreviewTime > 2000) {
+          window._lastSaverPreviewTime = now;
+        }
+        if (!window._lastSaverStatusTime || now - window._lastSaverStatusTime > 5000) {
+          window._lastSaverStatusTime = now;
+          const statusLine = document.getElementById('saver-status-line');
+          if (statusLine) {
+            const totalMins = Math.max(0, Math.floor((now - (window._camStartTime || now)) / 60000));
+            const hrs = Math.floor(totalMins / 60);
+            const mins = String(totalMins % 60).padStart(2, '0');
+            const roleLabel = deviceRole === 'shot' ? 'Shot Clock' : (deviceRole === 'main' ? 'Main Board' : 'All-In-One');
+            statusLine.textContent = `${syncActive ? 'Streaming Live' : 'Paused'} • ${roleLabel} • Uptime ${hrs}h ${mins}m`;
+          }
+        }
       }
 
-      // Full-frame camera preview: ONLY encode & upload when Remote Alignment Modal is actively open (or once every 15s for idle thumbnail)
-      const fullFrameInterval = isRemoteLeaseActive ? 450 : 15000;
-      const needFullFrame = (isRemoteLeaseActive || (now - (window.lastRemoteActiveTime || 0) < 8000) || !window.lastFullFrameSent) &&
-                            (now - (window.lastFullFrameSent || 0) >= fullFrameInterval);
+      // Full-frame camera preview: ONLY encode & upload on initial connect once OR while Remote Alignment lease is active (450ms)
+      const needFullFrame = !window.lastFullFrameSent ||
+                            (isRemoteLeaseActive && (now - window.lastFullFrameSent >= 450));
 
       if (needFullFrame) {
         window.lastFullFrameSent = now;
@@ -1800,11 +1879,16 @@
       }
 
       if ((syncActive || isRemoteLeaseActive) && changedStreamCount > 0) {
+        _lastKeepaliveSent = now;
+        sendUpdate(payload);
+      } else if (syncActive && changedStreamCount === 0 && (now - _lastKeepaliveSent > 4000)) {
+        _lastKeepaliveSent = now;
         sendUpdate(payload);
       }
 
-      // Adaptive cadence: 150ms (~6.6 FPS) — plenty fast for 1-second/0.1-second clocks while cutting thermal load in half
-      streamTimer = setTimeout(opticalStreamLoop, 150);
+      // Adaptive marathon cadence: 160ms (~6.25 FPS) during active clock/score changes, 320ms (~3.1 FPS) when paused/idle
+      const isGamePausedOrIdle = (now - _lastAnyCropChangeTime > 12000) && !controlsVisible && !isRemoteLeaseActive;
+      streamTimer = setTimeout(opticalStreamLoop, isGamePausedOrIdle ? 320 : 160);
     }
 
     // Transmit stream to Firebase / Server / BroadcastChannel
@@ -1878,9 +1962,10 @@
           fbPayload[`frames/${camSlot}`] = payload.fullFrame;
         }
 
-        // Prevent Wi-Fi / LTE upload queue buildup if network momentarily lags
-        if (_firebaseUploadInFlight) return;
+        // Prevent Wi-Fi / LTE upload queue buildup, with 4s safety release if network hangs
+        if (_firebaseUploadInFlight && (Date.now() - _firebaseUploadStartedAt < 4000)) return;
         _firebaseUploadInFlight = true;
+        _firebaseUploadStartedAt = Date.now();
 
         db.ref(`ocr/${fbUser}`).update(fbPayload)
           .then(() => {
@@ -1935,6 +2020,8 @@
       const btn = document.getElementById('sync-btn');
       
       if (syncActive) {
+        resetCropHashCache();
+        _lastKeepaliveSent = 0;
         btn.textContent = '⏸️ Stop Sync';
         btn.classList.add('active');
         document.getElementById('status-text').textContent = 'Optical Bridge (Streaming Live)';
@@ -2009,8 +2096,32 @@
     }
 
     let batterySaverActive = false;
-    function toggleBatterySaver() {
-      batterySaverActive = !batterySaverActive;
+    let lastUserInteractionAt = Date.now();
+    let wakeLockSentinel = null;
+
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator)) return;
+      if (wakeLockSentinel && !wakeLockSentinel.released) return;
+      try {
+        wakeLockSentinel = await navigator.wakeLock.request('screen');
+        wakeLockSentinel.addEventListener('release', () => {
+          wakeLockSentinel = null;
+        });
+      } catch (e) {
+        // Ignore if battery low or restricted on older iOS versions
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        requestWakeLock();
+      }
+    });
+
+    function toggleBatterySaver(forceState) {
+      batterySaverActive = (typeof forceState === 'boolean') ? forceState : !batterySaverActive;
+      document.body.classList.toggle('saver-mode', batterySaverActive);
+
       const overlay = document.getElementById('saver-overlay');
       if (overlay) {
         overlay.style.display = batterySaverActive ? 'flex' : 'none';
@@ -2038,6 +2149,63 @@
           saverBtn.style.background = '';
         }
       }
+
+      if (batterySaverActive) {
+        _lastSaverCanvasHashes = {};
+        window._lastSaverPreviewTime = 0;
+        const now = Date.now();
+        window._lastSaverStatusTime = now;
+        const statusLine = document.getElementById('saver-status-line');
+        if (statusLine) {
+          const totalMins = Math.max(0, Math.floor((now - (window._camStartTime || now)) / 60000));
+          const hrs = Math.floor(totalMins / 60);
+          const mins = String(totalMins % 60).padStart(2, '0');
+          const roleLabel = deviceRole === 'shot' ? 'Shot Clock' : (deviceRole === 'main' ? 'Main Board' : 'All-In-One');
+          statusLine.textContent = `${syncActive ? 'Streaming Live' : 'Paused'} • ${roleLabel} • Uptime ${hrs}h ${mins}m`;
+        }
+      } else {
+        lastUserInteractionAt = Date.now();
+        if (typeof resetHideControlsTimer === 'function') {
+          resetHideControlsTimer();
+        }
+      }
+    }
+
+    function startMarathonWatchdogs() {
+      if (window._marathonWatchdogsStarted) return;
+      window._marathonWatchdogsStarted = true;
+
+      const markUserActive = () => {
+        lastUserInteractionAt = Date.now();
+        if (!wakeLockSentinel) requestWakeLock();
+      };
+      ['pointerdown', 'touchstart', 'input', 'change'].forEach(evt => {
+        document.addEventListener(evt, markUserActive, { passive: true });
+      });
+
+      // Auto-enter OLED/GPU Thermal Saver Mode after 60s of idle touch while streaming live
+      setInterval(() => {
+        if (syncActive && !batterySaverActive && !window.remoteActive && (Date.now() - lastUserInteractionAt >= 60000)) {
+          toggleBatterySaver(true);
+        }
+      }, 5000);
+
+      // 10s camera track self-healing watchdog in case iOS background/thermal kills the video track
+      setInterval(() => {
+        if (document.hidden) return;
+        const video = document.getElementById('camera-view');
+        const stream = video && video.srcObject;
+        const track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
+        const trackEnded = !stream || !track || track.readyState === 'ended';
+        if (trackEnded && !window._cameraRestartInFlight) {
+          window._cameraRestartInFlight = true;
+          Promise.resolve(startCamera(typeof currentDeviceId !== 'undefined' ? currentDeviceId : undefined))
+            .catch(() => {})
+            .finally(() => {
+              setTimeout(() => { window._cameraRestartInFlight = false; }, 3000);
+            });
+        }
+      }, 10000);
     }
 
     function getLoggedInUser() {
@@ -2225,15 +2393,18 @@
       toggleSync();
       opticalStreamLoop();
       resetHideControlsTimer();
+      requestWakeLock();
+      startMarathonWatchdogs();
     });
   </script>
 
   <!-- Battery Saver Blackout Overlay -->
-  <div id="saver-overlay" style="display:none; position:fixed; inset:0; background:#000; z-index:1500; flex-direction:column; align-items:center; justify-content:center; padding:20px; font-family:'Barlow Condensed',sans-serif;">
+  <div id="saver-overlay" onclick="if(!event.target.closest('#saver-crop-monitors')) toggleBatterySaver(false)" style="display:none; position:fixed; inset:0; background:#000; z-index:1500; flex-direction:column; align-items:center; justify-content:center; padding:20px; font-family:'Barlow Condensed',sans-serif;">
     <div style="text-align:center; margin-bottom:20px;">
-      <div style="font-size:36px; margin-bottom:4px; animation: pulseSaver 2s infinite;">🔋</div>
-      <div style="font-size:16px; color:#16c784; font-weight:700; letter-spacing:1px; text-transform:uppercase;">Battery Saver Active</div>
-      <div style="font-size:11px; color:var(--grey); margin-top:2px; font-family:sans-serif;">Camera preview is dimmed to save battery. Optical Stream continues live.</div>
+      <div style="font-size:36px; margin-bottom:4px;">🔋</div>
+      <div style="font-size:16px; color:#16c784; font-weight:700; letter-spacing:1px; text-transform:uppercase;">Thermal Eco Mode Active</div>
+      <div style="font-size:11px; color:var(--grey); margin-top:2px; font-family:sans-serif;">Viewfinder & GPU preview paused to keep iPhone cool for 8+ hrs. Tap anywhere or Exit Saver Mode to wake viewfinder.</div>
+      <div id="saver-status-line" style="font-size:11px; color:#f5c842; margin-top:6px; font-family:monospace;">Optical Bridge: 0h 00m • Eco Cool Active</div>
     </div>
 
     <!-- Live Crop Monitors in Saver Mode -->
@@ -2260,7 +2431,7 @@
       </div>
     </div>
 
-    <button class="btn" onclick="toggleBatterySaver()" style="padding:10px 20px; border-color:var(--orange); color:var(--orange); border-radius:6px; font-size:13px; font-weight:bold; text-transform:uppercase; letter-spacing:1px; cursor:pointer;">Exit Saver Mode</button>
+    <button class="btn" onclick="event.stopPropagation(); toggleBatterySaver(false)" style="padding:10px 20px; border-color:var(--orange); color:var(--orange); border-radius:6px; font-size:13px; font-weight:bold; text-transform:uppercase; letter-spacing:1px; cursor:pointer;">Exit Saver Mode</button>
   </div>
 </body>
 </html>
