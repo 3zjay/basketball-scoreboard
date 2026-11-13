@@ -953,8 +953,9 @@
       try {
         const constraints = {
           video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+            width: { ideal: 960, max: 1280 },
+            height: { ideal: 540, max: 720 },
+            frameRate: { ideal: 15, max: 20 }
           },
           audio: false
         };
@@ -975,7 +976,14 @@
         console.error("Camera access error:", err);
         if (!deviceId) {
           try {
-            const fallbackConstraints = { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
+            const fallbackConstraints = {
+              video: {
+                width: { ideal: 960, max: 1280 },
+                height: { ideal: 540, max: 720 },
+                frameRate: { ideal: 15, max: 20 }
+              },
+              audio: false
+            };
             stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
             const video = document.getElementById('camera-view');
             video.srcObject = stream;
@@ -1307,8 +1315,12 @@
     }
 
     function dilate(data, w, h) {
+      if (!window._dilateBuf || window._dilateBuf.length !== data.length) {
+        window._dilateBuf = new Uint8ClampedArray(data.length);
+      }
+      const temp = window._dilateBuf;
       for (let iter = 0; iter < 2; iter++) {
-        const temp = new Uint8ClampedArray(data);
+        temp.set(data);
         for (let y = 1; y < h - 1; y++) {
           for (let x = 1; x < w - 1; x++) {
             const idx = (y * w + x) * 4;
@@ -1548,17 +1560,27 @@
     }
 
     let streamTimer = null;
-    // Optical Bridge 12.5 FPS Stream Loop
+    let _firebaseUploadInFlight = false;
+    let _lastSentStreams = {};
+    let _lastHeartbeatByKey = {};
+    const REMOTE_ALIGN_LEASE_MS = 180000; // Auto-expire remote alignment full-frame mode after 3 mins
+
+    // Optical Bridge Thermal-Optimized Stream Loop
     function opticalStreamLoop() {
       if (streamTimer) {
         clearTimeout(streamTimer);
         streamTimer = null;
       }
 
+      if (document.hidden) {
+        streamTimer = setTimeout(opticalStreamLoop, 500);
+        return;
+      }
+
       const video = document.getElementById('camera-view');
       const canvas = document.getElementById('helper-canvas');
       if (!video || !canvas) {
-        streamTimer = setTimeout(opticalStreamLoop, 150);
+        streamTimer = setTimeout(opticalStreamLoop, 180);
         return;
       }
 
@@ -1568,11 +1590,14 @@
       const viewH = video.offsetHeight;
 
       if (!videoW || !videoH || !viewW || !viewH) {
-        streamTimer = setTimeout(opticalStreamLoop, 150);
+        streamTimer = setTimeout(opticalStreamLoop, 180);
         return;
       }
 
-      const keys = ['clock', 'shot', 'home', 'away', 'period'];
+      const now = Date.now();
+      const isRemoteLeaseActive = window.remoteActive && (now - (window.remoteActivatedAt || 0) < REMOTE_ALIGN_LEASE_MS);
+      const controlsVisible = !document.body.classList.contains('controls-hidden') && !batterySaverActive;
+
       const fieldMap = {
         clock: 'gameClockStream',
         shot: 'shotClockStream',
@@ -1604,33 +1629,41 @@
         enabledCrops: roleEnabledCrops,
         invertStates: roleInvertStates,
         aspectRatios: { [camSlot]: currentAspect },
-        timestamp: Date.now()
+        timestamp: now
       };
 
+      const streamRatio = videoW / videoH;
+      const viewRatio = viewW / viewH;
+
+      let scaledWidth, scaledHeight;
+      let offsetX = 0, offsetY = 0;
+
+      if (viewRatio > streamRatio) {
+        scaledWidth = viewW;
+        scaledHeight = viewW / streamRatio;
+        offsetY = (scaledHeight - viewH) / 2;
+      } else {
+        scaledWidth = viewH * streamRatio;
+        scaledHeight = viewH;
+        offsetX = (scaledWidth - viewW) / 2;
+      }
+
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      let changedStreamCount = 0;
+
       for (const key of ownedKeys) {
+        const streamKey = fieldMap[key];
         if (enabledCrops[key] === false) {
-          payload[fieldMap[key]] = null;
+          if (_lastSentStreams[streamKey] !== null) {
+            payload[streamKey] = null;
+            _lastSentStreams[streamKey] = null;
+            changedStreamCount++;
+          }
           continue;
         }
 
         const frame = frames[key];
         if (!frame) continue;
-
-        const streamRatio = videoW / videoH;
-        const viewRatio = viewW / viewH;
-
-        let scaledWidth, scaledHeight;
-        let offsetX = 0, offsetY = 0;
-
-        if (viewRatio > streamRatio) {
-          scaledWidth = viewW;
-          scaledHeight = viewW / streamRatio;
-          offsetY = (scaledHeight - viewH) / 2;
-        } else {
-          scaledWidth = viewH * streamRatio;
-          scaledHeight = viewH;
-          offsetX = (scaledWidth - viewW) / 2;
-        }
 
         const boxX = frame.offsetLeft;
         const boxY = frame.offsetTop;
@@ -1645,92 +1678,107 @@
         const cropW = Math.max(1, Math.min(videoW - cropX, (boxW / scaledWidth) * videoW));
         const cropH = Math.max(1, Math.min(videoH - cropY, (boxH / scaledHeight) * videoH));
 
-        const scale = Math.min(160 / cropW, 1.0);
-        canvas.width = Math.round(cropW * scale);
-        canvas.height = Math.round(cropH * scale);
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
-
-        preprocess(ctx, canvas.width, canvas.height, key);
-
-        // Run OCR digit recognition on the preprocessed crop
-        const recognized = recognizeCanvasDigits(ctx, canvas.width, canvas.height, key);
-        if (recognized) {
-          if (key === 'clock') payload.clock = recognized;
-          else if (key === 'home') payload.homeScore = recognized;
-          else if (key === 'away') payload.awayScore = recognized;
-          else if (key === 'shot') payload.shotClock = recognized;
-          else if (key === 'period') payload.period = recognized;
+        const maxCropWidth = (key === 'period' || key === 'shot') ? 110 : 140;
+        const scale = Math.min(maxCropWidth / cropW, 1.0);
+        const targetW = Math.max(1, Math.round(cropW * scale));
+        const targetH = Math.max(1, Math.round(cropH * scale));
+        if (canvas.width !== targetW || canvas.height !== targetH) {
+          canvas.width = targetW;
+          canvas.height = targetH;
         }
 
-        // Update in-box binarized canvas preview
-        const cPreview = document.getElementById(`crop-preview-${key}`);
-        if (cPreview) {
-          cPreview.width = canvas.width;
-          cPreview.height = canvas.height;
-          const cCtx = cPreview.getContext('2d');
-          cCtx.clearRect(0, 0, canvas.width, canvas.height);
-          cCtx.putImageData(ctx.getImageData(0, 0, canvas.width, canvas.height), 0, 0);
-        }
+        ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, targetW, targetH);
 
-        // Update calibration binarization monitor
-        if (key === activeCrop) {
-          const pCanvas = document.getElementById('ocr-preview-canvas');
-          if (pCanvas) {
-            pCanvas.width = canvas.width;
-            pCanvas.height = canvas.height;
-            const pCtx = pCanvas.getContext('2d');
-            pCtx.clearRect(0, 0, canvas.width, canvas.height);
-            pCtx.putImageData(ctx.getImageData(0, 0, canvas.width, canvas.height), 0, 0);
+        preprocess(ctx, targetW, targetH, key);
+
+        // Only update calibration previews when controls are visible on screen (saves GPU/CPU when auto-hidden or in Saver Mode)
+        if (controlsVisible) {
+          const cPreview = document.getElementById(`crop-preview-${key}`);
+          if (cPreview) {
+            if (cPreview.width !== targetW || cPreview.height !== targetH) {
+              cPreview.width = targetW;
+              cPreview.height = targetH;
+            }
+            const cCtx = cPreview.getContext('2d');
+            cCtx.clearRect(0, 0, targetW, targetH);
+            cCtx.drawImage(canvas, 0, 0);
           }
-          const ocrTextEl = document.getElementById('ocr-recognized-text');
-          if (ocrTextEl) {
-            ocrTextEl.textContent = recognized ? `OCR: ${recognized}` : 'Live Feed Stream';
-            ocrTextEl.style.color = recognized ? '#16c784' : '#f5c842';
-          }
-        }
 
-        // Update battery saver monitors
-        if (batterySaverActive) {
+          if (key === activeCrop) {
+            const pCanvas = document.getElementById('ocr-preview-canvas');
+            if (pCanvas) {
+              if (pCanvas.width !== targetW || pCanvas.height !== targetH) {
+                pCanvas.width = targetW;
+                pCanvas.height = targetH;
+              }
+              const pCtx = pCanvas.getContext('2d');
+              pCtx.clearRect(0, 0, targetW, targetH);
+              pCtx.drawImage(canvas, 0, 0);
+            }
+            const ocrTextEl = document.getElementById('ocr-recognized-text');
+            if (ocrTextEl && ocrTextEl.textContent !== 'Live Feed Stream') {
+              ocrTextEl.textContent = 'Live Feed Stream';
+              ocrTextEl.style.color = '#16c784';
+            }
+          }
+        } else if (batterySaverActive && (!window._lastSaverPreviewTime || now - window._lastSaverPreviewTime > 600)) {
+          // In Saver Mode, refresh tiny monitor thumbnails at low rate (1.5 FPS) to keep phone cool
           const sCanvas = document.getElementById(`saver-canvas-${key}`);
           if (sCanvas) {
-            sCanvas.width = canvas.width;
-            sCanvas.height = canvas.height;
+            if (sCanvas.width !== targetW || sCanvas.height !== targetH) {
+              sCanvas.width = targetW;
+              sCanvas.height = targetH;
+            }
             const sCtx = sCanvas.getContext('2d');
-            sCtx.clearRect(0, 0, canvas.width, canvas.height);
-            sCtx.putImageData(ctx.getImageData(0, 0, canvas.width, canvas.height), 0, 0);
+            sCtx.clearRect(0, 0, targetW, targetH);
+            sCtx.drawImage(canvas, 0, 0);
           }
         }
 
         const dataUrl = canvas.toDataURL('image/png');
-        payload[fieldMap[key]] = dataUrl;
+        const prevUrl = _lastSentStreams[streamKey];
+        const sinceHeartbeat = now - (_lastHeartbeatByKey[streamKey] || 0);
+
+        // Delta Deduplication: Only transmit crop over network if its pixels changed or 3.5s heartbeat elapsed
+        if (dataUrl !== prevUrl || sinceHeartbeat > 3500) {
+          payload[streamKey] = dataUrl;
+          _lastSentStreams[streamKey] = dataUrl;
+          _lastHeartbeatByKey[streamKey] = now;
+          changedStreamCount++;
+        }
       }
 
-      // Check if remote alignment or live stream needs full camera frame
-      const now = Date.now();
-      const needFullFrame = window.remoteActive || (now - (window.lastRemoteActiveTime || 0) < 15000) || (now - (window.lastFullFrameSent || 0) > 3000);
-      if (needFullFrame && (now - (window.lastFullFrameSent || 0) >= 240)) {
+      if (batterySaverActive && (!window._lastSaverPreviewTime || now - window._lastSaverPreviewTime > 600)) {
+        window._lastSaverPreviewTime = now;
+      }
+
+      // Full-frame camera preview: ONLY encode & upload when Remote Alignment Modal is actively open (or once every 15s for idle thumbnail)
+      const fullFrameInterval = isRemoteLeaseActive ? 450 : 15000;
+      const needFullFrame = (isRemoteLeaseActive || (now - (window.lastRemoteActiveTime || 0) < 8000) || !window.lastFullFrameSent) &&
+                            (now - (window.lastFullFrameSent || 0) >= fullFrameInterval);
+
+      if (needFullFrame) {
         window.lastFullFrameSent = now;
         if (!window._fullCanvas) {
           window._fullCanvas = document.createElement('canvas');
         }
         const fc = window._fullCanvas;
-        const targetW = 480;
-        const targetH = Math.round(480 * (videoH / videoW));
+        const targetW = 400;
+        const targetH = Math.round(400 * (videoH / videoW));
         if (fc.width !== targetW || fc.height !== targetH) {
           fc.width = targetW;
           fc.height = targetH;
         }
         const fctx = fc.getContext('2d');
         fctx.drawImage(video, 0, 0, targetW, targetH);
-        const fullFrameJpeg = fc.toDataURL('image/jpeg', 0.55);
+        const fullFrameJpeg = fc.toDataURL('image/jpeg', 0.45);
         payload.fullFrame = fullFrameJpeg;
         payload.frames = { [camSlot]: fullFrameJpeg };
         payload.crops = getNormalizedCrops(true);
         payload.aspectRatio = currentAspect;
+        changedStreamCount++;
 
-        if (db) {
+        if (db && isRemoteLeaseActive) {
           const user = (document.getElementById('session-input') && document.getElementById('session-input').value) || 'default';
           const fbUser = user.replace(/[\.\#\$\[\]]/g, '_');
           db.ref(`ocr_cams/${fbUser}/${camSlot}`).set({
@@ -1746,16 +1794,17 @@
         }
       }
 
-      if (!window._lastPresenceCheck || (now - window._lastPresenceCheck > 3000)) {
+      if (!window._lastPresenceCheck || (now - window._lastPresenceCheck > 10000)) {
         window._lastPresenceCheck = now;
         registerDevicePresence();
       }
 
-      if (syncActive || window.remoteActive) {
+      if ((syncActive || isRemoteLeaseActive) && changedStreamCount > 0) {
         sendUpdate(payload);
       }
 
-      streamTimer = setTimeout(opticalStreamLoop, 100);
+      // Adaptive cadence: 150ms (~6.6 FPS) — plenty fast for 1-second/0.1-second clocks while cutting thermal load in half
+      streamTimer = setTimeout(opticalStreamLoop, 150);
     }
 
     // Transmit stream to Firebase / Server / BroadcastChannel
@@ -1829,8 +1878,13 @@
           fbPayload[`frames/${camSlot}`] = payload.fullFrame;
         }
 
+        // Prevent Wi-Fi / LTE upload queue buildup if network momentarily lags
+        if (_firebaseUploadInFlight) return;
+        _firebaseUploadInFlight = true;
+
         db.ref(`ocr/${fbUser}`).update(fbPayload)
           .then(() => {
+            _firebaseUploadInFlight = false;
             const statusEl = document.getElementById('status-text');
             if (statusEl && syncActive) {
               statusEl.textContent = 'Optical Bridge (Streaming Live)';
@@ -1838,6 +1892,7 @@
             }
           })
           .catch((err) => {
+            _firebaseUploadInFlight = false;
             console.error('Firebase OCR update error:', err);
             const statusEl = document.getElementById('status-text');
             if (statusEl) {
@@ -2110,9 +2165,17 @@
           bindRoleCropListeners();
 
           db.ref(`ocr/${fbUser}/remoteActive`).on('value', snapshot => {
-            window.remoteActive = snapshot.val() === true;
-            if (window.remoteActive) {
+            const val = snapshot.val();
+            if (val === true) {
+              window.remoteActive = true;
+              window.remoteActivatedAt = Date.now();
               window.lastRemoteActiveTime = Date.now();
+            } else if (typeof val === 'number' && (Date.now() - val < REMOTE_ALIGN_LEASE_MS)) {
+              window.remoteActive = true;
+              window.remoteActivatedAt = val;
+              window.lastRemoteActiveTime = Date.now();
+            } else {
+              window.remoteActive = false;
             }
           });
 
@@ -2143,7 +2206,10 @@
               }
             } else if (e.data.type === 'remote_active') {
               window.remoteActive = !!e.data.active;
-              if (window.remoteActive) window.lastRemoteActiveTime = Date.now();
+              if (window.remoteActive) {
+                window.remoteActivatedAt = Date.now();
+                window.lastRemoteActiveTime = Date.now();
+              }
             }
           });
         }

@@ -3391,15 +3391,24 @@ let dragStartPointer = { x: 0, y: 0 };
 let dragStartNorm = { x: 0, y: 0, w: 0, h: 0 };
 let lastRemoteBroadcastTime = 0;
 
+let _remoteAlignHeartbeat = null;
 function openRemoteAlignModal(e) {
   if (e && e.preventDefault) e.preventDefault();
   remoteAlignActive = true;
   const modal = document.getElementById('remoteAlignModal');
   if (modal) modal.style.display = 'flex';
 
-  // Signal phone to begin high-rate full-frame snapshot stream
+  // Signal phone to begin full-frame snapshot stream with auto-expiring timestamp lease
   if (useFirebase && db) {
-    db.ref(`ocr/${fbUser}/remoteActive`).set(true).catch(() => {});
+    const rRef = db.ref(`ocr/${fbUser}/remoteActive`);
+    rRef.set(Date.now()).catch(() => {});
+    try { rRef.onDisconnect().set(false); } catch(err) {}
+    clearInterval(_remoteAlignHeartbeat);
+    _remoteAlignHeartbeat = setInterval(() => {
+      if (remoteAlignActive && db) {
+        db.ref(`ocr/${fbUser}/remoteActive`).set(Date.now()).catch(() => {});
+      }
+    }, 60000);
   }
   bc.postMessage({ type: 'remote_active', user: fbUser, active: true });
 
@@ -3411,6 +3420,8 @@ function openRemoteAlignModal(e) {
 
 function closeRemoteAlignModal() {
   remoteAlignActive = false;
+  clearInterval(_remoteAlignHeartbeat);
+  _remoteAlignHeartbeat = null;
   const modal = document.getElementById('remoteAlignModal');
   if (modal) modal.style.display = 'none';
 
