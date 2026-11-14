@@ -347,15 +347,13 @@
       transform: translateY(calc(100% + 45px)) !important;
     }
     body.saver-mode #video-container {
-      width: 2px !important;
-      height: 2px !important;
-      overflow: hidden !important;
-      opacity: 0.01 !important;
+      visibility: hidden !important;
       pointer-events: none !important;
     }
     body.saver-mode .controls-overlay,
     body.saver-mode .crop-frame {
-      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
     }
     @keyframes pulseSaver {
       0%, 100% { opacity: 0.6; }
@@ -710,6 +708,18 @@
 
       if (data.crops) {
         const crops = data.crops;
+        try {
+          const existingRaw = localStorage.getItem('hc_ocr_crops_norm_' + deviceRole);
+          const existingNorm = existingRaw ? JSON.parse(existingRaw) : {};
+          const mergedNorm = { ...existingNorm };
+          myOwned.forEach(k => {
+            if (crops[k] && crops[k].w > 0.01 && crops[k].h > 0.01) {
+              mergedNorm[k] = crops[k];
+            }
+          });
+          localStorage.setItem('hc_ocr_crops_norm_' + deviceRole, JSON.stringify(mergedNorm));
+        } catch(e) {}
+
         const video = document.getElementById('camera-view');
         if (video && video.videoWidth) {
           myOwned.forEach(k => {
@@ -725,6 +735,9 @@
               }
             }
           });
+          window._pendingRemoteCrops = null;
+        } else {
+          window._pendingRemoteCrops = Object.assign(window._pendingRemoteCrops || {}, crops);
         }
       }
 
@@ -968,9 +981,8 @@
       try {
         const constraints = {
           video: {
-            width: { ideal: 960, max: 1280 },
-            height: { ideal: 540, max: 720 },
-            frameRate: { ideal: 15, max: 20 }
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
           },
           audio: false
         };
@@ -984,6 +996,12 @@
         video.srcObject = stream;
         video.onloadedmetadata = () => {
           restoreCropPositions();
+          if (window._pendingRemoteCrops) {
+            const pending = window._pendingRemoteCrops;
+            window._pendingRemoteCrops = null;
+            applyRemoteCropPositions({ crops: pending });
+          }
+          saveCropPositions(true);
         };
         
         await enumerateCameras();
@@ -993,9 +1011,8 @@
           try {
             const fallbackConstraints = {
               video: {
-                width: { ideal: 960, max: 1280 },
-                height: { ideal: 540, max: 720 },
-                frameRate: { ideal: 15, max: 20 }
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
               },
               audio: false
             };
@@ -1004,6 +1021,12 @@
             video.srcObject = stream;
             video.onloadedmetadata = () => {
               restoreCropPositions();
+              if (window._pendingRemoteCrops) {
+                const pending = window._pendingRemoteCrops;
+                window._pendingRemoteCrops = null;
+                applyRemoteCropPositions({ crops: pending });
+              }
+              saveCropPositions(true);
             };
             await enumerateCameras();
           } catch(e) {
@@ -1722,12 +1745,6 @@
           continue;
         }
 
-        // Sub-sample slow-changing crops (home, away, period) every 3rd tick when controls are hidden
-        const isSlowCrop = (key === 'home' || key === 'away' || key === 'period');
-        if (!controlsVisible && isSlowCrop && (_tickCounter % 3 !== 0)) {
-          continue;
-        }
-
         const frame = frames[key];
         if (!frame) continue;
 
@@ -1754,8 +1771,8 @@
 
         const cropHash = preprocess(ctx, targetW, targetH, key);
 
-        // Only update calibration previews when controls are visible on screen (saves GPU/CPU when auto-hidden or in Saver Mode)
-        if (controlsVisible) {
+        // Always update in-box viewfinder previews whenever not in Saver Mode (even while dragging or controls auto-hidden)
+        if (!batterySaverActive) {
           const cPreview = document.getElementById(`crop-preview-${key}`);
           if (cPreview) {
             if (cPreview.width !== targetW || cPreview.height !== targetH) {
@@ -1767,7 +1784,7 @@
             cCtx.drawImage(cropCanvas, 0, 0);
           }
 
-          if (key === activeCrop) {
+          if (controlsVisible && key === activeCrop) {
             const pCanvas = document.getElementById('ocr-preview-canvas');
             if (pCanvas) {
               if (pCanvas.width !== targetW || pCanvas.height !== targetH) {
@@ -1778,13 +1795,14 @@
               pCtx.clearRect(0, 0, targetW, targetH);
               pCtx.drawImage(cropCanvas, 0, 0);
             }
+            const recognized = recognizeCanvasDigits(ctx, targetW, targetH, key);
             const ocrTextEl = document.getElementById('ocr-recognized-text');
-            if (ocrTextEl && ocrTextEl.textContent !== 'Live Feed Stream') {
-              ocrTextEl.textContent = 'Live Feed Stream';
-              ocrTextEl.style.color = '#16c784';
+            if (ocrTextEl) {
+              ocrTextEl.textContent = recognized ? `OCR: ${recognized}` : 'Live Feed Stream';
+              ocrTextEl.style.color = recognized ? '#16c784' : '#f5c842';
             }
           }
-        } else if (batterySaverActive && (cropHash !== _lastSaverCanvasHashes[key] || (now - (window._lastSaverPreviewTime || 0) > 2000))) {
+        } else if (cropHash !== _lastSaverCanvasHashes[key] || (now - (window._lastSaverPreviewTime || 0) > 2000)) {
           // In Saver Mode, refresh tiny monitor thumbnails only when crop pixels change or every 2s
           const sCanvas = document.getElementById(`saver-canvas-${key}`);
           if (sCanvas) {
@@ -1800,16 +1818,19 @@
         }
 
         const sinceHeartbeat = now - (_lastHeartbeatByKey[streamKey] || 0);
+        const hashChanged = (cropHash !== _lastCropHashes[key]) || !_lastSentStreams[streamKey];
 
-        // Hash-First Deduplication: Skip PNG encoding completely unless pixels changed or 30s heartbeat elapsed
-        if (cropHash !== _lastCropHashes[key] || sinceHeartbeat > 30000) {
-          if (cropHash !== _lastCropHashes[key]) {
-            _lastAnyCropChangeTime = now;
-          }
+        // Hash-First Deduplication: encode PNG only on pixel change; reuse cached DataURL on 3s heartbeats
+        if (hashChanged) {
+          _lastAnyCropChangeTime = now;
           const dataUrl = cropCanvas.toDataURL('image/png');
           _lastCropHashes[key] = cropHash;
           payload[streamKey] = dataUrl;
           _lastSentStreams[streamKey] = dataUrl;
+          _lastHeartbeatByKey[streamKey] = now;
+          changedStreamCount++;
+        } else if (sinceHeartbeat > 3000) {
+          payload[streamKey] = _lastSentStreams[streamKey];
           _lastHeartbeatByKey[streamKey] = now;
           changedStreamCount++;
         }
@@ -1832,9 +1853,10 @@
         }
       }
 
-      // Full-frame camera preview: ONLY encode & upload on initial connect once OR while Remote Alignment lease is active (450ms)
+      // Full-frame camera preview: fast (450ms) when Remote Alignment lease is active, or low-rate (8000ms) when viewfinder is visible
+      const fullFrameInterval = isRemoteLeaseActive ? 450 : 8000;
       const needFullFrame = !window.lastFullFrameSent ||
-                            (isRemoteLeaseActive && (now - window.lastFullFrameSent >= 450));
+                            ((isRemoteLeaseActive || !batterySaverActive) && (now - window.lastFullFrameSent >= fullFrameInterval));
 
       if (needFullFrame) {
         window.lastFullFrameSent = now;
@@ -1886,9 +1908,51 @@
         sendUpdate(payload);
       }
 
-      // Adaptive marathon cadence: 160ms (~6.25 FPS) during active clock/score changes, 320ms (~3.1 FPS) when paused/idle
+      // Zero-lag adaptive cadence: 100ms (10 FPS) during active clock/score changes or alignment, 200ms (5 FPS) when idle
       const isGamePausedOrIdle = (now - _lastAnyCropChangeTime > 12000) && !controlsVisible && !isRemoteLeaseActive;
-      streamTimer = setTimeout(opticalStreamLoop, isGamePausedOrIdle ? 320 : 160);
+      streamTimer = setTimeout(opticalStreamLoop, isGamePausedOrIdle ? 200 : 100);
+    }
+
+    let _pendingFirebasePayload = null;
+    let _pendingFirebaseUser = null;
+
+    function flushFirebasePayload() {
+      if (!db || !_pendingFirebasePayload || !_pendingFirebaseUser) return;
+      const now = Date.now();
+      if (_firebaseUploadInFlight && (now - _firebaseUploadStartedAt < 4000)) return;
+
+      const fbUser = _pendingFirebaseUser;
+      const nextPayload = _pendingFirebasePayload;
+      _pendingFirebasePayload = null;
+      _pendingFirebaseUser = null;
+
+      _firebaseUploadInFlight = true;
+      _firebaseUploadStartedAt = now;
+
+      db.ref(`ocr/${fbUser}`).update(nextPayload)
+        .then(() => {
+          _firebaseUploadInFlight = false;
+          const statusEl = document.getElementById('status-text');
+          if (statusEl && syncActive) {
+            statusEl.textContent = 'Optical Bridge (Streaming Live)';
+            statusEl.style.color = '#16c784';
+          }
+          if (_pendingFirebasePayload) {
+            flushFirebasePayload();
+          }
+        })
+        .catch((err) => {
+          _firebaseUploadInFlight = false;
+          console.error('Firebase OCR update error:', err);
+          const statusEl = document.getElementById('status-text');
+          if (statusEl) {
+            statusEl.textContent = 'Firebase Connection Error';
+            statusEl.style.color = '#ef4444';
+          }
+          if (_pendingFirebasePayload) {
+            setTimeout(flushFirebasePayload, 250);
+          }
+        });
     }
 
     // Transmit stream to Firebase / Server / BroadcastChannel
@@ -1962,29 +2026,10 @@
           fbPayload[`frames/${camSlot}`] = payload.fullFrame;
         }
 
-        // Prevent Wi-Fi / LTE upload queue buildup, with 4s safety release if network hangs
-        if (_firebaseUploadInFlight && (Date.now() - _firebaseUploadStartedAt < 4000)) return;
-        _firebaseUploadInFlight = true;
-        _firebaseUploadStartedAt = Date.now();
-
-        db.ref(`ocr/${fbUser}`).update(fbPayload)
-          .then(() => {
-            _firebaseUploadInFlight = false;
-            const statusEl = document.getElementById('status-text');
-            if (statusEl && syncActive) {
-              statusEl.textContent = 'Optical Bridge (Streaming Live)';
-              statusEl.style.color = '#16c784';
-            }
-          })
-          .catch((err) => {
-            _firebaseUploadInFlight = false;
-            console.error('Firebase OCR update error:', err);
-            const statusEl = document.getElementById('status-text');
-            if (statusEl) {
-              statusEl.textContent = 'Firebase Connection Error';
-              statusEl.style.color = '#ef4444';
-            }
-          });
+        // Coalescing Upload Queue: never drop changed score/clock updates while a previous Firebase write is in flight
+        _pendingFirebaseUser = fbUser;
+        _pendingFirebasePayload = Object.assign(_pendingFirebasePayload || {}, fbPayload);
+        flushFirebasePayload();
         return;
       }
 
@@ -2183,12 +2228,7 @@
         document.addEventListener(evt, markUserActive, { passive: true });
       });
 
-      // Auto-enter OLED/GPU Thermal Saver Mode after 60s of idle touch while streaming live
-      setInterval(() => {
-        if (syncActive && !batterySaverActive && !window.remoteActive && (Date.now() - lastUserInteractionAt >= 60000)) {
-          toggleBatterySaver(true);
-        }
-      }, 5000);
+      // Keep Saver Mode manual via the top-bar button so the viewfinder never unexpectedly blacks out while aligning
 
       // 10s camera track self-healing watchdog in case iOS background/thermal kills the video track
       setInterval(() => {
@@ -2267,8 +2307,6 @@
         } catch(e) {}
       }
 
-      restoreEnabledCrops();
-
       const helpShown = localStorage.getItem('hc_ocr_help_shown');
       if (!helpShown) {
         toggleHelp();
@@ -2334,14 +2372,11 @@
 
           db.ref(`ocr/${fbUser}/remoteActive`).on('value', snapshot => {
             const val = snapshot.val();
-            if (val === true) {
+            if (val === true || (typeof val === 'number' && val > 0)) {
               window.remoteActive = true;
               window.remoteActivatedAt = Date.now();
               window.lastRemoteActiveTime = Date.now();
-            } else if (typeof val === 'number' && (Date.now() - val < REMOTE_ALIGN_LEASE_MS)) {
-              window.remoteActive = true;
-              window.remoteActivatedAt = val;
-              window.lastRemoteActiveTime = Date.now();
+              window.lastFullFrameSent = 0;
             } else {
               window.remoteActive = false;
             }
@@ -2377,6 +2412,7 @@
               if (window.remoteActive) {
                 window.remoteActivatedAt = Date.now();
                 window.lastRemoteActiveTime = Date.now();
+                window.lastFullFrameSent = 0;
               }
             }
           });
@@ -2384,11 +2420,15 @@
       }
 
       setDeviceRole(deviceRole, false);
+      restoreEnabledCrops();
       restoreCropPositions();
       startCamera();
       initRemoteCropListeners();
       registerDevicePresence();
-      setTimeout(() => saveCropPositions(true), 1500);
+      setTimeout(() => {
+        const video = document.getElementById('camera-view');
+        if (video && video.videoWidth > 0) saveCropPositions(true);
+      }, 1500);
       
       toggleSync();
       opticalStreamLoop();
