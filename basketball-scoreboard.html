@@ -2861,6 +2861,10 @@ function connectSSE(){
     const handleCropSnapshot = (val) => {
       if (!val || val.sender === myClientId || isDraggingRemote || isResizingRemote) return;
       const senderRole = val.role || val.targetRole || 'all';
+      const now = Date.now();
+      const hasDedicatedShotCam = Object.values(connectedDevices || {}).some(d => d && d.role === 'shot' && (now - (d.lastSeen || 0) < 25000));
+      const skipMainShotOverwrite = (senderRole !== 'shot') && hasDedicatedShotCam && (!val.enabledCrops || val.enabledCrops.shot === false);
+      const mainSyncKeys = skipMainShotOverwrite ? ['clock', 'home', 'away', 'period'] : ['clock', 'home', 'away', 'period', 'shot'];
 
       if (val.crops) {
         if (senderRole === 'shot') {
@@ -2871,7 +2875,7 @@ function connectSSE(){
             }
           }
         } else {
-          ['clock', 'home', 'away', 'period'].forEach(k => {
+          mainSyncKeys.forEach(k => {
             if (val.crops[k] && val.crops[k].w > 0.01 && val.crops[k].h > 0.01) {
               remoteNormCrops[k] = val.crops[k];
             }
@@ -2882,7 +2886,7 @@ function connectSSE(){
         if (senderRole === 'shot') {
           if (val.thresholds.shot != null) remoteThresholds.shot = val.thresholds.shot;
         } else {
-          ['clock', 'home', 'away', 'period'].forEach(k => {
+          mainSyncKeys.forEach(k => {
             if (val.thresholds[k] != null) remoteThresholds[k] = val.thresholds[k];
           });
         }
@@ -2891,7 +2895,7 @@ function connectSSE(){
         if (senderRole === 'shot') {
           if (val.invertStates.shot != null) remoteInvertStates.shot = val.invertStates.shot;
         } else {
-          ['clock', 'home', 'away', 'period'].forEach(k => {
+          mainSyncKeys.forEach(k => {
             if (val.invertStates[k] != null) remoteInvertStates[k] = val.invertStates[k];
           });
         }
@@ -2901,7 +2905,7 @@ function connectSSE(){
         if (senderRole === 'shot') {
           if (val.enabledCrops.shot !== undefined) remoteEnabledCrops.shot = val.enabledCrops.shot;
         } else {
-          ['clock', 'home', 'away', 'period'].forEach(k => {
+          mainSyncKeys.forEach(k => {
             if (val.enabledCrops[k] !== undefined) remoteEnabledCrops[k] = val.enabledCrops[k];
           });
         }
@@ -3023,6 +3027,8 @@ function toggleAiSync(enabled) {
 function syncCropEnableCheckboxes() {
   const modalCb = document.getElementById('rcropEnableCb');
   if (modalCb) modalCb.checked = remoteEnabledCrops[activeRemoteCrop] !== false;
+  const cam1ShotCb = document.getElementById('rcropCam1ShotCb');
+  if (cam1ShotCb) cam1ShotCb.checked = remoteEnabledCrops.shot !== false;
 }
 
 function syncCropInvertCheckboxes() {
@@ -3348,7 +3354,13 @@ function switchRemoteCamera(role) {
   if (role === 'shot') {
     selectRemoteCrop('shot');
   } else if (role === 'main') {
-    selectRemoteCrop(activeRemoteCrop === 'shot' ? 'clock' : activeRemoteCrop);
+    if (activeRemoteCrop === 'shot' && remoteEnabledCrops.shot === false) {
+      selectRemoteCrop('clock');
+    } else {
+      selectRemoteCrop(activeRemoteCrop);
+    }
+  } else {
+    selectRemoteCrop(activeRemoteCrop);
   }
 
   applyRemoteBoxStyles();
@@ -3490,7 +3502,11 @@ function applyRemoteBoxStyles() {
       if (activeRemoteCameraRole === 'shot') {
         box.style.display = (k === 'shot') ? 'block' : 'none';
       } else if (activeRemoteCameraRole === 'main') {
-        box.style.display = (k === 'shot') ? 'none' : 'block';
+        if (k === 'shot') {
+          box.style.display = (remoteEnabledCrops.shot !== false || activeRemoteCrop === 'shot') ? 'block' : 'none';
+        } else {
+          box.style.display = 'block';
+        }
       } else {
         box.style.display = 'block';
       }
@@ -3498,11 +3514,63 @@ function applyRemoteBoxStyles() {
   });
 }
 
+function toggleCam1ShotClock(enabled) {
+  remoteEnabledCrops.shot = !!enabled;
+  const now = Date.now();
+  const hasDedicatedShotCam = Object.values(connectedDevices || {}).some(d => d && d.role === 'shot' && (now - (d.lastSeen || 0) < 25000));
+
+  if (activeRemoteCameraRole === 'shot') {
+    activeRemoteCameraRole = 'main';
+    switchRemoteCamera('main');
+  }
+
+  if (!enabled && !hasDedicatedShotCam) {
+    cachedFeeds.Shot = null;
+    const img = document.getElementById('feedShotImg');
+    const ph = document.getElementById('feedShotPlaceholder');
+    if (img) img.style.display = 'none';
+    if (ph) ph.style.display = 'inline';
+
+    if (useFirebase && db) {
+      db.ref(`ocr/${fbUser}/shotClockStream`).set(null).catch(() => {});
+      db.ref(`ocr/${fbUser}/enabledCrops/shot`).set(false).catch(() => {});
+      db.ref(`states/${fbUser}/enabledCrops/shot`).set(false).catch(() => {});
+    }
+    bc.postMessage({
+      type: 'stream',
+      user: fbUser,
+      data: { role: 'all', streamActive: true, shotClockStream: null, enabledCrops: { ...remoteEnabledCrops } }
+    });
+    bc.postMessage({
+      type: 'state',
+      user: fbUser,
+      data: { ...S, enabledCrops: { ...remoteEnabledCrops } }
+    });
+  } else if (enabled) {
+    if (useFirebase && db) {
+      db.ref(`ocr/${fbUser}/enabledCrops/shot`).set(true).catch(() => {});
+      db.ref(`states/${fbUser}/enabledCrops/shot`).set(true).catch(() => {});
+    }
+    bc.postMessage({
+      type: 'state',
+      user: fbUser,
+      data: { ...S, enabledCrops: { ...remoteEnabledCrops } }
+    });
+    activeRemoteCrop = 'shot';
+  }
+
+  syncCropEnableCheckboxes();
+  saveRemoteCropsLocally();
+  broadcastRemoteCrops();
+  selectRemoteCrop(activeRemoteCrop);
+}
+
 function selectRemoteCrop(key) {
   activeRemoteCrop = key;
 
-  // Auto camera-role switching: selecting Shot switches to Cam 2 view; selecting any other crop switches to Cam 1 view
-  if (key === 'shot' && activeRemoteCameraRole !== 'shot') {
+  // Auto camera-role switching: if on Cam 2 and clicking a non-shot crop, switch to Cam 1.
+  // Stay on Cam 1 when selecting SHT unless no Main feed exists and a Shot Cam feed exists.
+  if (key === 'shot' && activeRemoteCameraRole !== 'shot' && !cachedMainFrame && cachedShotFrame && remoteEnabledCrops.shot === false) {
     switchRemoteCamera('shot');
     return;
   } else if (key !== 'shot' && activeRemoteCameraRole === 'shot') {
@@ -3575,6 +3643,9 @@ function selectRemoteCrop(key) {
 }
 
 function toggleRemoteCropEnabled(enabled) {
+  if (activeRemoteCrop === 'shot' && activeRemoteCameraRole !== 'shot') {
+    return toggleCam1ShotClock(enabled);
+  }
   remoteEnabledCrops[activeRemoteCrop] = !!enabled;
   const box = document.getElementById(`rcrop-${activeRemoteCrop}`);
   if (box) box.style.opacity = enabled ? '1' : '0.25';
@@ -3757,7 +3828,7 @@ function applyCropPreset(type) {
 function broadcastRemoteCrops() {
   const isShotRole = (activeRemoteCameraRole === 'shot');
   const targetSlot = isShotRole ? 'shot' : 'main';
-  const ownedKeys = isShotRole ? ['shot'] : ['clock', 'home', 'away', 'period'];
+  const ownedKeys = isShotRole ? ['shot'] : ['clock', 'home', 'away', 'period', 'shot'];
 
   const roleCrops = {};
   const roleThresholds = {};
@@ -4004,10 +4075,16 @@ syncCropEnableCheckboxes();
       </div>
 
       <!-- Multi-Camera Remote Aligner Selector -->
-      <div style="display:flex; align-items:center; gap:6px; background:#080604; border:1px solid #2a1e14; padding:3px; border-radius:8px;">
-        <button id="remote-cam-btn-all" onclick="switchRemoteCamera('all')" style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:5px 10px; border-radius:5px; border:1px solid var(--orange); background:var(--orange); color:#fff; cursor:pointer;">🌟 All</button>
-        <button id="remote-cam-btn-main" onclick="switchRemoteCamera('main')" style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:5px 10px; border-radius:5px; border:1px solid transparent; background:transparent; color:#888; cursor:pointer;">📹 Cam 1: Main</button>
-        <button id="remote-cam-btn-shot" onclick="switchRemoteCamera('shot')" style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:5px 10px; border-radius:5px; border:1px solid transparent; background:transparent; color:#888; cursor:pointer;">⏱️ Cam 2: Shot</button>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:6px; background:#080604; border:1px solid #2a1e14; padding:3px; border-radius:8px;">
+          <button id="remote-cam-btn-all" onclick="switchRemoteCamera('all')" style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:5px 10px; border-radius:5px; border:1px solid var(--orange); background:var(--orange); color:#fff; cursor:pointer;">🌟 All</button>
+          <button id="remote-cam-btn-main" onclick="switchRemoteCamera('main')" style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:5px 10px; border-radius:5px; border:1px solid transparent; background:transparent; color:#888; cursor:pointer;">📹 Cam 1: Main</button>
+          <button id="remote-cam-btn-shot" onclick="switchRemoteCamera('shot')" style="font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; padding:5px 10px; border-radius:5px; border:1px solid transparent; background:transparent; color:#888; cursor:pointer;">⏱️ Cam 2: Shot</button>
+        </div>
+
+        <label id="rcropCam1ShotWrap" title="Stream Shot Clock directly from Cam 1 (Main Board Camera)" style="display:inline-flex; align-items:center; gap:5px; background:#09212b; border:1px solid #13475c; padding:5px 10px; border-radius:8px; cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase; color:#00d2ff;">
+          <input type="checkbox" id="rcropCam1ShotCb" onchange="toggleCam1ShotClock(this.checked)" style="accent-color:#00d2ff; cursor:pointer;"> ⏱️ Shot on Cam 1
+        </label>
       </div>
 
       <div style="display:flex; align-items:center; gap:10px;">

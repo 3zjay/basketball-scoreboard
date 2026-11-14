@@ -574,10 +574,41 @@
     }
     let myClientId = 'cam_' + deviceRole + '_' + tabSessionId;
 
+    function getConfigurableCropKeys(role = deviceRole) {
+      if (role === 'shot') return ['shot'];
+      return ['clock', 'home', 'away', 'period', 'shot'];
+    }
+
     function getOwnedCropKeys(role = deviceRole) {
       if (role === 'shot') return ['shot'];
-      if (role === 'main') return ['clock', 'home', 'away', 'period'];
+      if (role === 'main') {
+        if (enabledCrops.shot === true || !window._hasDedicatedShotCam) {
+          return ['clock', 'home', 'away', 'period', 'shot'];
+        }
+        return ['clock', 'home', 'away', 'period'];
+      }
       return ['clock', 'home', 'away', 'period', 'shot'];
+    }
+
+    function updateRoleBadgeText() {
+      const badge = document.getElementById('device-role-badge');
+      if (!badge) return;
+      if (deviceRole === 'shot') {
+        badge.textContent = '⏱️ SHOT CLOCK ONLY';
+        badge.style.color = '#00d2ff';
+        badge.style.background = '#09212b';
+        badge.style.borderColor = '#13475c';
+      } else if (deviceRole === 'main') {
+        badge.textContent = enabledCrops.shot ? '📹 CAM 1: MAIN + SHOT' : '📹 CAM 1: MAIN (NO SHOT)';
+        badge.style.color = enabledCrops.shot ? '#16c784' : '#f5c842';
+        badge.style.background = enabledCrops.shot ? '#0f2918' : '#292109';
+        badge.style.borderColor = enabledCrops.shot ? '#1c5230' : '#5c4813';
+      } else {
+        badge.textContent = '🌟 ALL-IN-ONE';
+        badge.style.color = '#16c784';
+        badge.style.background = '#0f2918';
+        badge.style.borderColor = '#1c5230';
+      }
     }
 
     // Drag-and-drop state
@@ -704,7 +735,7 @@
         return;
       }
 
-      const myOwned = getOwnedCropKeys(deviceRole);
+      const myOwned = getConfigurableCropKeys(deviceRole);
 
       if (data.crops) {
         const crops = data.crops;
@@ -775,6 +806,7 @@
       }
 
       saveCropPositions(false);
+      updateRoleBadgeText();
       resetCropHashCache();
     }
 
@@ -837,26 +869,6 @@
         }
       });
 
-      const badge = document.getElementById('device-role-badge');
-      if (badge) {
-        if (role === 'shot') {
-          badge.textContent = '⏱️ SHOT CLOCK ONLY';
-          badge.style.color = '#00d2ff';
-          badge.style.background = '#09212b';
-          badge.style.borderColor = '#13475c';
-        } else if (role === 'main') {
-          badge.textContent = '📹 MAIN BOARD (NO SHOT)';
-          badge.style.color = '#f5c842';
-          badge.style.background = '#292109';
-          badge.style.borderColor = '#5c4813';
-        } else {
-          badge.textContent = '🌟 ALL-IN-ONE';
-          badge.style.color = '#16c784';
-          badge.style.background = '#0f2918';
-          badge.style.borderColor = '#1c5230';
-        }
-      }
-
       if (role === 'shot') {
         enabledCrops = { clock: false, home: false, away: false, period: false, shot: true };
         const sf = frames.shot;
@@ -869,10 +881,26 @@
         selectCrop('shot');
       } else if (role === 'main') {
         enabledCrops = { clock: true, home: true, away: true, period: true, shot: false };
+        const sf = frames.shot;
+        if (sf && sf.style.width === '60%') {
+          sf.style.left = '42%';
+          sf.style.top = '55%';
+          sf.style.width = '100px';
+          sf.style.height = '50px';
+        }
         if (activeCrop === 'shot') selectCrop('clock');
       } else if (role === 'all') {
         enabledCrops = { clock: true, home: true, away: true, period: true, shot: true };
+        const sf = frames.shot;
+        if (sf && sf.style.width === '60%') {
+          sf.style.left = '42%';
+          sf.style.top = '55%';
+          sf.style.width = '100px';
+          sf.style.height = '50px';
+        }
       }
+
+      updateRoleBadgeText();
 
       Object.keys(enabledCrops).forEach(k => {
         const cb = document.getElementById(`crop-toggle-${k}`);
@@ -942,9 +970,16 @@
       try { localStorage.setItem('hc_ocr_enabled_crops_' + deviceRole, JSON.stringify(enabledCrops)); } catch(e) {}
       const frame = frames[key];
       if (frame) {
+        if (enabled && key === 'shot' && deviceRole !== 'shot' && frame.style.width === '60%') {
+          frame.style.left = '42%';
+          frame.style.top = '55%';
+          frame.style.width = '100px';
+          frame.style.height = '50px';
+        }
         frame.style.display = enabled ? 'block' : 'none';
         frame.style.opacity = enabled ? '1' : '0.2';
       }
+      updateRoleBadgeText();
       resetCropHashCache();
       saveCropPositions(true);
       registerDevicePresence();
@@ -952,7 +987,7 @@
 
     function restoreEnabledCrops() {
       const saved = localStorage.getItem('hc_ocr_enabled_crops_' + deviceRole);
-      const myOwned = getOwnedCropKeys(deviceRole);
+      const myOwned = getConfigurableCropKeys(deviceRole);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -971,6 +1006,7 @@
           });
         } catch(e) {}
       }
+      updateRoleBadgeText();
     }
 
     // Initialize Camera Stream
@@ -1211,7 +1247,7 @@
     }
 
     function restoreCropPositions() {
-      const myOwned = getOwnedCropKeys(deviceRole);
+      const myOwned = getConfigurableCropKeys(deviceRole);
       // First attempt to restore using normalized coordinates mapped to current screen dimensions
       const normSaved = localStorage.getItem('hc_ocr_crops_norm_' + deviceRole) || localStorage.getItem('hc_ocr_crops_norm');
       const video = document.getElementById('camera-view');
@@ -1260,7 +1296,7 @@
     function handleOrientationOrResize() {
       clearTimeout(orientationResizeTimer);
       orientationResizeTimer = setTimeout(() => {
-        const myOwned = getOwnedCropKeys(deviceRole);
+        const myOwned = getConfigurableCropKeys(deviceRole);
         let norm = null;
         const normSaved = localStorage.getItem('hc_ocr_crops_norm_' + deviceRole) || localStorage.getItem('hc_ocr_crops_norm');
         if (normSaved) {
@@ -2080,6 +2116,9 @@
           stopPayload.homeScoreStream = null;
           stopPayload.awayScoreStream = null;
           stopPayload.periodStream = null;
+          if (!window._hasDedicatedShotCam) {
+            stopPayload.shotClockStream = null;
+          }
         } else {
           stopPayload.gameClockStream = null;
           stopPayload.shotClockStream = null;
@@ -2398,6 +2437,7 @@
               const d = devices[id];
               return d && d.role === 'shot' && (now - (d.lastSeen || 0) < 30000);
             });
+            window._hasDedicatedShotCam = hasDedicatedShotCam;
             if (hasDedicatedShotCam && deviceRole === 'all') {
               console.log('[Multi-Cam] Dedicated Shot Clock detected, auto-yielding Cam 1 to Main Board role');
               setDeviceRole('main', true);
