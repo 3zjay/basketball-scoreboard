@@ -347,7 +347,7 @@
       transform: translateY(calc(100% + 45px)) !important;
     }
     body.saver-mode #video-container {
-      visibility: hidden !important;
+      opacity: 0.01 !important;
       pointer-events: none !important;
     }
     body.saver-mode .controls-overlay,
@@ -1664,6 +1664,9 @@
         streamTimer = setTimeout(opticalStreamLoop, 180);
         return;
       }
+      if (video.paused && video.srcObject) {
+        video.play().catch(() => {});
+      }
 
       const videoW = video.videoWidth;
       const videoH = video.videoHeight;
@@ -1791,6 +1794,7 @@
                 pCanvas.width = targetW;
                 pCanvas.height = targetH;
               }
+              pCanvas.style.background = invertStates[key] ? '#0a0604' : '#e2e8f0';
               const pCtx = pCanvas.getContext('2d');
               pCtx.clearRect(0, 0, targetW, targetH);
               pCtx.drawImage(cropCanvas, 0, 0);
@@ -1802,54 +1806,41 @@
               ocrTextEl.style.color = recognized ? '#16c784' : '#f5c842';
             }
           }
-        } else if (cropHash !== _lastSaverCanvasHashes[key] || (now - (window._lastSaverPreviewTime || 0) > 2000)) {
-          // In Saver Mode, refresh tiny monitor thumbnails only when crop pixels change or every 2s
+        } else {
+          // In Saver Mode, update every active monitor thumbnail on every tick with proper contrast background
           const sCanvas = document.getElementById(`saver-canvas-${key}`);
           if (sCanvas) {
             if (sCanvas.width !== targetW || sCanvas.height !== targetH) {
               sCanvas.width = targetW;
               sCanvas.height = targetH;
             }
+            sCanvas.style.background = invertStates[key] ? '#0a0604' : '#e2e8f0';
             const sCtx = sCanvas.getContext('2d');
             sCtx.clearRect(0, 0, targetW, targetH);
             sCtx.drawImage(cropCanvas, 0, 0);
-            _lastSaverCanvasHashes[key] = cropHash;
           }
         }
 
+        const dataUrl = cropCanvas.toDataURL('image/png');
         const sinceHeartbeat = now - (_lastHeartbeatByKey[streamKey] || 0);
-        const hashChanged = (cropHash !== _lastCropHashes[key]) || !_lastSentStreams[streamKey];
+        const streamChanged = dataUrl !== _lastSentStreams[streamKey];
 
-        // Hash-First Deduplication: encode PNG only on pixel change; reuse cached DataURL on 3s heartbeats
-        if (hashChanged) {
+        if (streamChanged) {
           _lastAnyCropChangeTime = now;
-          const dataUrl = cropCanvas.toDataURL('image/png');
-          _lastCropHashes[key] = cropHash;
+        }
+        if (streamChanged || sinceHeartbeat > 2000) {
           payload[streamKey] = dataUrl;
           _lastSentStreams[streamKey] = dataUrl;
-          _lastHeartbeatByKey[streamKey] = now;
-          changedStreamCount++;
-        } else if (sinceHeartbeat > 3000) {
-          payload[streamKey] = _lastSentStreams[streamKey];
+          _lastCropHashes[key] = cropHash;
           _lastHeartbeatByKey[streamKey] = now;
           changedStreamCount++;
         }
       }
 
       if (batterySaverActive) {
-        if (!window._lastSaverPreviewTime || now - window._lastSaverPreviewTime > 2000) {
-          window._lastSaverPreviewTime = now;
-        }
-        if (!window._lastSaverStatusTime || now - window._lastSaverStatusTime > 5000) {
+        if (!window._lastSaverStatusTime || now - window._lastSaverStatusTime >= 1000) {
           window._lastSaverStatusTime = now;
-          const statusLine = document.getElementById('saver-status-line');
-          if (statusLine) {
-            const totalMins = Math.max(0, Math.floor((now - (window._camStartTime || now)) / 60000));
-            const hrs = Math.floor(totalMins / 60);
-            const mins = String(totalMins % 60).padStart(2, '0');
-            const roleLabel = deviceRole === 'shot' ? 'Shot Clock' : (deviceRole === 'main' ? 'Main Board' : 'All-In-One');
-            statusLine.textContent = `${syncActive ? 'Streaming Live' : 'Paused'} • ${roleLabel} • Uptime ${hrs}h ${mins}m`;
-          }
+          updateSaverStatusLine(now);
         }
       }
 
@@ -2163,6 +2154,17 @@
       }
     });
 
+    function updateSaverStatusLine(now = Date.now()) {
+      const statusLine = document.getElementById('saver-status-line');
+      if (!statusLine) return;
+      const totalSecs = Math.max(0, Math.floor((now - (window._camStartTime || now)) / 1000));
+      const hrs = Math.floor(totalSecs / 3600);
+      const mins = String(Math.floor((totalSecs % 3600) / 60)).padStart(2, '0');
+      const secs = String(totalSecs % 60).padStart(2, '0');
+      const roleLabel = deviceRole === 'shot' ? 'Shot Clock' : (deviceRole === 'main' ? 'Main Board' : 'All-In-One');
+      statusLine.textContent = `${syncActive ? '● Streaming Live' : '⏸ Paused'} • ${roleLabel} • ${hrs}h ${mins}m ${secs}s`;
+    }
+
     function toggleBatterySaver(forceState) {
       batterySaverActive = (typeof forceState === 'boolean') ? forceState : !batterySaverActive;
       document.body.classList.toggle('saver-mode', batterySaverActive);
@@ -2175,6 +2177,11 @@
       const videoContainer = document.getElementById('video-container');
       if (videoContainer) {
         videoContainer.style.opacity = batterySaverActive ? '0.01' : '';
+      }
+
+      const video = document.getElementById('camera-view');
+      if (video && video.paused && video.srcObject) {
+        video.play().catch(() => {});
       }
       
       Object.keys(frames).forEach(k => {
@@ -2196,18 +2203,18 @@
       }
 
       if (batterySaverActive) {
-        _lastSaverCanvasHashes = {};
-        window._lastSaverPreviewTime = 0;
+        const ownedKeys = getOwnedCropKeys(deviceRole);
+        ['clock', 'home', 'away', 'period', 'shot'].forEach(k => {
+          const sCanvas = document.getElementById(`saver-canvas-${k}`);
+          if (sCanvas && sCanvas.parentElement) {
+            const isVisible = ownedKeys.includes(k) && enabledCrops[k] !== false;
+            sCanvas.parentElement.style.display = isVisible ? '' : 'none';
+            sCanvas.style.background = invertStates[k] ? '#0a0604' : '#e2e8f0';
+          }
+        });
         const now = Date.now();
         window._lastSaverStatusTime = now;
-        const statusLine = document.getElementById('saver-status-line');
-        if (statusLine) {
-          const totalMins = Math.max(0, Math.floor((now - (window._camStartTime || now)) / 60000));
-          const hrs = Math.floor(totalMins / 60);
-          const mins = String(totalMins % 60).padStart(2, '0');
-          const roleLabel = deviceRole === 'shot' ? 'Shot Clock' : (deviceRole === 'main' ? 'Main Board' : 'All-In-One');
-          statusLine.textContent = `${syncActive ? 'Streaming Live' : 'Paused'} • ${roleLabel} • Uptime ${hrs}h ${mins}m`;
-        }
+        updateSaverStatusLine(now);
       } else {
         lastUserInteractionAt = Date.now();
         if (typeof resetHideControlsTimer === 'function') {
