@@ -24,6 +24,11 @@
     { "source": "/pill", "destination": "/basketball-scripps.html" },
     { "source": "/frontcam", "destination": "/basketball-frontcam.html" },
     { "source": "/front-cam", "destination": "/basketball-frontcam.html" },
+    { "source": "/cam1", "destination": "/basketball-frontcam.html?style=1" },
+    { "source": "/cam2", "destination": "/basketball-frontcam.html?style=2" },
+    { "source": "/cam3", "destination": "/basketball-frontcam.html?style=3" },
+    { "source": "/cam4", "destination": "/basketball-frontcam.html?style=4" },
+    { "source": "/cam5", "destination": "/basketball-frontcam.html?style=5" },
     { "source": "/camera", "destination": "/camera.html" }
   ]
 }
