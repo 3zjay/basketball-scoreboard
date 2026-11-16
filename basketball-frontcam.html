@@ -1,0 +1,2031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    // Global Storage Shield — prevents WebKit SecurityError exceptions on blocked localStorage/sessionStorage
+    (function() {
+      try {
+        localStorage.setItem('__test_ls__', '1');
+        localStorage.removeItem('__test_ls__');
+      } catch (e) {
+        var store = {};
+        Object.defineProperty(window, 'localStorage', {
+          value: {
+            getItem: function(k) { return store[k] === undefined ? null : store[k]; },
+            setItem: function(k, v) { store[k] = String(v); },
+            removeItem: function(k) { delete store[k]; },
+            clear: function() { store = {}; },
+            key: function(i) { return Object.keys(store)[i] || null; },
+            get length() { return Object.keys(store).length; }
+          },
+          configurable: true, writable: true
+        });
+      }
+      try {
+        sessionStorage.setItem('__test_ss__', '1');
+        sessionStorage.removeItem('__test_ss__');
+      } catch (e) {
+        var store = {};
+        Object.defineProperty(window, 'sessionStorage', {
+          value: {
+            getItem: function(k) { return store[k] === undefined ? null : store[k]; },
+            setItem: function(k, v) { store[k] = String(v); },
+            removeItem: function(k) { delete store[k]; },
+            clear: function() { store = {}; },
+            key: function(i) { return Object.keys(store)[i] || null; },
+            get length() { return Object.keys(store).length; }
+          },
+          configurable: true, writable: true
+        });
+      }
+    })();
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Hoop Culture — Front Cam Bottom-Right Overlay</title>
+  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,700;1,800;1,900&family=Barlow:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-dark: #080605;
+      --orange-fire: #e8430a;
+      --gold-accent: #ffaa00;
+      --away-color: #c8102e;
+      --home-color: #f5c842;
+      --glass-border: rgba(255, 255, 255, 0.22);
+    }
+
+    html, body {
+      background: transparent;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      font-family: 'Barlow Condensed', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* ════ OPTIONAL SIMULATED FRONT-FACING CAMERA VIEWFINDER (?preview=1) ════ */
+    #preview-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      background:
+        radial-gradient(ellipse 72% 60% at 38% 36%, rgba(232, 67, 10, 0.16) 0%, transparent 62%),
+        radial-gradient(ellipse 55% 48% at 72% 24%, rgba(255, 170, 0, 0.10) 0%, transparent 58%),
+        radial-gradient(circle at 38% 58%, rgba(45, 32, 22, 0.45) 0%, rgba(8, 6, 5, 0.96) 72%),
+        linear-gradient(160deg, #17120e 0%, #090706 55%, #050404 100%);
+      overflow: hidden;
+      pointer-events: none;
+    }
+    body.preview-mode #preview-backdrop {
+      display: block;
+    }
+    .pv-court-floor {
+      position: absolute;
+      left: -10%;
+      right: -10%;
+      bottom: -8%;
+      height: 44%;
+      background:
+        repeating-linear-gradient(90deg, rgba(255, 190, 120, 0.03) 0px, rgba(255, 190, 120, 0.03) 34px, rgba(0, 0, 0, 0.08) 34px, rgba(0, 0, 0, 0.08) 68px),
+        linear-gradient(180deg, rgba(112, 68, 32, 0.16) 0%, rgba(58, 34, 16, 0.38) 100%);
+      border-top: 2px solid rgba(255, 170, 0, 0.18);
+      transform: perspective(700px) rotateX(48deg);
+      transform-origin: bottom center;
+    }
+    .pv-court-arc {
+      position: absolute;
+      left: 16%;
+      bottom: 6%;
+      width: 44%;
+      height: 36%;
+      border: 2px solid rgba(255, 170, 0, 0.14);
+      border-radius: 50%;
+    }
+    /* Simulated Host / Commentator Silhouette on Left-Center */
+    .pv-subject {
+      position: absolute;
+      left: 20%;
+      bottom: 0;
+      width: 24vw;
+      height: 58vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      opacity: 0.42;
+    }
+    .pv-head {
+      width: 6.8vw;
+      height: 6.8vw;
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 32%, #48382f 0%, #1c1512 72%);
+      border: 1.5px solid rgba(255, 170, 0, 0.25);
+      box-shadow: 0 0 36px rgba(232, 67, 10, 0.22);
+      margin-bottom: -0.6vw;
+    }
+    .pv-shoulders {
+      width: 19vw;
+      height: 34vh;
+      border-radius: 8vw 8vw 0 0;
+      background: linear-gradient(180deg, #2b211c 0%, #110d0b 100%);
+      border-top: 1.5px solid rgba(255, 170, 0, 0.2);
+      position: relative;
+    }
+    .pv-mic {
+      position: absolute;
+      left: 58%;
+      top: 18%;
+      width: 1.1vw;
+      height: 5.5vw;
+      background: linear-gradient(180deg, #94a3b8 0%, #1e293b 100%);
+      border-radius: 999px;
+      transform: rotate(-16deg);
+    }
+    .pv-mic::before {
+      content: '';
+      position: absolute;
+      top: -0.9vw;
+      left: -0.3vw;
+      width: 1.7vw;
+      height: 1.7vw;
+      border-radius: 50%;
+      background: #e8430a;
+      border: 1.5px solid #ffaa00;
+    }
+    /* Safe-frame Reticle */
+    .pv-reticle {
+      position: absolute;
+      inset: 2.2vw;
+      border: 1px dashed rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+    }
+    .pv-banner {
+      position: absolute;
+      top: 2.2vw;
+      left: 2.2vw;
+      background: rgba(8, 6, 5, 0.85);
+      border: 1px solid rgba(232, 67, 10, 0.55);
+      border-radius: 10px;
+      padding: 10px 16px;
+      color: #f2ede8;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
+      max-width: 440px;
+    }
+    .pv-banner-kicker {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #ffaa00;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .pv-banner-title {
+      font-size: 19px;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: #ffffff;
+    }
+    .pv-banner-sub {
+      font-family: 'Barlow', sans-serif;
+      font-size: 12px;
+      color: #b8aba0;
+      margin-top: 3px;
+      line-height: 1.4;
+    }
+
+    /* ════ MAIN CONTAINER: BOTTOM-RIGHT CORNER SCOREBUG ════ */
+    #scorebug-wrapper {
+      position: fixed;
+      bottom: 2.2vw;
+      right: 2.2vw;
+      top: auto;
+      left: auto;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      width: clamp(304px, 24.5vw, 480px);
+      font-size: clamp(11.5px, 0.92vw, 17.5px);
+      transform-origin: bottom right;
+      pointer-events: auto;
+      transition: transform 0.28s ease, bottom 0.28s ease, top 0.28s ease, left 0.28s ease, right 0.28s ease;
+    }
+
+    #frontcam-bug {
+      width: 100%;
+      border-radius: 0.85em;
+      overflow: visible;
+      background: linear-gradient(180deg, rgba(16, 20, 30, 0.96) 0%, rgba(8, 10, 15, 0.98) 100%);
+      border: 1.5px solid var(--glass-border);
+      box-shadow:
+        0 1.1em 2.8em rgba(0, 0, 0, 0.88),
+        0 0.25em 0.7em rgba(0, 0, 0, 0.75),
+        inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      position: relative;
+    }
+
+    /* Top Fire Orange -> Athletic Gold Gradient Accent Rim */
+    #frontcam-bug::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 0.22em;
+      border-radius: 0.85em 0.85em 0 0;
+      background: linear-gradient(90deg, #e8430a 0%, #ffaa00 50%, #e8430a 100%);
+      z-index: 4;
+    }
+
+    /* ════ 1. HEADER STRIP (LIVE · BROADCAST · VENUE + HC MEDALLION) ════ */
+    .fc-header {
+      height: 2.25em;
+      padding: 0.22em 3.6em 0 0.85em;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5em;
+      background: linear-gradient(180deg, #151924 0%, #0b0e15 100%);
+      border-radius: 0.8em 0.8em 0 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      position: relative;
+      z-index: 2;
+    }
+
+    .fc-header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.42em;
+      min-width: 0;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .fc-live-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3em;
+      background: rgba(239, 68, 68, 0.16);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      border-radius: 999px;
+      padding: 0.12em 0.45em;
+      flex-shrink: 0;
+    }
+
+    .fc-live-dot {
+      width: 0.42em;
+      height: 0.42em;
+      border-radius: 50%;
+      background: #ff3b30;
+      box-shadow: 0 0 0.4em #ff3b30;
+      animation: fcLivePulse 1.15s infinite alternate;
+      flex-shrink: 0;
+    }
+    @keyframes fcLivePulse {
+      0% { opacity: 0.45; transform: scale(0.85); }
+      100% { opacity: 1; transform: scale(1.18); box-shadow: 0 0 0.55em #ff3b30; }
+    }
+
+    .fc-live-word {
+      font-size: 0.65em;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      color: #ffffff;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .fc-broadcast-val {
+      font-size: 0.82em;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: #ffffff;
+      text-transform: uppercase;
+      line-height: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .fc-hdr-sep {
+      font-size: 0.8em;
+      color: #ffaa00;
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+
+    .fc-venue-val {
+      font-size: 0.82em;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: #ffaa00;
+      text-transform: uppercase;
+      line-height: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Elevated Brushed-Silver Hoop Culture Medallion (Right Header Corner) */
+    .hc-medallion-anchor {
+      position: absolute;
+      right: 0.65em;
+      top: -0.45em;
+      z-index: 25;
+      pointer-events: none;
+    }
+
+    .hc-medallion-ring {
+      width: 2.85em;
+      height: 2.85em;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 35%, #94a3b8 70%, #475569 100%);
+      border: 1.5px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 0.35em 1em rgba(0, 0, 0, 0.88), inset 0 1px 2px rgba(255, 255, 255, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.14em;
+    }
+
+    .hc-medallion-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 48% 36%, #ffffff 0%, #f8fafc 45%, #e2e8f0 85%, #cbd5e1 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: inset 0 0.08em 0.25em rgba(0, 0, 0, 0.25);
+    }
+
+    .hc-medallion-logo {
+      width: 86%;
+      height: 86%;
+      object-fit: contain;
+      filter: drop-shadow(0 0.08em 0.2em rgba(0, 0, 0, 0.32));
+    }
+
+    /* ════ 2. STACKED TEAM MATCHUP ROWS (AWAY TOP / HOME BOTTOM) ════ */
+    .fc-teams {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 2;
+      background: #0a0d14;
+    }
+
+    .fc-team-row {
+      height: 3.45em;
+      display: flex;
+      align-items: stretch;
+      position: relative;
+      transition: background 0.35s ease;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+    }
+
+    .fc-team-row.away {
+      background: linear-gradient(90deg, rgba(200, 16, 46, 0.36) 0%, rgba(200, 16, 46, 0.15) 55%, rgba(10, 13, 20, 0.95) 100%);
+    }
+
+    .fc-team-row.home {
+      background: linear-gradient(90deg, rgba(245, 200, 66, 0.36) 0%, rgba(245, 200, 66, 0.15) 55%, rgba(10, 13, 20, 0.95) 100%);
+    }
+
+    .fc-team-spine {
+      width: 0.42em;
+      flex-shrink: 0;
+      background: #c8102e;
+      box-shadow: 0 0 0.65em rgba(255, 255, 255, 0.15);
+    }
+    .fc-team-row.home .fc-team-spine {
+      background: #f5c842;
+    }
+
+    .fc-team-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.65em;
+      padding: 0 0.65em;
+    }
+
+    .team-logo-circle {
+      width: 2.55em;
+      height: 2.55em;
+      border-radius: 50%;
+      background: rgba(6, 8, 12, 0.72);
+      border: 1.5px solid rgba(255, 255, 255, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+      box-shadow: 0 0.15em 0.45em rgba(0, 0, 0, 0.65);
+    }
+
+    .team-logo-circle img {
+      width: 92%;
+      height: 92%;
+      object-fit: contain;
+    }
+
+    .team-logo-fallback {
+      font-size: 0.85em;
+      font-weight: 900;
+      color: #ffffff;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .fc-team-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.08em;
+    }
+
+    .fc-team-name-line {
+      display: flex;
+      align-items: center;
+      gap: 0.42em;
+      min-width: 0;
+    }
+
+    .team-name-text {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.58em;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      line-height: 0.94;
+      color: #ffffff;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.92);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    /* Animated Possession Triangle Next to Active Team */
+    .poss-arrow {
+      width: 0.78em;
+      height: 0.78em;
+      opacity: 0;
+      transform: scale(0.8);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      flex-shrink: 0;
+    }
+    .poss-arrow.active {
+      opacity: 1;
+      filter: drop-shadow(0 0 0.35em #ffaa00);
+      animation: possGlow 0.85s infinite alternate ease-in-out;
+    }
+    @keyframes possGlow {
+      0% { transform: scale(0.92); }
+      100% { transform: scale(1.16); filter: drop-shadow(0 0 0.65em #ffd84d); }
+    }
+
+    .fc-team-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.48em;
+      line-height: 1;
+    }
+
+    .fc-fouls-chip {
+      font-size: 0.72em;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: rgba(255, 255, 255, 0.72);
+      text-transform: uppercase;
+    }
+    .fc-fouls-chip strong {
+      color: #ffaa00;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .fc-bonus-badge {
+      display: none;
+      align-items: center;
+      font-size: 0.64em;
+      font-weight: 900;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: #080605;
+      background: linear-gradient(180deg, #ffd147 0%, #ffaa00 100%);
+      padding: 0.1em 0.42em;
+      border-radius: 0.22em;
+      box-shadow: 0 0 0.45em rgba(255, 170, 0, 0.55);
+    }
+    .fc-bonus-badge.active {
+      display: inline-flex;
+    }
+
+    /* Right Score Pod */
+    .fc-score-box {
+      width: 4.55em;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #161b28 0%, #090c13 100%);
+      border-left: 1px solid rgba(255, 255, 255, 0.14);
+      padding: 0 0.3em;
+      transition: background 0.25s ease;
+    }
+
+    .score-num {
+      font-family: 'Teko', sans-serif;
+      font-size: 2.75em;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 0.82;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+      margin-top: 0.1em;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    @keyframes scoreBump {
+      0% { transform: scale(1); color: #ffffff; }
+      40% { transform: scale(1.22); color: #ffaa00; text-shadow: 0 0 0.7em #ffaa00; }
+      100% { transform: scale(1); color: #ffffff; }
+    }
+    .score-num.bump {
+      animation: scoreBump 0.4s ease-out;
+    }
+
+    /* ════ 3. BOTTOM CLOCK & SHOT CLOCK DOCK ════ */
+    .fc-clock-bar {
+      height: 2.7em;
+      display: flex;
+      align-items: stretch;
+      background: linear-gradient(180deg, #121723 0%, #06080d 100%);
+      border-radius: 0 0 0.8em 0.8em;
+      overflow: hidden;
+      position: relative;
+      z-index: 2;
+    }
+
+    .fc-pod {
+      transition: background 0.25s ease;
+    }
+    /* Automatic contrast backing when streaming non-inverted black digits */
+    .fc-pod.light-pod {
+      background: linear-gradient(180deg, #f8fafc 0%, #dbe4f0 100%) !important;
+    }
+
+    .fc-period-pod {
+      width: 4.5em;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.04);
+      border-right: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 0 0.4em;
+    }
+
+    .period-val {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.25em;
+      font-weight: 900;
+      color: #ffffff;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .period-val sup {
+      font-size: 0.65em;
+      margin-left: 0.06em;
+      color: #ffaa00;
+    }
+
+    .fc-gameclock-pod {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4em;
+      padding: 0 0.6em;
+      border-right: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .fc-clock-label {
+      font-size: 0.62em;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      color: rgba(255, 255, 255, 0.45);
+      text-transform: uppercase;
+    }
+
+    .game-clock-val {
+      font-family: 'Teko', sans-serif;
+      font-size: 2.08em;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 0.85;
+      letter-spacing: 0.04em;
+      font-variant-numeric: tabular-nums;
+      min-width: 2.6em;
+      margin-top: 0.08em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+      transition: color 0.3s ease;
+    }
+    .game-clock-val.warn {
+      color: #ff6b6b;
+      text-shadow: 0 0 0.6em rgba(255, 59, 48, 0.8);
+      animation: clkWarnPulse 0.5s infinite alternate;
+    }
+    @keyframes clkWarnPulse {
+      0% { opacity: 0.8; }
+      100% { opacity: 1; }
+    }
+
+    .fc-shotclock-pod {
+      width: 5.5em;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.38em;
+      padding: 0 0.55em;
+      background: linear-gradient(180deg, rgba(232, 67, 10, 0.16) 0%, rgba(16, 12, 10, 0.9) 100%);
+    }
+
+    .fc-shot-lbl {
+      font-size: 0.6em;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: rgba(255, 255, 255, 0.58);
+      text-transform: uppercase;
+    }
+
+    .shot-clock-val {
+      font-family: 'Teko', sans-serif;
+      font-size: 2.08em;
+      font-weight: 700;
+      color: #ffaa00;
+      line-height: 0.85;
+      margin-top: 0.08em;
+      font-variant-numeric: tabular-nums;
+      min-width: 1.35em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    }
+    .shot-clock-val.urgent {
+      color: #ff3b30;
+      text-shadow: 0 0 0.55em rgba(255, 0, 0, 0.8);
+      animation: scPulse 0.45s ease infinite alternate;
+    }
+    .shot-clock-val.zero {
+      color: #ff2a1f;
+      text-shadow: 0 0 0.7em #ff0000;
+    }
+    @keyframes scPulse {
+      0% { opacity: 1; }
+      100% { opacity: 0.35; }
+    }
+
+    /* ════ 4. OPTIONAL COURTSIDE / HOST CAM LOWER TAG ════ */
+    .fc-host-tag {
+      margin-top: 0.45em;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45em;
+      padding: 0.28em 0.8em;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(16, 20, 30, 0.92) 0%, rgba(8, 6, 5, 0.96) 100%);
+      border: 1px solid rgba(232, 67, 10, 0.55);
+      box-shadow: 0 0.45em 1.4em rgba(0, 0, 0, 0.75);
+      font-size: 0.74em;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #f2ede8;
+      white-space: nowrap;
+    }
+    .fc-host-tag-dot {
+      width: 0.5em;
+      height: 0.5em;
+      border-radius: 50%;
+      background: #e8430a;
+      box-shadow: 0 0 0.4em #ff6b1a;
+      flex-shrink: 0;
+    }
+    .fc-host-tag.hidden {
+      display: none;
+    }
+
+    /* ════ OPTICAL SCANNER LIVE FEED STREAM CROPS ════ */
+    img.stream-bin-img {
+      max-height: 100%;
+      max-width: 100%;
+      object-fit: contain;
+      border: none !important;
+      outline: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+      display: inline-block;
+      vertical-align: middle;
+      pointer-events: none;
+    }
+    .score-num img.stream-bin-img {
+      height: 0.85em;
+      max-width: 1.55em;
+    }
+    .game-clock-val img.stream-bin-img {
+      height: 0.92em;
+      max-width: 2.8em;
+    }
+    .shot-clock-val img.stream-bin-img {
+      height: 0.92em;
+      max-width: 1.45em;
+    }
+    .period-val img.stream-bin-img {
+      height: 1.15em;
+      max-width: 2.4em;
+    }
+
+    /* ════ FLOATING TOAST NOTIFICATION ════ */
+    #toast-alert {
+      position: fixed;
+      top: 1.5vw;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(13, 17, 23, 0.95);
+      border: 1.5px solid #ffaa00;
+      color: #ffffff;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 6px 18px;
+      border-radius: 9999px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.85);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+      z-index: 99999;
+    }
+    #toast-alert.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* ════ FLOATING BROADCAST CONTROLS HUD (Press 'H' to toggle) ════ */
+    #hud-panel {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      background: rgba(13, 17, 23, 0.95);
+      border: 1.5px solid #2a3040;
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: #fff;
+      font-size: 13px;
+      z-index: 9999;
+      display: none;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8);
+      font-family: 'Barlow', sans-serif;
+      width: 300px;
+    }
+    #hud-panel.show { display: block; }
+    #hud-panel h4 {
+      margin-bottom: 6px;
+      color: #ffaa00;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 16px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    #hud-panel label {
+      display: block;
+      margin-top: 8px;
+      font-size: 11px;
+      color: #a0a5b5;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    #hud-panel input[type="text"],
+    #hud-panel input[type="range"],
+    #hud-panel select {
+      width: 100%;
+      background: #161b26;
+      border: 1px solid #3b4252;
+      color: #fff;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-top: 3px;
+    }
+    #hud-panel .check-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 9px;
+      font-size: 12px;
+      color: #e2e8f0;
+      cursor: pointer;
+    }
+    #hud-panel .btn-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    #hud-panel button {
+      flex: 1;
+      padding: 7px 10px;
+      border-radius: 6px;
+      border: none;
+      background: #e8430a;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 12px;
+    }
+    #hud-panel button:hover { background: #ff5b1f; }
+  </style>
+</head>
+<body>
+
+<!-- Optional Simulated Front-Facing Camera Framing Backdrop (?preview=1) -->
+<div id="preview-backdrop" aria-hidden="true">
+  <div class="pv-court-floor"></div>
+  <div class="pv-court-arc"></div>
+  <div class="pv-subject">
+    <div class="pv-head"></div>
+    <div class="pv-shoulders">
+      <div class="pv-mic"></div>
+    </div>
+  </div>
+  <div class="pv-reticle"></div>
+  <div class="pv-banner">
+    <div class="pv-banner-kicker">Hoop Culture · Front-Facing Camera Overlay Preview</div>
+    <div class="pv-banner-title">Bottom-Right Corner Scorebug</div>
+    <div class="pv-banner-sub">Center &amp; left frame stay completely clear for host, interview, or courtside camera angle. Supports both live camera digit streams and digital fallback. Press <strong>H</strong> for HUD controls.</div>
+  </div>
+</div>
+
+<!-- Main Bottom-Right Scorebug -->
+<div id="scorebug-wrapper">
+  <div id="frontcam-bug">
+
+    <!-- ① HEADER: LIVE + BROADCAST + VENUE + HC MEDALLION -->
+    <div class="fc-header">
+      <div class="fc-header-left">
+        <span class="fc-live-pill">
+          <span class="fc-live-dot"></span>
+          <span class="fc-live-word">LIVE</span>
+        </span>
+        <span class="fc-broadcast-val" id="broadcastName">FACEBOOK</span>
+        <span class="fc-hdr-sep">·</span>
+        <span class="fc-venue-val" id="venueName">AUDLEY</span>
+      </div>
+
+      <!-- Official Hoop Culture Medallion -->
+      <div class="hc-medallion-anchor" title="Hoop Culture Basketball Network">
+        <div class="hc-medallion-ring">
+          <div class="hc-medallion-inner">
+            <img src="hoop-culture-logo2.png" alt="Hoop Culture Logo" class="hc-medallion-logo" onerror="this.onerror=null;this.src='/hoop-culture-logo2.png';">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② STACKED TEAM MATCHUP ROWS -->
+    <div class="fc-teams">
+      <!-- Away / Top Slot -->
+      <div class="fc-team-row away" id="awayTeamRow">
+        <div class="fc-team-spine" id="awaySpine"></div>
+        <div class="fc-team-main">
+          <div class="team-logo-circle" id="awayLogoCircle">
+            <div class="team-logo-fallback" id="awayLogoFallback">PIN</div>
+          </div>
+          <div class="fc-team-info">
+            <div class="fc-team-name-line">
+              <div class="team-name-text" id="awayTeamName">PINTURA</div>
+              <div class="poss-arrow" id="awayPossArrow" title="Possession">
+                <svg viewBox="0 0 24 24"><polygon points="6,4 19,12 6,20" fill="#ffaa00"/></svg>
+              </div>
+            </div>
+            <div class="fc-team-meta">
+              <span class="fc-fouls-chip">FOULS <strong id="awayFouls">0</strong></span>
+              <span class="fc-bonus-badge" id="awayBonusBadge">BONUS</span>
+            </div>
+          </div>
+        </div>
+        <div class="fc-score-box fc-pod">
+          <div class="score-num" id="awayScore">68</div>
+        </div>
+      </div>
+
+      <!-- Home / Bottom Slot -->
+      <div class="fc-team-row home" id="homeTeamRow">
+        <div class="fc-team-spine" id="homeSpine"></div>
+        <div class="fc-team-main">
+          <div class="team-logo-circle" id="homeLogoCircle">
+            <div class="team-logo-fallback" id="homeLogoFallback">FRE</div>
+          </div>
+          <div class="fc-team-info">
+            <div class="fc-team-name-line">
+              <div class="team-name-text" id="homeTeamName">FREEDOM</div>
+              <div class="poss-arrow" id="homePossArrow" title="Possession">
+                <svg viewBox="0 0 24 24"><polygon points="6,4 19,12 6,20" fill="#ffaa00"/></svg>
+              </div>
+            </div>
+            <div class="fc-team-meta">
+              <span class="fc-fouls-chip">FOULS <strong id="homeFouls">0</strong></span>
+              <span class="fc-bonus-badge" id="homeBonusBadge">BONUS</span>
+            </div>
+          </div>
+        </div>
+        <div class="fc-score-box fc-pod">
+          <div class="score-num" id="homeScore">57</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ③ BOTTOM CLOCK & SHOT CLOCK DOCK -->
+    <div class="fc-clock-bar">
+      <div class="fc-period-pod fc-pod">
+        <div class="period-val" id="periodVal">1<sup>ST</sup></div>
+      </div>
+      <div class="fc-gameclock-pod fc-pod">
+        <span class="fc-clock-label">CLK</span>
+        <div class="game-clock-val" id="gameClockVal">10:00</div>
+      </div>
+      <div class="fc-shotclock-pod fc-pod">
+        <span class="fc-shot-lbl">SHOT</span>
+        <div class="shot-clock-val" id="shotClockVal">24</div>
+      </div>
+    </div>
+
+  </div><!-- /#frontcam-bug -->
+
+  <!-- ④ OPTIONAL COURTSIDE / FRONT CAM TAG -->
+  <div class="fc-host-tag" id="hostCamTag">
+    <span class="fc-host-tag-dot"></span>
+    <span id="hostCamTagText">COURTSIDE CAM · LIVE COVERAGE</span>
+  </div>
+</div><!-- /#scorebug-wrapper -->
+
+<!-- Floating Toast Message -->
+<div id="toast-alert"></div>
+
+<!-- Operator Test HUD Panel (Toggle with 'H' key) -->
+<div id="hud-panel">
+  <h4>⚙ Front Cam Overlay Controls</h4>
+  <p style="font-size:11px;color:#8a95a8;margin-bottom:4px;">Press <strong>H</strong> to toggle · Press <strong>I</strong> for digit polarity</p>
+
+  <label>Corner Position:</label>
+  <select id="hudPos" onchange="overridePos(this.value)">
+    <option value="br">Bottom Right (Recommended)</option>
+    <option value="bl">Bottom Left</option>
+    <option value="tr">Top Right</option>
+    <option value="tl">Top Left</option>
+  </select>
+
+  <label>Scale Factor:</label>
+  <input type="range" id="hudScale" min="0.6" max="1.5" step="0.05" value="1.0" oninput="overrideScale(this.value)">
+
+  <label>Scanner Digits Polarity:</label>
+  <select id="hudFeedInvert" onchange="setFeedInvertMode(this.value)">
+    <option value="auto">⚡ Auto (Per-Crop Polarity from Scanner)</option>
+    <option value="white">⚪ White Digits (Force Screen)</option>
+    <option value="black">⚫ Black Digits (Force Multiply)</option>
+  </select>
+
+  <label>Broadcast Brand:</label>
+  <input type="text" id="hudBroadcast" value="FACEBOOK" oninput="overrideBroadcast(this.value)">
+
+  <label>Venue Name:</label>
+  <input type="text" id="hudVenue" value="AUDLEY" oninput="overrideVenue(this.value)">
+
+  <label>Camera Tag Label:</label>
+  <input type="text" id="hudTagText" value="COURTSIDE CAM · LIVE COVERAGE" oninput="overrideTagText(this.value)">
+
+  <label class="check-row">
+    <input type="checkbox" id="hudShowTag" checked onchange="toggleHostTag(this.checked)">
+    Show Bottom Camera Tag Pill
+  </label>
+
+  <label class="check-row">
+    <input type="checkbox" id="hudPreviewBg" onchange="togglePreviewBackdrop(this.checked)">
+    Show Preview Viewfinder Backdrop
+  </label>
+
+  <div class="btn-row">
+    <button onclick="toggleSwap()">⇄ Swap Top / Bottom</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ══ CONFIGURATION & SERVER DISCOVERY ══ */
+const isLocalServer = window.location.hostname === 'localhost' ||
+                      window.location.hostname === '127.0.0.1' ||
+                      window.location.hostname.startsWith('192.168.') ||
+                      window.location.hostname.startsWith('10.') ||
+                      window.location.protocol === 'file:';
+
+const useFirebase = (typeof isFirebaseConfigured !== 'undefined' && isFirebaseConfigured) && !isLocalServer;
+
+const SERVER_URL = useFirebase
+  ? 'https://scoreboard.hoopculture.ca'
+  : (window.location.protocol === 'file:' ? '' : '');
+
+let db = null;
+if (useFirebase && typeof firebase !== 'undefined' && isFirebaseConfigured) {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+  } catch (e) {
+    console.error('Firebase init failed:', e);
+  }
+}
+
+function gP(n) { return new URLSearchParams(window.location.search).get(n); }
+
+// User room detection (URL param -> localStorage -> Cookie)
+const userParam = gP('user');
+let sessionUser = localStorage.getItem('hc_session_user');
+if (!sessionUser) {
+  try {
+    const match = document.cookie.match(new RegExp('(^| )hc_session_user=([^;]+)'));
+    if (match && match[2]) sessionUser = decodeURIComponent(match[2]);
+  } catch (e) {}
+}
+
+let currentUser = userParam || sessionUser || '';
+if (currentUser === 'default') currentUser = '';
+let fbUser = currentUser ? currentUser.replace(/[\.\#\$\[\]]/g, '_') : '';
+
+// URL Customization Flags
+let isSwapped = gP('swap') === '1' || gP('homeleft') === '1';
+const customVenueParam = gP('venue');
+const posParam = (gP('pos') || 'br').toLowerCase();
+const scaleParam = parseFloat(gP('scale') || '1.0');
+const previewParam = gP('preview') === '1';
+const demoParam = gP('demo') === '1';
+const showTagParam = gP('tag') !== '0';
+const customTagText = gP('tagtext');
+
+// Scanner Digits Invert Polarity Option ('auto' | 'black' | 'white')
+const explicitInvert = gP('invert') || gP('feedInvert');
+let storedInvert = '';
+try { storedInvert = localStorage.getItem('hc_feed_invert_mode') || ''; } catch (e) {}
+let feedInvertMode = (explicitInvert === 'black' || explicitInvert === '1' || gP('black') === '1')
+  ? 'black'
+  : (explicitInvert === 'white' || explicitInvert === '0' || gP('white') === '1'
+      ? 'white'
+      : (storedInvert === 'black' || storedInvert === 'white' ? storedInvert : 'auto'));
+
+let cropInvertStates = { home: false, away: false, clock: false, shot: false, period: false };
+let _lastDedicatedShotCamTime = 0;
+
+function $(id) { return document.getElementById(id); }
+
+function hexToRgba(hexColor, alpha) {
+  if (!hexColor || typeof hexColor !== 'string') return `rgba(200, 16, 46, ${alpha})`;
+  let hex = hexColor.replace('#', '').trim();
+  if (hex.length === 3) {
+    hex = hex.split('').map(c => c + c).join('');
+  }
+  if (hex.length !== 6) return `rgba(200, 16, 46, ${alpha})`;
+  const r = parseInt(hex.slice(0, 2), 16) || 0;
+  const g = parseInt(hex.slice(2, 4), 16) || 0;
+  const b = parseInt(hex.slice(4, 6), 16) || 0;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function getEffectiveInvert(cropKey) {
+  if (feedInvertMode === 'black') return false;
+  if (feedInvertMode === 'white') return true;
+  if (cropKey && cropInvertStates[cropKey] !== undefined) {
+    return !!cropInvertStates[cropKey];
+  }
+  return false;
+}
+
+function applyStreamImgStyles(img, cropKey) {
+  if (!img) return;
+  img.style.border = 'none';
+  img.style.outline = 'none';
+  img.style.background = 'transparent';
+  img.style.boxShadow = 'none';
+
+  if (!cropKey && img.dataset && img.dataset.cropKey) {
+    cropKey = img.dataset.cropKey;
+  }
+
+  const isWhiteDigits = getEffectiveInvert(cropKey);
+  const pod = img.closest('.fc-pod');
+
+  if (isWhiteDigits) {
+    img.style.mixBlendMode = 'screen';
+    img.style.filter = 'contrast(2.5) brightness(1.3)';
+    if (pod) pod.classList.remove('light-pod');
+  } else {
+    img.style.mixBlendMode = 'multiply';
+    img.style.filter = 'contrast(2.5) brightness(1.1)';
+    if (pod) pod.classList.add('light-pod');
+  }
+}
+
+function updateAllStreamImagesStyle() {
+  document.querySelectorAll('img.stream-bin-img').forEach(img => {
+    applyStreamImgStyles(img, img.dataset ? img.dataset.cropKey : null);
+  });
+}
+
+function setFeedInvertMode(mode) {
+  feedInvertMode = (mode === 'black' || mode === 'white') ? mode : 'auto';
+  try {
+    if (feedInvertMode === 'auto') localStorage.removeItem('hc_feed_invert_mode');
+    else localStorage.setItem('hc_feed_invert_mode', feedInvertMode);
+  } catch (e) {}
+  const sel = $('hudFeedInvert');
+  if (sel) sel.value = feedInvertMode;
+  updateAllStreamImagesStyle();
+  showToast(feedInvertMode === 'black'
+    ? '⚫ Feed Invert: Force Black (Multiply)'
+    : (feedInvertMode === 'white' ? '⚪ Feed Invert: Force White (Screen)' : '⚡ Feed Invert: Auto Per-Crop'));
+}
+
+function toggleFeedInvert() {
+  if (feedInvertMode === 'auto') setFeedInvertMode('black');
+  else if (feedInvertMode === 'black') setFeedInvertMode('white');
+  else setFeedInvertMode('auto');
+}
+
+/* ══ STATE DEFINITION ══ */
+const DEFAULT_STATE = {
+  homeScore: 57,
+  awayScore: 68,
+  homeAbbr: 'FREEDOM',
+  awayAbbr: 'PINTURA',
+  homeName: 'FREEDOM',
+  awayName: 'PINTURA',
+  homeColor: '#f5c842',
+  awayColor: '#c8102e',
+  homeLogo: 'home-thumb.png',
+  awayLogo: 'away-thumb.png',
+  homeLogoThumb: 'home-thumb.png',
+  awayLogoThumb: 'away-thumb.png',
+  gameClockStream: null,
+  shotClockStream: null,
+  homeScoreStream: null,
+  awayScoreStream: null,
+  periodStream: null,
+  homeFouls: demoParam ? 4 : 0,
+  awayFouls: demoParam ? 3 : 0,
+  homeBonus: false,
+  awayBonus: demoParam,
+  gameSeconds: demoParam ? 262 : 600,
+  gameRunning: false,
+  shotSeconds: demoParam ? 14 : 24,
+  shotRunning: false,
+  quarter: demoParam ? 3 : 1,
+  possession: demoParam ? 'away' : null,
+  venue: 'AUDLEY',
+  rp1Title: 'BROADCAST',
+  rp1Value: 'Facebook',
+  rp2Title: 'VENUE',
+  rp2Value: 'Audley',
+  aiSyncEnabled: true
+};
+
+let S = { ...DEFAULT_STATE };
+let aiSyncActive = false;
+let lastTopScore = -1;
+let lastBotScore = -1;
+
+// Hydrate from same-browser localStorage unless demo=1
+if (!demoParam) {
+  try {
+    const localRaw = localStorage.getItem('bball_v3');
+    if (localRaw) {
+      const local = JSON.parse(localRaw);
+      if (local && typeof local === 'object') {
+        if (local.awayAbbr || local.homeAbbr || local.rp1Value || local.rp2Value || (local.awayScore !== undefined && local.awayScore > 0)) {
+          if (local.homeAbbr) local.homeName = local.homeAbbr;
+          if (local.awayAbbr) local.awayName = local.awayAbbr;
+          S = { ...DEFAULT_STATE, ...local };
+        }
+      }
+    }
+  } catch (e) {}
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'bball_v3' && e.newValue) {
+      try {
+        const data = JSON.parse(e.newValue);
+        if (data && typeof data === 'object') applyStateMessage(data);
+      } catch (err) {}
+    }
+  });
+
+  if (window.location.protocol !== 'file:') {
+    const targetInitRoom = fbUser || 'isidro_pascua@gmail_com';
+    fetch(`https://hoop-culture-scoreboard-default-rtdb.firebaseio.com/states/${targetInitRoom}.json`)
+      .then(r => r.json())
+      .then(data => {
+        if (data && typeof data === 'object') applyStateMessage(data);
+      }).catch(() => {});
+
+    fetch(`https://hoop-culture-scoreboard-default-rtdb.firebaseio.com/ocr/${targetInitRoom}.json`)
+      .then(r => r.json())
+      .then(data => {
+        if (data && typeof data === 'object') applyStreamData(data);
+      }).catch(() => {});
+  }
+}
+
+/* ══ POSITION, SCALE & PREVIEW OPTIONS ══ */
+let currentPos = (posParam === 'bl' || posParam === 'tr' || posParam === 'tl' || posParam === 'br') ? posParam : 'br';
+let currentScale = (!isNaN(scaleParam) && scaleParam > 0) ? scaleParam : 1.0;
+
+function applyLayoutOptions() {
+  const wrap = $('scorebug-wrapper');
+  if (!wrap) return;
+
+  if (currentPos === 'bl') {
+    wrap.style.top = 'auto';
+    wrap.style.right = 'auto';
+    wrap.style.bottom = '2.2vw';
+    wrap.style.left = '2.2vw';
+    wrap.style.alignItems = 'flex-start';
+    wrap.style.transformOrigin = 'bottom left';
+  } else if (currentPos === 'tr') {
+    wrap.style.bottom = 'auto';
+    wrap.style.left = 'auto';
+    wrap.style.top = '2.2vw';
+    wrap.style.right = '2.2vw';
+    wrap.style.alignItems = 'flex-end';
+    wrap.style.transformOrigin = 'top right';
+  } else if (currentPos === 'tl') {
+    wrap.style.bottom = 'auto';
+    wrap.style.right = 'auto';
+    wrap.style.top = '2.2vw';
+    wrap.style.left = '2.2vw';
+    wrap.style.alignItems = 'flex-start';
+    wrap.style.transformOrigin = 'top left';
+  } else {
+    wrap.style.top = 'auto';
+    wrap.style.left = 'auto';
+    wrap.style.bottom = '2.2vw';
+    wrap.style.right = '2.2vw';
+    wrap.style.alignItems = 'flex-end';
+    wrap.style.transformOrigin = 'bottom right';
+  }
+
+  wrap.style.transform = currentScale !== 1.0 ? `scale(${currentScale})` : 'none';
+}
+
+function togglePreviewBackdrop(enabled) {
+  document.body.classList.toggle('preview-mode', !!enabled);
+  const cb = $('hudPreviewBg');
+  if (cb) cb.checked = !!enabled;
+}
+
+function toggleHostTag(visible) {
+  const tag = $('hostCamTag');
+  if (tag) tag.classList.toggle('hidden', !visible);
+  const cb = $('hudShowTag');
+  if (cb) cb.checked = !!visible;
+}
+
+function overrideTagText(val) {
+  const el = $('hostCamTagText');
+  if (el) el.textContent = (val || '').trim().toUpperCase() || 'COURTSIDE CAM · LIVE';
+}
+
+/* ══ RENDER SCOREBUG ══ */
+function renderAll() {
+  renderVenue();
+  renderTeams();
+  renderScores();
+  renderClock();
+  renderShotClock();
+}
+
+function renderVenue() {
+  const vEl = $('venueName');
+  const bEl = $('broadcastName');
+
+  let venueText = 'AUDLEY';
+  if (customVenueParam) {
+    venueText = customVenueParam.toUpperCase();
+  } else if (S.rp2Value && S.rp2Value.trim() && S.rp2Value.trim() !== '—' && S.rp2Value.trim() !== '-') {
+    venueText = S.rp2Value.trim().toUpperCase();
+  } else if (S.venue && S.venue.trim()) {
+    venueText = S.venue.trim().toUpperCase();
+  }
+  if (vEl && vEl.textContent !== venueText) vEl.textContent = venueText;
+
+  let broadcastText = 'FACEBOOK';
+  const customBroadcastParam = gP('broadcast') || gP('network');
+  if (customBroadcastParam) {
+    broadcastText = customBroadcastParam.toUpperCase();
+  } else if (S.rp1Value && S.rp1Value.trim() && S.rp1Value.trim() !== '—' && S.rp1Value.trim() !== '-') {
+    broadcastText = S.rp1Value.trim().toUpperCase();
+  } else if (S.broadcast && S.broadcast.trim()) {
+    broadcastText = S.broadcast.trim().toUpperCase();
+  } else {
+    broadcastText = 'HOOP CULTURE';
+  }
+  if (bEl && bEl.textContent !== broadcastText) bEl.textContent = broadcastText;
+}
+
+function getTeamDisplayName(key) {
+  const abbr = S[key + 'Abbr'];
+  if (abbr && typeof abbr === 'string' && abbr.trim() && abbr.trim() !== 'AWAY' && abbr.trim() !== 'HOME') {
+    return abbr.trim();
+  }
+  const name = S[key + 'Name'];
+  if (name && typeof name === 'string' && name.trim()) return name.trim();
+  const team = S[key + 'Team'];
+  if (team && typeof team === 'string' && team.trim()) return team.trim();
+  return key === 'home' ? 'FREEDOM' : 'PINTURA';
+}
+
+function renderTeams() {
+  const topTeamKey = isSwapped ? 'home' : 'away';
+  const botTeamKey = isSwapped ? 'away' : 'home';
+
+  const topColor = S[topTeamKey + 'Color'] || (isSwapped ? '#f5c842' : '#c8102e');
+  const botColor = S[botTeamKey + 'Color'] || (isSwapped ? '#c8102e' : '#f5c842');
+
+  const topName = getTeamDisplayName(topTeamKey).toUpperCase();
+  const botName = getTeamDisplayName(botTeamKey).toUpperCase();
+
+  const topLogo = S[topTeamKey + 'Logo'] || S[topTeamKey + 'LogoThumb'] || '';
+  const botLogo = S[botTeamKey + 'Logo'] || S[botTeamKey + 'LogoThumb'] || '';
+
+  document.documentElement.style.setProperty('--away-color', topColor);
+  document.documentElement.style.setProperty('--home-color', botColor);
+
+  const topRow = $('awayTeamRow');
+  const botRow = $('homeTeamRow');
+  const topSpine = $('awaySpine');
+  const botSpine = $('homeSpine');
+
+  if (topRow) topRow.style.background = `linear-gradient(90deg, ${hexToRgba(topColor, 0.38)} 0%, ${hexToRgba(topColor, 0.14)} 52%, rgba(10, 13, 20, 0.96) 100%)`;
+  if (botRow) botRow.style.background = `linear-gradient(90deg, ${hexToRgba(botColor, 0.38)} 0%, ${hexToRgba(botColor, 0.14)} 52%, rgba(10, 13, 20, 0.96) 100%)`;
+  if (topSpine) topSpine.style.background = topColor;
+  if (botSpine) botSpine.style.background = botColor;
+
+  const topNameEl = $('awayTeamName');
+  const botNameEl = $('homeTeamName');
+  if (topNameEl && topNameEl.textContent !== topName) topNameEl.textContent = topName;
+  if (botNameEl && botNameEl.textContent !== botName) botNameEl.textContent = botName;
+
+  setUniformTeamFontSize(topNameEl, topName, botNameEl, botName);
+
+  setLogoBadge('awayLogoCircle', 'awayLogoFallback', topLogo, topName.slice(0, 3));
+  setLogoBadge('homeLogoCircle', 'homeLogoFallback', botLogo, botName.slice(0, 3));
+
+  // Fouls & Bonus Badges
+  const topFoulsEl = $('awayFouls');
+  const botFoulsEl = $('homeFouls');
+  const topFouls = Number.isFinite(Number(S[topTeamKey + 'Fouls'])) ? Number(S[topTeamKey + 'Fouls']) : 0;
+  const botFouls = Number.isFinite(Number(S[botTeamKey + 'Fouls'])) ? Number(S[botTeamKey + 'Fouls']) : 0;
+  if (topFoulsEl) topFoulsEl.textContent = String(topFouls);
+  if (botFoulsEl) botFoulsEl.textContent = String(botFouls);
+
+  const topBonus = $('awayBonusBadge');
+  const botBonus = $('homeBonusBadge');
+  if (topBonus) topBonus.classList.toggle('active', !!S[topTeamKey + 'Bonus']);
+  if (botBonus) botBonus.classList.toggle('active', !!S[botTeamKey + 'Bonus']);
+
+  // Possession Arrows
+  const topPossArrow = $('awayPossArrow');
+  const botPossArrow = $('homePossArrow');
+  if (topPossArrow && botPossArrow) {
+    topPossArrow.classList.toggle('active', S.possession === topTeamKey);
+    botPossArrow.classList.toggle('active', S.possession === botTeamKey);
+  }
+}
+
+let _lastTeam1 = '';
+let _lastTeam2 = '';
+let _lastUniformSize = null;
+
+function setUniformTeamFontSize(el1, text1, el2, text2) {
+  if (!el1 || !el2) return;
+  const raw1 = (text1 || '').trim();
+  const raw2 = (text2 || '').trim();
+  const maxLen = Math.max(raw1.length, raw2.length);
+
+  if (raw1 === _lastTeam1 && raw2 === _lastTeam2 && _lastUniformSize !== null) {
+    el1.style.fontSize = _lastUniformSize + 'em';
+    el2.style.fontSize = _lastUniformSize + 'em';
+    return;
+  }
+  _lastTeam1 = raw1;
+  _lastTeam2 = raw2;
+
+  let targetEm = 1.55;
+  if (maxLen <= 5) targetEm = 1.65;
+  else if (maxLen <= 8) targetEm = 1.48;
+  else if (maxLen <= 11) targetEm = 1.25;
+  else if (maxLen <= 14) targetEm = 1.08;
+  else targetEm = 0.94;
+
+  el1.style.fontSize = targetEm + 'em';
+  el2.style.fontSize = targetEm + 'em';
+
+  const parent1 = el1.parentElement;
+  const parent2 = el2.parentElement;
+  let currentEm = targetEm;
+  let guard = 0;
+  while (guard < 16 && currentEm > 0.8) {
+    const ov1 = parent1 && parent1.clientWidth > 0 && el1.scrollWidth > (parent1.clientWidth - 18);
+    const ov2 = parent2 && parent2.clientWidth > 0 && el2.scrollWidth > (parent2.clientWidth - 18);
+    if (!ov1 && !ov2) break;
+    currentEm -= 0.04;
+    el1.style.fontSize = currentEm.toFixed(2) + 'em';
+    el2.style.fontSize = currentEm.toFixed(2) + 'em';
+    guard++;
+  }
+  _lastUniformSize = currentEm.toFixed(2);
+}
+
+function setLogoBadge(circleId, fallbackId, logoUrl, fallbackAbbr) {
+  const circle = $(circleId);
+  if (!circle) return;
+  const abbr = (fallbackAbbr || 'HC').toUpperCase();
+  if (logoUrl) {
+    let img = circle.querySelector('img');
+    if (!img) {
+      circle.innerHTML = `
+        <img src="${logoUrl}" alt="${abbr}" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+        <div class="team-logo-fallback" style="display:none;">${abbr}</div>
+      `;
+    } else if (img.getAttribute('src') !== logoUrl) {
+      img.src = logoUrl;
+      img.style.display = 'block';
+      const fb = circle.querySelector('.team-logo-fallback');
+      if (fb) fb.style.display = 'none';
+    }
+  } else {
+    circle.innerHTML = `<div class="team-logo-fallback" style="display:flex;">${abbr}</div>`;
+  }
+}
+
+function renderStreamOrText(el, streamImgUrl, fallbackText, maxHeightCss, cropKey) {
+  if (typeof el === 'string') el = $(el);
+  if (!el) return;
+  const pod = el.closest('.fc-pod');
+
+  if (aiSyncActive && streamImgUrl) {
+    let img = el.querySelector('img.stream-bin-img');
+    if (!img) {
+      el.innerHTML = '';
+      img = document.createElement('img');
+      img.className = 'stream-bin-img';
+      if (cropKey) img.dataset.cropKey = cropKey;
+      if (maxHeightCss) img.style.maxHeight = maxHeightCss;
+      img.style.maxWidth = '100%';
+      img.style.objectFit = 'contain';
+      img.style.flexShrink = '0';
+      img.style.verticalAlign = 'middle';
+      el.appendChild(img);
+    } else {
+      if (cropKey) img.dataset.cropKey = cropKey;
+      if (maxHeightCss) img.style.maxHeight = maxHeightCss;
+    }
+    if (img.getAttribute('src') !== streamImgUrl) {
+      img.src = streamImgUrl;
+    }
+    applyStreamImgStyles(img, cropKey);
+  } else {
+    if (pod) pod.classList.remove('light-pod');
+    const img = el.querySelector('img.stream-bin-img');
+    if (img) el.innerHTML = '';
+    const txt = (fallbackText !== null && fallbackText !== undefined) ? String(fallbackText) : '';
+    if (el.children.length === 0 && el.textContent !== txt) {
+      el.textContent = txt;
+    }
+  }
+}
+
+function renderScores() {
+  const topTeamKey = isSwapped ? 'home' : 'away';
+  const botTeamKey = isSwapped ? 'away' : 'home';
+
+  const topScore = (S[topTeamKey + 'Score'] !== undefined && S[topTeamKey + 'Score'] !== null) ? S[topTeamKey + 'Score'] : 0;
+  const botScore = (S[botTeamKey + 'Score'] !== undefined && S[botTeamKey + 'Score'] !== null) ? S[botTeamKey + 'Score'] : 0;
+
+  const topStream = isSwapped ? S.homeScoreStream : S.awayScoreStream;
+  const botStream = isSwapped ? S.awayScoreStream : S.homeScoreStream;
+
+  const topScoreEl = $('awayScore');
+  if (topScoreEl) {
+    if (aiSyncActive && topStream) {
+      renderStreamOrText(topScoreEl, topStream, String(topScore), '2.2em', topTeamKey);
+    } else {
+      renderStreamOrText(topScoreEl, null, String(topScore), null, topTeamKey);
+      if (lastTopScore !== -1 && lastTopScore !== topScore) triggerBump(topScoreEl);
+    }
+  }
+
+  const botScoreEl = $('homeScore');
+  if (botScoreEl) {
+    if (aiSyncActive && botStream) {
+      renderStreamOrText(botScoreEl, botStream, String(botScore), '2.2em', botTeamKey);
+    } else {
+      renderStreamOrText(botScoreEl, null, String(botScore), null, botTeamKey);
+      if (lastBotScore !== -1 && lastBotScore !== botScore) triggerBump(botScoreEl);
+    }
+  }
+
+  lastTopScore = topScore;
+  lastBotScore = botScore;
+}
+
+function triggerBump(el) {
+  if (!el) return;
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+}
+
+function renderClock() {
+  const clkEl = $('gameClockVal');
+  const perEl = $('periodVal');
+  if (!clkEl || !perEl) return;
+
+  const q = S.quarter || 1;
+  let pText = '1<sup>ST</sup>';
+  if (q === 1) pText = '1<sup>ST</sup>';
+  else if (q === 2) pText = '2<sup>ND</sup>';
+  else if (q === 3) pText = '3<sup>RD</sup>';
+  else if (q === 4) pText = '4<sup>TH</sup>';
+  else if (q === 5) pText = 'OT';
+  else if (typeof q === 'number' && q > 5) pText = `${q - 4}OT`;
+  else if (typeof q === 'string' && q.trim()) pText = q.trim().toUpperCase();
+
+  if (aiSyncActive && S.periodStream) {
+    renderStreamOrText(perEl, S.periodStream, pText, '1.6em', 'period');
+  } else {
+    const pod = perEl.closest('.fc-pod');
+    if (pod) pod.classList.remove('light-pod');
+    const perImg = perEl.querySelector('img');
+    if (perImg) perEl.innerHTML = '';
+    if (perEl.innerHTML !== pText) perEl.innerHTML = pText;
+  }
+
+  let cStr = '10:00';
+  const secs = S.gameSeconds;
+  if (secs !== undefined && secs !== null) {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    if (secs < 60) {
+      cStr = `${secs}.0`;
+    } else {
+      cStr = `${m}:${s.toString().padStart(2, '0')}`;
+    }
+  }
+
+  if (aiSyncActive && S.gameClockStream) {
+    renderStreamOrText(clkEl, S.gameClockStream, cStr, '1.85em', 'clock');
+    clkEl.classList.remove('warn');
+  } else {
+    renderStreamOrText(clkEl, null, cStr, null, 'clock');
+    const isWarn = secs !== undefined && secs !== null && secs < 60;
+    clkEl.classList.toggle('warn', isWarn);
+  }
+}
+
+function renderShotClock() {
+  const scEl = $('shotClockVal');
+  if (!scEl) return;
+  const s = (S.shotSeconds !== undefined && S.shotSeconds !== null) ? S.shotSeconds : 24;
+  const sStr = String(s);
+
+  if (aiSyncActive && S.shotClockStream) {
+    renderStreamOrText(scEl, S.shotClockStream, sStr, '1.85em', 'shot');
+    scEl.classList.remove('urgent', 'zero');
+  } else {
+    renderStreamOrText(scEl, null, sStr, null, 'shot');
+    scEl.classList.toggle('urgent', s <= 5 && s > 0);
+    scEl.classList.toggle('zero', s === 0);
+  }
+}
+
+/* ══ REALTIME DATA SYNCHRONIZATION ══ */
+let _lastStateMsgTime = 0;
+
+function hasStateNonClockChanged(oldS, newD) {
+  if (!oldS || !newD) return true;
+  const keys = [
+    'homeScore', 'awayScore', 'homeAbbr', 'awayAbbr', 'homeName', 'awayName', 'homeTeam', 'awayTeam',
+    'homeColor', 'awayColor', 'homeLogo', 'awayLogo', 'homeLogoThumb', 'awayLogoThumb',
+    'quarter', 'period', 'possession', 'homeFouls', 'awayFouls', 'homeBonus', 'awayBonus',
+    'rp1Title', 'rp1Value', 'rp2Title', 'rp2Value', 'venue', 'broadcast', 'aiSyncActive', 'aiSyncEnabled',
+    'homeScoreStream', 'awayScoreStream', 'periodStream', 'feedInvert'
+  ];
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    if (newD[k] !== undefined && newD[k] !== oldS[k]) return true;
+  }
+  return false;
+}
+
+function applyStateMessage(msgData) {
+  if (!msgData) return;
+  _lastStateMsgTime = Date.now();
+
+  if (msgData.invertStates) {
+    cropInvertStates = Object.assign(cropInvertStates, msgData.invertStates);
+    updateAllStreamImagesStyle();
+  }
+  if (msgData.aiSyncActive !== undefined) aiSyncActive = !!msgData.aiSyncActive;
+  if (msgData.aiSyncEnabled !== undefined) aiSyncActive = !!msgData.aiSyncEnabled;
+  if (msgData.enabledCrops) {
+    if (msgData.enabledCrops.clock === false) S.gameClockStream = null;
+    if (msgData.enabledCrops.shot === false) S.shotClockStream = null;
+    if (msgData.enabledCrops.home === false) S.homeScoreStream = null;
+    if (msgData.enabledCrops.away === false) S.awayScoreStream = null;
+    if (msgData.enabledCrops.period === false) S.periodStream = null;
+  }
+  if (msgData.homeAbbr) msgData.homeName = msgData.homeAbbr;
+  if (msgData.awayAbbr) msgData.awayName = msgData.awayAbbr;
+  if (msgData.homeTeam) {
+    msgData.homeAbbr = msgData.homeTeam;
+    msgData.homeName = msgData.homeTeam;
+  }
+  if (msgData.awayTeam) {
+    msgData.awayAbbr = msgData.awayTeam;
+    msgData.awayName = msgData.awayTeam;
+  }
+
+  const nonClockChanged = hasStateNonClockChanged(S, msgData);
+  S = { ...S, ...msgData };
+
+  if (nonClockChanged) renderAll();
+  else {
+    renderClock();
+    renderShotClock();
+  }
+  syncLocalTick();
+}
+
+function applyStreamData(streamData) {
+  if (!streamData) return;
+  _lastStateMsgTime = Date.now();
+  const role = streamData.role || 'all';
+
+  if (streamData.streamActive === false) {
+    if (role === 'shot') {
+      S.shotClockStream = null;
+    } else if (role === 'main') {
+      S.gameClockStream = null;
+      S.homeScoreStream = null;
+      S.awayScoreStream = null;
+      S.periodStream = null;
+      if (Date.now() - _lastDedicatedShotCamTime > 45000) {
+        S.shotClockStream = null;
+      }
+    } else {
+      aiSyncActive = false;
+      S.gameClockStream = null;
+      S.shotClockStream = null;
+      S.homeScoreStream = null;
+      S.awayScoreStream = null;
+      S.periodStream = null;
+    }
+    renderAll();
+    syncLocalTick();
+    return;
+  }
+
+  aiSyncActive = true;
+  let streamImagesChanged = false;
+  const isLocalShotOnly = (role === 'shot' &&
+    streamData.homeScoreStream === undefined &&
+    streamData.awayScoreStream === undefined &&
+    streamData.gameClockStream === undefined &&
+    streamData.periodStream === undefined);
+
+  if (!isLocalShotOnly) {
+    if (streamData.gameClockStream !== undefined && S.gameClockStream !== streamData.gameClockStream) {
+      S.gameClockStream = streamData.gameClockStream;
+    }
+    if (streamData.homeScoreStream !== undefined && S.homeScoreStream !== streamData.homeScoreStream) {
+      S.homeScoreStream = streamData.homeScoreStream;
+      streamImagesChanged = true;
+    }
+    if (streamData.awayScoreStream !== undefined && S.awayScoreStream !== streamData.awayScoreStream) {
+      S.awayScoreStream = streamData.awayScoreStream;
+      streamImagesChanged = true;
+    }
+    if (streamData.periodStream !== undefined && S.periodStream !== streamData.periodStream) {
+      S.periodStream = streamData.periodStream;
+      streamImagesChanged = true;
+    }
+  }
+
+  if (role === 'shot') {
+    _lastDedicatedShotCamTime = Date.now();
+  }
+  if (streamData.shotClockStream !== undefined && S.shotClockStream !== streamData.shotClockStream) {
+    const dedicatedAlive = Date.now() - _lastDedicatedShotCamTime <= 45000;
+    if (role === 'shot' || !dedicatedAlive || (role === 'main' && streamData.shotClockStream)) {
+      S.shotClockStream = streamData.shotClockStream;
+    }
+  }
+
+  if (streamData.enabledCrops) {
+    if (!isLocalShotOnly) {
+      if (streamData.enabledCrops.clock === false && S.gameClockStream !== null) { S.gameClockStream = null; streamImagesChanged = true; }
+      if (streamData.enabledCrops.home === false && S.homeScoreStream !== null) { S.homeScoreStream = null; streamImagesChanged = true; }
+      if (streamData.enabledCrops.away === false && S.awayScoreStream !== null) { S.awayScoreStream = null; streamImagesChanged = true; }
+      if (streamData.enabledCrops.period === false && S.periodStream !== null) { S.periodStream = null; streamImagesChanged = true; }
+    }
+    if (streamData.enabledCrops.shot === false && S.shotClockStream !== null) {
+      if (role === 'shot' || Date.now() - _lastDedicatedShotCamTime > 45000) {
+        S.shotClockStream = null;
+        streamImagesChanged = true;
+      }
+    }
+  }
+
+  if (streamData.invertStates) {
+    cropInvertStates = Object.assign(cropInvertStates, streamData.invertStates);
+    updateAllStreamImagesStyle();
+  }
+
+  if (streamImagesChanged) {
+    renderScores();
+    renderClock();
+    renderShotClock();
+  } else {
+    renderClock();
+    renderShotClock();
+  }
+  syncLocalTick();
+}
+
+let localTick = null;
+function startLocalTick() {
+  if (localTick) return;
+  localTick = setInterval(() => {
+    if (Date.now() - _lastStateMsgTime < 3000) return;
+    if (S.gameRunning && S.gameSeconds > 0) {
+      S.gameSeconds--;
+      renderClock();
+    }
+    if (S.shotRunning && S.shotSeconds > 0) {
+      S.shotSeconds--;
+      renderShotClock();
+    }
+  }, 1000);
+}
+function stopLocalTick() {
+  if (localTick) {
+    clearInterval(localTick);
+    localTick = null;
+  }
+}
+function syncLocalTick() {
+  if (S.gameRunning || S.shotRunning) startLocalTick();
+  else stopLocalTick();
+}
+
+// 1. BroadcastChannels
+function setupBroadcastChannels() {
+  if (typeof BroadcastChannel === 'undefined' || demoParam) return;
+  ['hc_scoreboard_sync', 'basketball_scoreboard', 'ezlive_scoreboard_channel', 'ocr_stream'].forEach(chName => {
+    try {
+      const channel = new BroadcastChannel(chName);
+      channel.onmessage = (e) => {
+        if (!e || !e.data) return;
+        if (e.data.type === 'state') applyStateMessage(e.data.data);
+        else if (e.data.type === 'stream' || e.data.type === 'ocr') applyStreamData(e.data.data || e.data);
+        else if (e.data.gameClockStream || e.data.shotClockStream) applyStreamData(e.data);
+        else if (e.data.data && typeof e.data.data === 'object' && (e.data.data.homeScore !== undefined || e.data.data.homeAbbr !== undefined || e.data.data.awayAbbr !== undefined || e.data.data.rp1Value !== undefined || e.data.data.rp2Value !== undefined)) applyStateMessage(e.data.data);
+        else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined || e.data.homeAbbr !== undefined || e.data.awayAbbr !== undefined || e.data.awayName !== undefined || e.data.homeName !== undefined || e.data.rp1Value !== undefined || e.data.rp2Value !== undefined) applyStateMessage(e.data);
+      };
+    } catch (err) {}
+  });
+}
+setupBroadcastChannels();
+
+// 2. Window PostMessage
+if (!demoParam) {
+  window.addEventListener('message', (e) => {
+    if (!e || !e.data) return;
+    if (e.data.type === 'state') applyStateMessage(e.data.data);
+    else if (e.data.type === 'stream' || e.data.type === 'ocr') applyStreamData(e.data.data || e.data);
+    else if (e.data.gameClockStream || e.data.shotClockStream) applyStreamData(e.data);
+    else if (e.data.data && typeof e.data.data === 'object' && (e.data.data.homeScore !== undefined || e.data.data.homeAbbr !== undefined || e.data.data.awayAbbr !== undefined || e.data.data.rp1Value !== undefined || e.data.data.rp2Value !== undefined)) applyStateMessage(e.data.data);
+    else if (e.data.homeScore !== undefined || e.data.gameSeconds !== undefined || e.data.homeAbbr !== undefined || e.data.awayAbbr !== undefined || e.data.awayName !== undefined || e.data.homeName !== undefined || e.data.rp1Value !== undefined || e.data.rp2Value !== undefined) applyStateMessage(e.data);
+  });
+}
+
+// 3. Firebase Realtime Sync
+if (useFirebase && db && !demoParam) {
+  function listenToRoom(roomKey) {
+    if (!roomKey) return;
+    fbUser = roomKey;
+
+    db.ref(`states/${roomKey}`).once('value').then(snap => {
+      const val = snap.val();
+      if (val) applyStateMessage(val);
+    }).catch(e => console.error('Firebase fetch error:', e));
+
+    db.ref(`states/${roomKey}`).on('value', snap => {
+      const val = snap.val();
+      if (val) applyStateMessage(val);
+    });
+
+    db.ref(`ocr/${roomKey}`).once('value').then(snap => {
+      const d = snap.val();
+      if (d) applyStreamData(d);
+    }).catch(() => {});
+
+    db.ref(`ocr/${roomKey}`).on('value', snap => {
+      const d = snap.val();
+      if (d) applyStreamData(d);
+    });
+  }
+
+  if (fbUser && fbUser !== 'default') {
+    listenToRoom(fbUser);
+  } else {
+    db.ref('states').once('value').then(snap => {
+      const all = snap.val();
+      if (!all) {
+        listenToRoom('isidro_pascua@gmail_com');
+        return;
+      }
+      const keys = Object.keys(all).filter(k => k !== 'default' && k !== 'ezlive_profiles');
+      if (keys.length === 0) {
+        listenToRoom('isidro_pascua@gmail_com');
+        return;
+      }
+
+      let bestKey = null;
+      let highestScore = -1;
+      keys.forEach(k => {
+        const room = all[k];
+        if (!room || typeof room !== 'object') return;
+        let score = 0;
+        if ((room.awayScore || 0) > 0 || (room.homeScore || 0) > 0) score += 1000;
+        if (room.awayAbbr && room.awayAbbr !== 'AWAY') score += 500;
+        if (room.homeAbbr && room.homeAbbr !== 'HOME') score += 500;
+        if (room.gameRunning || room.shotRunning) score += 200;
+        if (k === 'isidro_pascua@gmail_com') score += 2000;
+        const ts = room.shotLeaderTime || room.lastUpdate || 0;
+        if (ts > 0) score += Math.min(500, Math.floor(ts / 10000000000));
+        if (score > highestScore) {
+          highestScore = score;
+          bestKey = k;
+        }
+      });
+      listenToRoom(bestKey || 'isidro_pascua@gmail_com');
+    }).catch(() => listenToRoom('isidro_pascua@gmail_com'));
+  }
+}
+
+// 4. Local Server SSE Fallback
+function connectSSE() {
+  if (useFirebase || window.location.protocol === 'file:' || demoParam) return;
+  const userQuery = encodeURIComponent(currentUser || 'default');
+  fetch(`${SERVER_URL}/state?user=${userQuery}`)
+    .then(r => r.json())
+    .then(d => {
+      if (d && Object.keys(d).length) applyStateMessage(d);
+    }).catch(() => {});
+
+  try {
+    const es = new EventSource(`${SERVER_URL}/events?user=${userQuery}`);
+    es.onmessage = (e) => {
+      try {
+        const m = JSON.parse(e.data);
+        if (m.type === 'state') applyStateMessage(m.data);
+        else if (m.type === 'stream') applyStreamData(m.data);
+      } catch (err) {}
+    };
+  } catch (err) {}
+}
+connectSSE();
+
+/* ══ OPERATOR HUD & SHORTCUTS ══ */
+window.addEventListener('keydown', (e) => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
+  if (e.key === 'h' || e.key === 'H') {
+    const hud = $('hud-panel');
+    if (hud) hud.classList.toggle('show');
+  } else if (e.key === 'i' || e.key === 'I') {
+    toggleFeedInvert();
+  }
+});
+
+let toastTimer = null;
+function showToast(msg) {
+  const t = $('toast-alert');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function overrideBroadcast(val) {
+  S.broadcast = val;
+  S.rp1Value = val;
+  renderVenue();
+}
+
+function overrideVenue(val) {
+  S.venue = val;
+  S.rp2Value = val;
+  renderVenue();
+}
+
+function overridePos(val) {
+  currentPos = val;
+  applyLayoutOptions();
+}
+
+function overrideScale(val) {
+  const parsed = parseFloat(val);
+  currentScale = isNaN(parsed) ? 1.0 : parsed;
+  applyLayoutOptions();
+}
+
+function toggleSwap() {
+  isSwapped = !isSwapped;
+  _lastTeam1 = '';
+  _lastTeam2 = '';
+  _lastUniformSize = null;
+  renderAll();
+  showToast('⇄ Top / Bottom Teams Swapped');
+}
+
+// Initial Setup
+if (previewParam) togglePreviewBackdrop(true);
+toggleHostTag(showTagParam);
+if (customTagText) {
+  overrideTagText(customTagText);
+  const tagInput = $('hudTagText');
+  if (tagInput) tagInput.value = customTagText.toUpperCase();
+}
+const selInv = $('hudFeedInvert');
+if (selInv) selInv.value = feedInvertMode;
+const selPos = $('hudPos');
+if (selPos) selPos.value = currentPos;
+const inpScale = $('hudScale');
+if (inpScale) inpScale.value = String(currentScale);
+applyLayoutOptions();
+renderAll();
+</script>
+</body>
+</html>

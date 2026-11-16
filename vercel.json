@@ -22,6 +22,8 @@
     { "source": "/scripps-overlay", "destination": "/basketball-scripps.html" },
     { "source": "/overlay3", "destination": "/basketball-scripps.html" },
     { "source": "/pill", "destination": "/basketball-scripps.html" },
+    { "source": "/frontcam", "destination": "/basketball-frontcam.html" },
+    { "source": "/front-cam", "destination": "/basketball-frontcam.html" },
     { "source": "/camera", "destination": "/camera.html" }
   ]
 }

@@ -1194,6 +1194,9 @@ body.light .reset-btn:hover { background:#fee2e2; }
       <button class="btn" onclick="window.open('/nbaoverlay2?user=' + encodeURIComponent(currentUser),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;">
         📡 NBA Scorebug 2
       </button>
+      <button class="btn" onclick="window.open('/frontcam?user=' + encodeURIComponent(currentUser && currentUser !== 'default' ? currentUser : (localStorage.getItem('hc_session_user') || 'isidro.pascua@gmail.com')),'_blank')" style="padding:10px;font-size:12px;letter-spacing:1px;border-color:#38bdf8;color:#38bdf8;">
+        🤳 Front Cam (Bottom-R)
+      </button>
     </div>
   </div>
 
