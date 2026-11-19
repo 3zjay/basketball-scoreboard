@@ -731,9 +731,6 @@ body.light .reset-btn:hover { background:#fee2e2; }
     width: 100% !important;
     padding: 10px !important;
   }
-  #remoteVideoContainer {
-    max-height: 45vh;
-  }
   .remote-align-sidebar {
     flex: 1 1 auto !important;
     border-left: none !important;
@@ -2584,11 +2581,50 @@ let cachedMainAspect = 1.777;
 let cachedShotAspect = 1.777;
 let _lastDedicatedShotCamTime = 0;
 
+function fitRemoteVideoContainer(fallbackAspect) {
+  const container = document.getElementById('remoteVideoContainer');
+  const viewport = container && container.parentElement;
+  const feedImg = document.getElementById('remoteCameraFeed');
+  if (!container || !viewport) return;
+
+  let imgAspect = fallbackAspect;
+  if (feedImg && feedImg.naturalWidth > 0 && feedImg.naturalHeight > 0) {
+    imgAspect = feedImg.naturalWidth / feedImg.naturalHeight;
+  } else if (!imgAspect || isNaN(imgAspect) || imgAspect <= 0) {
+    imgAspect = (activeRemoteCameraRole === 'shot' ? cachedShotAspect : cachedMainAspect) || (16 / 9);
+  }
+
+  const vStyle = window.getComputedStyle(viewport);
+  const padX = (parseFloat(vStyle.paddingLeft) || 0) + (parseFloat(vStyle.paddingRight) || 0);
+  const padY = (parseFloat(vStyle.paddingTop) || 0) + (parseFloat(vStyle.paddingBottom) || 0);
+
+  let availW = Math.max(220, viewport.clientWidth - padX);
+  availW = Math.min(availW, 820);
+  const hintReserve = 28;
+  let availH = viewport.clientHeight - padY - hintReserve;
+  if (window.innerWidth <= 900 || window.innerHeight > window.innerWidth || availH < 140) {
+    availH = Math.max(180, Math.round(window.innerHeight * 0.45));
+  } else {
+    availH = Math.max(180, availH);
+  }
+
+  let fitW = availW;
+  let fitH = fitW / imgAspect;
+  if (fitH > availH) {
+    fitH = availH;
+    fitW = fitH * imgAspect;
+  }
+
+  container.style.maxWidth = 'none';
+  container.style.width = Math.round(fitW) + 'px';
+  container.style.height = Math.round(fitH) + 'px';
+  container.style.aspectRatio = String(imgAspect);
+}
+
 function renderRemoteCameraFeedUI() {
   const feedImg = document.getElementById('remoteCameraFeed');
   const feedPh = document.getElementById('remotePlaceholder');
   const statusBadge = document.getElementById('remoteFeedStatusBadge');
-  const container = document.getElementById('remoteVideoContainer');
 
   let frameToShow = null;
   let camLabel = '';
@@ -2608,12 +2644,7 @@ function renderRemoteCameraFeedUI() {
     aspectToUse = cachedMainFrame ? cachedMainAspect : cachedShotAspect;
   }
 
-  if (container && aspectToUse) {
-    const nextAspect = String(aspectToUse);
-    if (container.style.aspectRatio !== nextAspect) {
-      container.style.aspectRatio = nextAspect;
-    }
-  }
+  fitRemoteVideoContainer(aspectToUse);
 
   if (frameToShow) {
     if (feedImg) {
@@ -3431,6 +3462,7 @@ function openRemoteAlignModal(e) {
   applyRemoteBoxStyles();
   selectRemoteCrop(activeRemoteCrop);
   initRemoteBoxEventListeners();
+  requestAnimationFrame(() => fitRemoteVideoContainer());
 }
 
 function closeRemoteAlignModal() {
@@ -3780,8 +3812,8 @@ function nudgeRemoteCrop(dx, dy) {
 function resizeRemoteCrop(dw, dh) {
   const c = (activeRemoteCrop === 'shot' && activeRemoteCameraRole === 'shot' && shotCamNormCrop) ? shotCamNormCrop : remoteNormCrops[activeRemoteCrop];
   if (!c) return;
-  c.w = +Math.max(0.04, Math.min(1 - c.x, c.w + (dw * nudgeStep))).toFixed(4);
-  c.h = +Math.max(0.03, Math.min(1 - c.y, c.h + (dh * nudgeStep))).toFixed(4);
+  c.w = +Math.max(0.02, Math.min(1 - c.x, c.w + (dw * nudgeStep))).toFixed(4);
+  c.h = +Math.max(0.02, Math.min(1 - c.y, c.h + (dh * nudgeStep))).toFixed(4);
   if (activeRemoteCrop === 'shot' && activeRemoteCameraRole === 'shot') {
     remoteNormCrops.shot = { ...c };
   }
@@ -3907,6 +3939,14 @@ function initRemoteBoxEventListeners() {
   if (_remoteEventsBound) return;
   _remoteEventsBound = true;
 
+  const feedImg = document.getElementById('remoteCameraFeed');
+  if (feedImg) {
+    feedImg.addEventListener('load', () => fitRemoteVideoContainer());
+  }
+  window.addEventListener('resize', () => {
+    if (remoteAlignActive) fitRemoteVideoContainer();
+  });
+
   const keys = ['clock', 'home', 'away', 'period', 'shot'];
   keys.forEach(k => {
     const box = document.getElementById(`rcrop-${k}`);
@@ -3978,8 +4018,8 @@ function onRemotePointerMove(e) {
       shotCamNormCrop.y = newY;
     }
   } else if (isResizingRemote) {
-    const newW = +Math.max(0.04, Math.min(1 - dragStartNorm.x, dragStartNorm.w + dxNorm)).toFixed(4);
-    const newH = +Math.max(0.03, Math.min(1 - dragStartNorm.y, dragStartNorm.h + dyNorm)).toFixed(4);
+    const newW = +Math.max(0.02, Math.min(1 - dragStartNorm.x, dragStartNorm.w + dxNorm)).toFixed(4);
+    const newH = +Math.max(0.02, Math.min(1 - dragStartNorm.y, dragStartNorm.h + dyNorm)).toFixed(4);
     remoteNormCrops[dragCropKey].w = newW;
     remoteNormCrops[dragCropKey].h = newH;
     if (dragCropKey === 'shot' && activeRemoteCameraRole === 'shot') {
@@ -4105,7 +4145,7 @@ syncCropEnableCheckboxes();
         <div id="remoteVideoContainer" style="position:relative; width:100%; max-width:800px; aspect-ratio:16/9; background:#000; border:2px solid #2a1e14; border-radius:8px; overflow:hidden; user-select:none; box-shadow:0 8px 30px rgba(0,0,0,0.7);">
           
           <!-- Live Camera Image Feed -->
-          <img id="remoteCameraFeed" alt="Phone Camera Feed" style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:none; pointer-events:none;">
+          <img id="remoteCameraFeed" alt="Phone Camera Feed" style="position:absolute; inset:0; width:100%; height:100%; object-fit:fill; display:none; pointer-events:none;">
 
           <!-- Waiting Placeholder -->
           <div id="remotePlaceholder" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; background:radial-gradient(ellipse at center, #150f0a 0%, #000 100%);">

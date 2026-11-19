@@ -614,6 +614,8 @@
     // Drag-and-drop state
     let activeDragFrame = null;
     let activeResizeFrame = null;
+    let activeDragKey = null;
+    let activeResizeKey = null;
     let dragStartX, dragStartY, dragStartLeft, dragStartTop;
     let resizeStartWidth, resizeStartHeight;
 
@@ -626,15 +628,16 @@
     };
 
     let currentDeviceId = null;
+    let liveNormCrops = {};
 
-    // ── Normalized Video Space (0.0 to 1.0) Mapping Helpers ──
-    function screenToVideoNorm(frame) {
-      const video = document.getElementById('camera-view');
-      if (!video || !video.videoWidth || !video.offsetWidth) return null;
+    function getVideoCoverGeometry(video) {
+      if (!video || !video.videoWidth || !video.videoHeight) return null;
+      const vRect = video.getBoundingClientRect();
+      const viewW = vRect.width;
+      const viewH = vRect.height;
+      if (!viewW || !viewH) return null;
       const videoW = video.videoWidth;
       const videoH = video.videoHeight;
-      const viewW = video.offsetWidth;
-      const viewH = video.offsetHeight;
       const streamRatio = videoW / videoH;
       const viewRatio = viewW / viewH;
 
@@ -650,68 +653,60 @@
         scaledHeight = viewH;
         offsetX = (scaledWidth - viewW) / 2;
       }
+      return { vRect, videoW, videoH, viewW, viewH, scaledWidth, scaledHeight, offsetX, offsetY };
+    }
 
-      const boxX = frame.offsetLeft;
-      const boxY = frame.offsetTop;
-      const boxW = frame.offsetWidth;
-      const boxH = frame.offsetHeight;
+    // ── Normalized Video Space (0.0 to 1.0) Mapping Helpers ──
+    function screenToVideoNorm(frame) {
+      const video = document.getElementById('camera-view');
+      const g = getVideoCoverGeometry(video);
+      if (!g || !frame) return null;
+      const fRect = frame.getBoundingClientRect();
+      if (!fRect.width || !fRect.height) return null;
 
-      const xInScaled = boxX + offsetX;
-      const yInScaled = boxY + offsetY;
+      const boxX = fRect.left - g.vRect.left;
+      const boxY = fRect.top - g.vRect.top;
+      const boxW = fRect.width;
+      const boxH = fRect.height;
 
-      const cropX = Math.max(0, Math.min(videoW - 1, (xInScaled / scaledWidth) * videoW));
-      const cropY = Math.max(0, Math.min(videoH - 1, (yInScaled / scaledHeight) * videoH));
-      const cropW = Math.max(1, Math.min(videoW - cropX, (boxW / scaledWidth) * videoW));
-      const cropH = Math.max(1, Math.min(videoH - cropY, (boxH / scaledHeight) * videoH));
+      const xInScaled = boxX + g.offsetX;
+      const yInScaled = boxY + g.offsetY;
+
+      const cropX = Math.max(0, Math.min(g.videoW - 1, (xInScaled / g.scaledWidth) * g.videoW));
+      const cropY = Math.max(0, Math.min(g.videoH - 1, (yInScaled / g.scaledHeight) * g.videoH));
+      const cropW = Math.max(1, Math.min(g.videoW - cropX, (boxW / g.scaledWidth) * g.videoW));
+      const cropH = Math.max(1, Math.min(g.videoH - cropY, (boxH / g.scaledHeight) * g.videoH));
 
       return {
-        x: +(cropX / videoW).toFixed(4),
-        y: +(cropY / videoH).toFixed(4),
-        w: +(cropW / videoW).toFixed(4),
-        h: +(cropH / videoH).toFixed(4)
+        x: +(cropX / g.videoW).toFixed(4),
+        y: +(cropY / g.videoH).toFixed(4),
+        w: +(cropW / g.videoW).toFixed(4),
+        h: +(cropH / g.videoH).toFixed(4)
       };
     }
 
     function videoNormToScreen(norm) {
       const video = document.getElementById('camera-view');
-      if (!video || !video.videoWidth || !video.offsetWidth) return null;
-      const videoW = video.videoWidth;
-      const videoH = video.videoHeight;
-      const viewW = video.offsetWidth;
-      const viewH = video.offsetHeight;
-      const streamRatio = videoW / videoH;
-      const viewRatio = viewW / viewH;
+      const g = getVideoCoverGeometry(video);
+      if (!g || !norm) return null;
 
-      let scaledWidth, scaledHeight;
-      let offsetX = 0, offsetY = 0;
+      const cropX = norm.x * g.videoW;
+      const cropY = norm.y * g.videoH;
+      const cropW = norm.w * g.videoW;
+      const cropH = norm.h * g.videoH;
 
-      if (viewRatio > streamRatio) {
-        scaledWidth = viewW;
-        scaledHeight = viewW / streamRatio;
-        offsetY = (scaledHeight - viewH) / 2;
-      } else {
-        scaledWidth = viewH * streamRatio;
-        scaledHeight = viewH;
-        offsetX = (scaledWidth - viewW) / 2;
-      }
-
-      const cropX = norm.x * videoW;
-      const cropY = norm.y * videoH;
-      const cropW = norm.w * videoW;
-      const cropH = norm.h * videoH;
-
-      const xInScaled = (cropX / videoW) * scaledWidth;
-      const yInScaled = (cropY / videoH) * scaledHeight;
-      const boxX = xInScaled - offsetX;
-      const boxY = yInScaled - offsetY;
-      const boxW = (cropW / videoW) * scaledWidth;
-      const boxH = (cropH / videoH) * scaledHeight;
+      const xInScaled = (cropX / g.videoW) * g.scaledWidth;
+      const yInScaled = (cropY / g.videoH) * g.scaledHeight;
+      const boxX = g.vRect.left + (xInScaled - g.offsetX);
+      const boxY = g.vRect.top + (yInScaled - g.offsetY);
+      const boxW = (cropW / g.videoW) * g.scaledWidth;
+      const boxH = (cropH / g.videoH) * g.scaledHeight;
 
       return {
         left: Math.round(boxX) + 'px',
         top: Math.round(boxY) + 'px',
-        width: Math.max(30, Math.round(boxW)) + 'px',
-        height: Math.max(20, Math.round(boxH)) + 'px'
+        width: Math.max(14, Math.round(boxW)) + 'px',
+        height: Math.max(12, Math.round(boxH)) + 'px'
       };
     }
 
@@ -720,9 +715,16 @@
       const keys = onlyOwned ? getOwnedCropKeys(deviceRole) : ['clock', 'home', 'away', 'period', 'shot'];
       keys.forEach(k => {
         const f = frames[k];
-        if (f && f.style.display !== 'none' && f.offsetWidth > 0 && f.offsetHeight > 0) {
-          const n = screenToVideoNorm(f);
-          if (n) norm[k] = n;
+        if (f && f.style.display !== 'none') {
+          if (liveNormCrops[k] && liveNormCrops[k].w > 0.005 && liveNormCrops[k].h > 0.005) {
+            norm[k] = { ...liveNormCrops[k] };
+          } else if (f.offsetWidth > 0 && f.offsetHeight > 0) {
+            const n = screenToVideoNorm(f);
+            if (n) {
+              liveNormCrops[k] = { ...n };
+              norm[k] = n;
+            }
+          }
         }
       });
       return norm;
@@ -739,12 +741,17 @@
 
       if (data.crops) {
         const crops = data.crops;
+        myOwned.forEach(k => {
+          if (crops[k] && crops[k].w > 0.005 && crops[k].h > 0.005) {
+            liveNormCrops[k] = { ...crops[k] };
+          }
+        });
         try {
           const existingRaw = localStorage.getItem('hc_ocr_crops_norm_' + deviceRole);
           const existingNorm = existingRaw ? JSON.parse(existingRaw) : {};
           const mergedNorm = { ...existingNorm };
           myOwned.forEach(k => {
-            if (crops[k] && crops[k].w > 0.01 && crops[k].h > 0.01) {
+            if (crops[k] && crops[k].w > 0.005 && crops[k].h > 0.005) {
               mergedNorm[k] = crops[k];
             }
           });
@@ -756,7 +763,7 @@
           myOwned.forEach(k => {
             const norm = crops[k];
             const frame = frames[k];
-            if (norm && frame && norm.w > 0.01 && norm.h > 0.01) {
+            if (norm && frame && norm.w > 0.005 && norm.h > 0.005) {
               const domPos = videoNormToScreen(norm);
               if (domPos) {
                 frame.style.left = domPos.left;
@@ -914,8 +921,10 @@
       });
       try { localStorage.setItem('hc_ocr_enabled_crops_' + deviceRole, JSON.stringify(enabledCrops)); } catch(e) {}
 
-      if (prevRole !== role && db) {
-        bindRoleCropListeners();
+      if (prevRole !== role) {
+        liveNormCrops = {};
+        restoreCropPositions();
+        if (db) bindRoleCropListeners();
       }
 
       resetCropHashCache();
@@ -976,6 +985,7 @@
           frame.style.top = '55%';
           frame.style.width = '100px';
           frame.style.height = '50px';
+          delete liveNormCrops.shot;
         }
         frame.style.display = enabled ? 'block' : 'none';
         frame.style.opacity = enabled ? '1' : '0.2';
@@ -1018,8 +1028,8 @@
       try {
         const constraints = {
           video: {
-            width: { ideal: 960, max: 1280 },
-            height: { ideal: 540, max: 720 },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
             frameRate: { ideal: 15, max: 20 }
           },
           audio: false
@@ -1039,7 +1049,8 @@
             window._pendingRemoteCrops = null;
             applyRemoteCropPositions({ crops: pending });
           }
-          saveCropPositions(true);
+          saveCropPositions(false);
+          registerDevicePresence();
         };
         
         await enumerateCameras();
@@ -1049,8 +1060,8 @@
           try {
             const fallbackConstraints = {
               video: {
-                width: { ideal: 960, max: 1280 },
-                height: { ideal: 540, max: 720 },
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
                 frameRate: { ideal: 15, max: 20 }
               },
               audio: false
@@ -1065,7 +1076,8 @@
                 window._pendingRemoteCrops = null;
                 applyRemoteCropPositions({ crops: pending });
               }
-              saveCropPositions(true);
+              saveCropPositions(false);
+              registerDevicePresence();
             };
             await enumerateCameras();
           } catch(e) {
@@ -1150,6 +1162,7 @@
       if (window.hideControls) window.hideControls();
       
       activeDragFrame = frames[key];
+      activeDragKey = key;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
@@ -1176,6 +1189,11 @@
 
       activeDragFrame.style.left = `${dragStartLeft + dx}px`;
       activeDragFrame.style.top = `${dragStartTop + dy}px`;
+
+      if (activeDragKey) {
+        const norm = screenToVideoNorm(activeDragFrame);
+        if (norm) liveNormCrops[activeDragKey] = norm;
+      }
     }
 
     function saveCropPositions(broadcast = true) {
@@ -1260,7 +1278,8 @@
           let applied = false;
           myOwned.forEach(k => {
             const frame = frames[k];
-            if (frame && norm[k] && norm[k].w > 0.01 && norm[k].h > 0.01) {
+            if (frame && norm[k] && norm[k].w > 0.005 && norm[k].h > 0.005) {
+              liveNormCrops[k] = { ...norm[k] };
               const domPos = videoNormToScreen(norm[k]);
               if (domPos) {
                 frame.style.left = domPos.left;
@@ -1283,11 +1302,13 @@
           myOwned.forEach(k => {
             const f = frames[k];
             const p = positions[k];
-            if (f && p && parseInt(p.width) >= 25 && parseInt(p.height) >= 18) {
+            if (f && p && parseInt(p.width) >= 14 && parseInt(p.height) >= 12) {
               if (p.left) f.style.left = p.left;
               if (p.top) f.style.top = p.top;
               if (p.width) f.style.width = p.width;
               if (p.height) f.style.height = p.height;
+              const n = screenToVideoNorm(f);
+              if (n) liveNormCrops[k] = n;
             }
           });
         } catch(e) {}
@@ -1300,10 +1321,12 @@
       clearTimeout(orientationResizeTimer);
       orientationResizeTimer = setTimeout(() => {
         const myOwned = getConfigurableCropKeys(deviceRole);
-        let norm = null;
-        const normSaved = localStorage.getItem('hc_ocr_crops_norm_' + deviceRole) || localStorage.getItem('hc_ocr_crops_norm');
-        if (normSaved) {
-          try { norm = JSON.parse(normSaved); } catch(e) {}
+        let norm = Object.keys(liveNormCrops).length ? { ...liveNormCrops } : null;
+        if (!norm) {
+          const normSaved = localStorage.getItem('hc_ocr_crops_norm_' + deviceRole) || localStorage.getItem('hc_ocr_crops_norm');
+          if (normSaved) {
+            try { norm = JSON.parse(normSaved); } catch(e) {}
+          }
         }
         if (!norm) {
           norm = getNormalizedCrops(true);
@@ -1313,7 +1336,8 @@
         if (!video || !video.videoWidth || !video.offsetWidth) return;
         myOwned.forEach(k => {
           const frame = frames[k];
-          if (frame && norm[k] && norm[k].w > 0.01 && norm[k].h > 0.01) {
+          if (frame && norm[k] && norm[k].w > 0.005 && norm[k].h > 0.005) {
+            liveNormCrops[k] = { ...norm[k] };
             const domPos = videoNormToScreen(norm[k]);
             if (domPos) {
               frame.style.left = domPos.left;
@@ -1332,7 +1356,12 @@
     }
 
     function endDrag() {
+      if (activeDragFrame && activeDragKey) {
+        const norm = screenToVideoNorm(activeDragFrame);
+        if (norm) liveNormCrops[activeDragKey] = norm;
+      }
       activeDragFrame = null;
+      activeDragKey = null;
       document.removeEventListener('mousemove', onDrag);
       document.removeEventListener('touchmove', onDrag);
       saveCropPositions();
@@ -1345,6 +1374,7 @@
       if (window.hideControls) window.hideControls();
 
       activeResizeFrame = frames[key];
+      activeResizeKey = key;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
@@ -1369,12 +1399,22 @@
       const dx = clientX - dragStartX;
       const dy = clientY - dragStartY;
 
-      activeResizeFrame.style.width = `${Math.max(50, resizeStartWidth + dx)}px`;
-      activeResizeFrame.style.height = `${Math.max(30, resizeStartHeight + dy)}px`;
+      activeResizeFrame.style.width = `${Math.max(24, resizeStartWidth + dx)}px`;
+      activeResizeFrame.style.height = `${Math.max(18, resizeStartHeight + dy)}px`;
+
+      if (activeResizeKey) {
+        const norm = screenToVideoNorm(activeResizeFrame);
+        if (norm) liveNormCrops[activeResizeKey] = norm;
+      }
     }
 
     function endResize() {
+      if (activeResizeFrame && activeResizeKey) {
+        const norm = screenToVideoNorm(activeResizeFrame);
+        if (norm) liveNormCrops[activeResizeKey] = norm;
+      }
       activeResizeFrame = null;
+      activeResizeKey = null;
       document.removeEventListener('mousemove', onResize);
       document.removeEventListener('touchmove', onResize);
       saveCropPositions();
@@ -1750,22 +1790,7 @@
         timestamp: now
       };
 
-      const streamRatio = videoW / videoH;
-      const viewRatio = viewW / viewH;
-
-      let scaledWidth, scaledHeight;
-      let offsetX = 0, offsetY = 0;
-
-      if (viewRatio > streamRatio) {
-        scaledWidth = viewW;
-        scaledHeight = viewW / streamRatio;
-        offsetY = (scaledHeight - viewH) / 2;
-      } else {
-        scaledWidth = viewH * streamRatio;
-        scaledHeight = viewH;
-        offsetX = (scaledWidth - viewW) / 2;
-      }
-
+      const coverGeo = getVideoCoverGeometry(video);
       let changedStreamCount = 0;
 
       for (const key of ownedKeys) {
@@ -1791,18 +1816,39 @@
         const frame = frames[key];
         if (!frame) continue;
 
-        const boxX = frame.offsetLeft;
-        const boxY = frame.offsetTop;
-        const boxW = frame.offsetWidth;
-        const boxH = frame.offsetHeight;
+        let cropX, cropY, cropW, cropH;
+        const directNorm = liveNormCrops[key];
+        if (directNorm && directNorm.w > 0.005 && directNorm.h > 0.005 && activeDragFrame !== frame && activeResizeFrame !== frame) {
+          cropX = Math.max(0, Math.min(videoW - 1, directNorm.x * videoW));
+          cropY = Math.max(0, Math.min(videoH - 1, directNorm.y * videoH));
+          cropW = Math.max(1, Math.min(videoW - cropX, directNorm.w * videoW));
+          cropH = Math.max(1, Math.min(videoH - cropY, directNorm.h * videoH));
+        } else if (coverGeo) {
+          const fRect = frame.getBoundingClientRect();
+          const boxX = fRect.left - coverGeo.vRect.left;
+          const boxY = fRect.top - coverGeo.vRect.top;
+          const boxW = fRect.width;
+          const boxH = fRect.height;
 
-        const xInScaled = boxX + offsetX;
-        const yInScaled = boxY + offsetY;
+          const xInScaled = boxX + coverGeo.offsetX;
+          const yInScaled = boxY + coverGeo.offsetY;
 
-        const cropX = Math.max(0, Math.min(videoW - 1, (xInScaled / scaledWidth) * videoW));
-        const cropY = Math.max(0, Math.min(videoH - 1, (yInScaled / scaledHeight) * videoH));
-        const cropW = Math.max(1, Math.min(videoW - cropX, (boxW / scaledWidth) * videoW));
-        const cropH = Math.max(1, Math.min(videoH - cropY, (boxH / scaledHeight) * videoH));
+          cropX = Math.max(0, Math.min(videoW - 1, (xInScaled / coverGeo.scaledWidth) * videoW));
+          cropY = Math.max(0, Math.min(videoH - 1, (yInScaled / coverGeo.scaledHeight) * videoH));
+          cropW = Math.max(1, Math.min(videoW - cropX, (boxW / coverGeo.scaledWidth) * videoW));
+          cropH = Math.max(1, Math.min(videoH - cropY, (boxH / coverGeo.scaledHeight) * videoH));
+
+          if (boxW > 0 && boxH > 0) {
+            liveNormCrops[key] = {
+              x: +(cropX / videoW).toFixed(4),
+              y: +(cropY / videoH).toFixed(4),
+              w: +(cropW / videoW).toFixed(4),
+              h: +(cropH / videoH).toFixed(4)
+            };
+          }
+        } else {
+          continue;
+        }
 
         const maxCropWidth = (key === 'period' || key === 'shot') ? 84 : 112;
         const scale = Math.min(maxCropWidth / cropW, 1.0);
@@ -2506,7 +2552,10 @@
       registerDevicePresence();
       setTimeout(() => {
         const video = document.getElementById('camera-view');
-        if (video && video.videoWidth > 0) saveCropPositions(true);
+        if (video && video.videoWidth > 0) {
+          saveCropPositions(false);
+          registerDevicePresence();
+        }
       }, 1500);
       
       toggleSync();
